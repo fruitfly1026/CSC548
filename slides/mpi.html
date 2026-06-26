@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSC 548 · Message Passing (MPI)</title>
+
+<!-- reveal.js core (CDN) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/theme.css?v=11">
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================ TITLE ============================ -->
+<section class="title-slide" data-background-color="#ffffff">
+  <div class="eyebrow">CSC 548 / ECE 591 · Parallel Systems</div>
+  <h1>Message Passing</h1>
+  <div class="sub">Distributed-memory programming with <strong>MPI</strong> — SPMD, point-to-point, collectives, communicators, datatypes &amp; a worked parallel-PI example</div>
+  <aside class="notes">
+    This is the distributed-memory half of the course. Each process has its own private address space;
+    the only way to share data is to send explicit messages. We build up from the message-passing model and SPMD,
+    learn the six core MPI calls, then point-to-point (blocking &amp; nonblocking), collectives, communicators &amp;
+    derived datatypes, and finish with a real parallel-PI integration.
+  </aside>
+</section>
+
+<!-- Agenda -->
+<section data-background-color="#ffffff">
+  <h2>Agenda</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">1 · Model &amp; SPMD</span><span class="small">Message-passing model, separate address spaces, the six core calls, Hello World.</span></div>
+    <div class="callout"><span class="lbl">2 · Point-to-Point</span><span class="small">Blocking <code class="inline">Send</code>/<code class="inline">Recv</code>, tags, status, deadlock, nonblocking.</span></div>
+    <div class="callout"><span class="lbl">3 · Collectives</span><span class="small">Bcast, Reduce, Allreduce, Scatter, Gather, Barrier.</span></div>
+    <div class="callout"><span class="lbl">4 · Communicators &amp; Datatypes</span><span class="small">Groups, contexts, derived MPI types.</span></div>
+    <div class="callout"><span class="lbl">5 · Worked Example</span><span class="small">Parallel PI integration end-to-end.</span></div>
+    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">No shared memory — processes cooperate by <em>explicitly</em> exchanging messages.</span></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 1 — THE MESSAGE-PASSING MODEL & SPMD
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 1</div>
+  <div class="mod-title">The Message-Passing Model &amp; SPMD</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Explain the message-passing model and how it differs from shared memory</li>
+      <li>Describe SPMD and the cooperative (push) communication model</li>
+      <li>Write, compile &amp; run an MPI "Hello, World" with rank and size</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The Message-Passing Model</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">Process</span>A program counter <strong>and</strong> a private address space. (A process may itself hold multiple threads sharing that one space.)</div>
+      <p class="small">MPI coordinates communication <strong>among processes with separate address spaces</strong>. Interprocess communication is two things bundled together:</p>
+      <ul class="small">
+        <li><strong>Synchronization</strong> — agreeing on timing</li>
+        <li><strong>Data movement</strong> — copying bytes from one process's address space into another's</li>
+      </ul>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 200" class="chart" style="max-width:320px">
+        <rect x="15" y="30" width="120" height="150" rx="6" fill="none" stroke="#cbd5e1"/>
+        <text x="75" y="22" text-anchor="middle" class="note">Process 0</text>
+        <rect x="30" y="55" width="90" height="105" fill="#dbeafe"/><text x="75" y="110" text-anchor="middle" class="lbl">address<tspan x="75" dy="14">space</tspan></text>
+        <rect x="165" y="30" width="120" height="150" rx="6" fill="none" stroke="#cbd5e1"/>
+        <text x="225" y="22" text-anchor="middle" class="note">Process 1</text>
+        <rect x="180" y="55" width="90" height="105" fill="#dcfce7"/><text x="225" y="110" text-anchor="middle" class="lbl">address<tspan x="225" dy="14">space</tspan></text>
+        <line x1="120" y1="100" x2="180" y2="100" stroke="#CC0000" stroke-width="2" marker-end="url(#ar)"/>
+        <text x="150" y="92" text-anchor="middle" class="note" fill="#CC0000">message</text>
+        <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#CC0000"/></marker></defs>
+      </svg>
+      <div class="src">Nothing is shared — only messages cross.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Models of Parallel Computing</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Data parallel (SIMD)</span><span class="small">Same instruction on many data items simultaneously.</span></div>
+    <div class="callout"><span class="lbl">Task parallel (MIMD)</span><span class="small">Different instructions on different data.</span></div>
+    <div class="callout takeaway"><span class="lbl">SPMD</span><span class="small"><strong>Single Program, Multiple Data</strong> — every process runs the same program but branches on its rank. Not lock-stepped per operation.</span></div>
+  </div>
+  <div class="callout"><span class="lbl">Why SPMD</span>
+    SPMD is the practical way to write MPI: one source file, launched as <em>p</em> identical processes, each discovering "who am I?" via its rank and taking a different path. It is general enough to express MIMD behavior.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Cooperative Communication (Push Model)</h2>
+  <div class="cols w-64">
+    <div>
+      <p class="small">In message passing, data is <strong>explicitly sent</strong> by one process and <strong>explicitly received</strong> by another — a cooperative exchange.</p>
+      <div class="callout"><span class="lbl">Advantage</span>Any change to the receiver's memory happens with the receiver's <strong>explicit participation</strong>. Communication and synchronization are combined.</div>
+      <p class="tiny muted">One-sided <code class="inline">Put</code>/<code class="inline">Get</code> (MPI-2) decouples them — a "pull" model where only one side participates.</p>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 280 170" class="chart" style="max-width:300px">
+        <line x1="70" y1="20" x2="70" y2="155" stroke="#16181d" stroke-width="2"/>
+        <line x1="210" y1="20" x2="210" y2="155" stroke="#16181d" stroke-width="2"/>
+        <text x="70" y="14" text-anchor="middle" class="note">Process 0</text>
+        <text x="210" y="14" text-anchor="middle" class="note">Process 1</text>
+        <rect x="35" y="55" width="70" height="22" rx="4" fill="#3b82f6"/><text x="70" y="70" text-anchor="middle" fill="#fff" class="lbl">Send(data)</text>
+        <rect x="175" y="95" width="70" height="22" rx="4" fill="#16a34a"/><text x="210" y="110" text-anchor="middle" fill="#fff" class="lbl">Recv(data)</text>
+        <line x1="105" y1="66" x2="175" y2="106" stroke="#CC0000" stroke-width="2" marker-end="url(#ar2)"/>
+        <defs><marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#CC0000"/></marker></defs>
+      </svg>
+      <div class="src">Sender pushes; receiver must cooperate.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>What is MPI?</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">A specification</span>MPI is a message-passing <strong>library specification (an API)</strong> — <em>not</em> a language, compiler, or a single product.</div>
+      <p class="small">Targets parallel computers, clusters, and heterogeneous networks. Full-featured, designed for end users, library writers, and tool developers. The guiding goal is <strong>portability</strong>.</p>
+    </div>
+    <div>
+      <div class="code-label">Brief history</div>
+      <table style="font-size:.78em">
+        <tr><th>Year</th><th>Milestone</th></tr>
+        <tr><td>1990</td><td>PVM (precursor, Oak Ridge)</td></tr>
+        <tr><td class="hi">1994</td><td>MPI-1.0 — C &amp; Fortran bindings</td></tr>
+        <tr><td>1997</td><td>MPI-2 — one-sided, parallel I/O, dynamic procs</td></tr>
+        <tr><td>2012</td><td>MPI-3 — nonblocking collectives, RMA, MPI_T</td></tr>
+        <tr><td>2021</td><td>MPI-4 — sessions, persistent collectives</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>A Minimal MPI Program</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">Hello, world (C)</div>
+      <pre><code class="language-c" data-trim>
+#include "mpi.h"
+#include &lt;stdio.h&gt;
+
+int main(int argc, char *argv[]) {
+  MPI_Init(&amp;argc, &amp;argv);
+  printf("Hello, world!\n");
+  MPI_Finalize();
+  return 0;
+}
+</code></pre>
+    </div>
+    <div>
+      <ul class="small">
+        <li><code class="inline">mpi.h</code> must be <code class="inline">#include</code>d</li>
+        <li>Every MPI function returns an error code or <code class="inline">MPI_SUCCESS</code></li>
+        <li><code class="inline">MPI_Init</code> and <code class="inline">MPI_Finalize</code> bracket all MPI activity</li>
+      </ul>
+      <div class="callout"><span class="lbl">Compile &amp; run</span>
+        <span class="small"><code class="inline">mpicc myprog.c -o myprog</code><br>
+        <code class="inline">mpirun -np 10 myprog</code> &nbsp;(or <code class="inline">mpiexec -n 10</code>)</span></div>
+      <p class="tiny muted">Launch details are implementation-dependent (MPICH, OpenMPI, Intel MPI…).</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Finding Out About the Environment</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Every SPMD process asks two questions:</p>
+      <div class="callout"><span class="lbl">How many of us?</span><code class="inline">MPI_Comm_size</code> → number of processes.</div>
+      <div class="callout"><span class="lbl">Which one am I?</span><code class="inline">MPI_Comm_rank</code> → my rank, in <code class="inline">0 .. size-1</code>.</div>
+      <p class="tiny muted"><code class="inline">MPI_COMM_WORLD</code> is the default communicator holding all initial processes.</p>
+    </div>
+    <div>
+      <div class="code-label">Better Hello (C)</div>
+      <pre><code class="language-c" data-trim>
+#include "mpi.h"
+#include &lt;stdio.h&gt;
+int main(int argc, char *argv[]) {
+  int rank, size;
+  MPI_Init(&amp;argc, &amp;argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &amp;rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &amp;size);
+  printf("I am %d of %d\n", rank, size);
+  MPI_Finalize();
+  return 0;
+}
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 1 — Review</h2>
+  <div class="qa">
+    <p class="q">1. What does it mean that MPI processes have "separate address spaces"?</p>
+    <div class="fragment"><div class="a">No process can read or write another's memory directly. The <strong>only</strong> way to share data is to send a message that the other process explicitly receives.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. In SPMD, how do two processes running the same program do different work?</p>
+    <div class="fragment"><div class="a">They branch on their <strong>rank</strong> (from <code class="inline">MPI_Comm_rank</code>) — e.g. <code class="inline">if (rank == 0) …</code>. One program, multiple data, different control paths.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 2 — POINT-TO-POINT COMMUNICATION
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 2</div>
+  <div class="mod-title">Point-to-Point Communication</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Use blocking <code class="inline">MPI_Send</code>/<code class="inline">MPI_Recv</code> with tags and <code class="inline">MPI_Status</code></li>
+      <li>Recognize and fix deadlock in "unsafe" send/recv ordering</li>
+      <li>Overlap communication with computation using <code class="inline">MPI_Isend</code>/<code class="inline">MPI_Irecv</code> + <code class="inline">MPI_Wait</code></li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Basic Send / Receive — What to Specify</h2>
+  <div class="cols">
+    <div>
+      <p class="small">To fill in <code class="inline">Send(data)</code> / <code class="inline">Recv(data)</code> we must answer:</p>
+      <ul class="small">
+        <li><strong>How is the data described?</strong> A triple <code class="inline">(address, count, datatype)</code>.</li>
+        <li><strong>How are processes identified?</strong> By <strong>rank</strong> within a communicator.</li>
+        <li><strong>How does the receiver screen messages?</strong> By a user-defined <strong>tag</strong>.</li>
+        <li><strong>What does "complete" mean?</strong> Depends on blocking vs. nonblocking.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Datatype triple</span>Data in a message is <code class="inline">(start, count, datatype)</code>. Labeling by type lets MPI bridge machines with different memory layouts (heterogeneous comm).</div>
+      <div class="callout"><span class="lbl">Tags</span>An integer that lets the receiver filter messages. Use <code class="inline">MPI_ANY_TAG</code> to accept any. (Tags avoid confusion with <em>datatypes</em>.)</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Blocking Send &amp; Receive</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">MPI_Send</div>
+      <pre><code class="language-c" data-trim>
+MPI_Send(start, count, datatype,
+         dest, tag, comm);
+</code></pre>
+      <ul class="tiny">
+        <li>Buffer described by <code class="inline">(start, count, datatype)</code></li>
+        <li><code class="inline">dest</code> = rank of target in <code class="inline">comm</code></li>
+        <li>On return, the data is delivered — <strong>buffer is reusable</strong> (but may not yet be received at the target)</li>
+      </ul>
+    </div>
+    <div>
+      <div class="code-label">MPI_Recv</div>
+      <pre><code class="language-c" data-trim>
+MPI_Recv(start, count, datatype,
+         source, tag, comm, &amp;status);
+</code></pre>
+      <ul class="tiny">
+        <li>Waits for a message matching <code class="inline">source</code> &amp; <code class="inline">tag</code></li>
+        <li><code class="inline">source</code> may be <code class="inline">MPI_ANY_SOURCE</code></li>
+        <li>Receiving <strong>fewer</strong> than <code class="inline">count</code> is OK; <strong>more</strong> is an error</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout"><span class="lbl">Matching</span>A receive completes only when source <em>and</em> tag (and communicator) match a pending send.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The Status Object</h2>
+  <div class="cols">
+    <div>
+      <p class="small">When you receive with wildcards (<code class="inline">MPI_ANY_SOURCE</code>, <code class="inline">MPI_ANY_TAG</code>), the <code class="inline">status</code> structure tells you what actually arrived.</p>
+      <div class="callout"><span class="lbl">Fields</span><span class="small"><code class="inline">status.MPI_SOURCE</code>, <code class="inline">status.MPI_TAG</code>, and <code class="inline">MPI_Get_count(&amp;status, type, &amp;n)</code> for how many elements.</span></div>
+    </div>
+    <div>
+      <div class="code-label">Reading status (C)</div>
+      <pre><code class="language-c" data-trim>
+int recvd_tag, recvd_from, recvd_count;
+MPI_Status status;
+
+MPI_Recv(buf, n, MPI_INT,
+         MPI_ANY_SOURCE, MPI_ANY_TAG,
+         MPI_COMM_WORLD, &amp;status);
+
+recvd_tag  = status.MPI_TAG;
+recvd_from = status.MPI_SOURCE;
+MPI_Get_count(&amp;status, MPI_INT, &amp;recvd_count);
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Sources of Deadlock</h2>
+  <div class="cols">
+    <div>
+      <div class="callout warn"><span class="lbl">Unsafe pattern</span>Both processes <code class="inline">Send</code> first. If there isn't enough system buffer space, each <code class="inline">Send</code> blocks waiting for the matching <code class="inline">Recv</code> that never starts → <strong>deadlock</strong>.</div>
+      <pre><code class="language-c" data-trim>
+// Process 0        // Process 1
+Send(1);            Send(0);
+Recv(1);            Recv(0);
+</code></pre>
+      <p class="tiny muted">Called "unsafe" because it depends on the availability of system buffers.</p>
+    </div>
+    <div>
+      <div class="code-label">Fix 1 — reorder</div>
+      <pre><code class="language-c" data-trim>
+// Process 0        // Process 1
+Send(1);            Recv(0);
+Recv(1);            Send(0);
+</code></pre>
+      <div class="code-label">Fix 2 — nonblocking</div>
+      <pre><code class="language-c" data-trim>
+// both processes
+Isend(other);
+Irecv(other);
+Waitall();
+</code></pre>
+      <p class="tiny muted">Or use <code class="inline">MPI_Sendrecv</code>, which does both atomically.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Nonblocking Communication</h2>
+  <div class="cols">
+    <div>
+      <p class="small"><code class="inline">MPI_Isend</code> / <code class="inline">MPI_Irecv</code> <strong>return immediately</strong> with a request handle — the transfer is merely initiated. You must not touch the buffer until you confirm completion.</p>
+      <div class="callout"><span class="lbl">Completion</span><span class="small"><code class="inline">MPI_Wait(&amp;req, &amp;status)</code> blocks until done; <code class="inline">MPI_Test</code> polls. Also <code class="inline">MPI_Waitall</code> / <code class="inline">Waitany</code> / <code class="inline">Waitsome</code>.</span></div>
+    </div>
+    <div>
+      <div class="code-label">Overlap comm with compute</div>
+      <pre><code class="language-c" data-trim>
+MPI_Request req;
+MPI_Irecv(buf, n, MPI_INT, src, tag,
+          MPI_COMM_WORLD, &amp;req);
+
+/* do useful work while the
+   message is in flight ...    */
+compute_something();
+
+MPI_Wait(&amp;req, MPI_STATUS_IGNORE);
+/* now buf is safe to use */
+</code></pre>
+    </div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Why nonblocking</span>It both <strong>avoids deadlock</strong> and lets you <strong>hide latency</strong> by overlapping communication with computation.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Communication Modes</h2>
+  <table style="font-size:.8em">
+    <tr><th>Mode</th><th>Blocking</th><th>Nonblocking</th><th>Semantics</th></tr>
+    <tr><td class="hi">Standard</td><td><code class="inline">MPI_Send</code></td><td><code class="inline">MPI_Isend</code></td><td>MPI decides whether to buffer</td></tr>
+    <tr><td>Synchronous</td><td><code class="inline">MPI_Ssend</code></td><td><code class="inline">MPI_Issend</code></td><td>completes only once the receive starts</td></tr>
+    <tr><td>Buffered</td><td><code class="inline">MPI_Bsend</code></td><td><code class="inline">MPI_Ibsend</code></td><td>uses a user-attached buffer</td></tr>
+    <tr><td>Ready</td><td><code class="inline">MPI_Rsend</code></td><td><code class="inline">MPI_Irsend</code></td><td>send only if the receive is already posted</td></tr>
+  </table>
+  <div class="cols" style="margin-top:.5em">
+    <div class="callout"><span class="lbl">Buffered setup</span><span class="small"><code class="inline">MPI_Buffer_attach</code> / <code class="inline">MPI_Buffer_detach</code> reserve space for buffered sends.</span></div>
+    <div class="callout"><span class="lbl">Combined</span><span class="small"><code class="inline">MPI_Sendrecv</code> (different buffers) and <code class="inline">MPI_Sendrecv_replace</code> (same buffer) swap data deadlock-free.</span></div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 2 — Review</h2>
+  <div class="qa">
+    <p class="q">1. Why can two processes that both <code class="inline">Send</code> before they <code class="inline">Recv</code> deadlock?</p>
+    <div class="fragment"><div class="a">If system buffers are too small, each blocking <code class="inline">Send</code> waits for the matching <code class="inline">Recv</code> to drain it — but neither process reaches its <code class="inline">Recv</code>. Reorder, or use nonblocking / <code class="inline">Sendrecv</code>.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. After <code class="inline">MPI_Irecv</code> returns, when is it safe to read the buffer?</p>
+    <div class="fragment"><div class="a">Only after a matching <code class="inline">MPI_Wait</code> (or a successful <code class="inline">MPI_Test</code>) reports the request complete — the receive merely <em>started</em> when <code class="inline">Irecv</code> returned.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 3 — COLLECTIVE OPERATIONS
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 3</div>
+  <div class="mod-title">Collective Operations</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Use <code class="inline">MPI_Bcast</code>, <code class="inline">Reduce</code>, <code class="inline">Allreduce</code>, <code class="inline">Scatter</code>, <code class="inline">Gather</code>, <code class="inline">Barrier</code></li>
+      <li>Replace hand-coded send/recv with a single collective</li>
+      <li>Pick the right reduction operator</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>What Are Collectives?</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">Definition</span>Operations called by <strong>all</strong> processes in a communicator. <strong>No tags.</strong> Blocking (MPI-1).</div>
+      <ul class="small">
+        <li><strong>Barrier</strong> — synchronize the team</li>
+        <li><strong>Broadcast</strong> — one-to-all</li>
+        <li><strong>Scatter / Gather</strong> — distribute / collect pieces</li>
+        <li><strong>Reduce / Allreduce</strong> — all-to-one (+ broadcast result)</li>
+      </ul>
+      <p class="tiny muted">In many numerical algorithms a send/recv pair can be replaced by a Bcast/Reduce — simpler <em>and</em> faster.</p>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 240 130" class="chart" style="max-width:280px">
+        <text x="120" y="14" text-anchor="middle" class="note">Barrier — all wait, then proceed</text>
+        <line x1="120" y1="60" x2="120" y2="60" stroke="#CC0000"/>
+        <rect x="118" y="24" width="4" height="90" fill="#CC0000"/>
+        <g stroke="#3b82f6" stroke-width="3">
+          <line x1="20" y1="35" x2="118" y2="35"/><line x1="40" y1="55" x2="118" y2="55"/>
+          <line x1="15" y1="75" x2="118" y2="75"/><line x1="55" y1="95" x2="118" y2="95"/>
+        </g>
+        <g stroke="#16a34a" stroke-width="3">
+          <line x1="122" y1="35" x2="220" y2="35"/><line x1="122" y1="55" x2="220" y2="55"/>
+          <line x1="122" y1="75" x2="220" y2="75"/><line x1="122" y1="95" x2="220" y2="95"/>
+        </g>
+        <text x="60" y="125" text-anchor="middle" class="note">arrive</text>
+        <text x="180" y="125" text-anchor="middle" class="note">released together</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Broadcast &amp; Scatter / Gather</h2>
+  <div class="cols">
+    <div class="center">
+      <svg viewBox="0 0 230 150" class="chart" style="max-width:250px">
+        <text x="115" y="14" text-anchor="middle" class="note">MPI_Bcast (root → all)</text>
+        <rect x="90" y="25" width="50" height="22" rx="3" fill="#CC0000"/><text x="115" y="40" text-anchor="middle" fill="#fff" class="lbl">A</text>
+        <text x="115" y="58" text-anchor="middle" class="tiny muted">root</text>
+        <g fill="#3b82f6">
+          <rect x="10" y="110" width="40" height="22" rx="3"/><rect x="70" y="110" width="40" height="22" rx="3"/>
+          <rect x="130" y="110" width="40" height="22" rx="3"/><rect x="190" y="110" width="40" height="22" rx="3"/>
+        </g>
+        <g fill="#fff" class="lbl" text-anchor="middle"><text x="30" y="125">A</text><text x="90" y="125">A</text><text x="150" y="125">A</text><text x="210" y="125">A</text></g>
+        <g stroke="#16181d" stroke-width="1.2" marker-end="url(#a3)">
+          <line x1="105" y1="47" x2="30" y2="108"/><line x1="110" y1="47" x2="90" y2="108"/>
+          <line x1="120" y1="47" x2="150" y2="108"/><line x1="125" y1="47" x2="210" y2="108"/>
+        </g>
+        <defs><marker id="a3" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L5,3 L0,6 Z" fill="#16181d"/></marker></defs>
+      </svg>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 230 150" class="chart" style="max-width:250px">
+        <text x="115" y="14" text-anchor="middle" class="note">Scatter (split) / Gather (collect)</text>
+        <g fill="#CC0000">
+          <rect x="65" y="25" width="22" height="22" rx="3"/><rect x="89" y="25" width="22" height="22" rx="3"/>
+          <rect x="113" y="25" width="22" height="22" rx="3"/><rect x="137" y="25" width="22" height="22" rx="3"/>
+        </g>
+        <g fill="#fff" class="lbl" text-anchor="middle"><text x="76" y="40">A0</text><text x="100" y="40">A1</text><text x="124" y="40">A2</text><text x="148" y="40">A3</text></g>
+        <g fill="#3b82f6">
+          <rect x="10" y="110" width="40" height="22" rx="3"/><rect x="70" y="110" width="40" height="22" rx="3"/>
+          <rect x="130" y="110" width="40" height="22" rx="3"/><rect x="190" y="110" width="40" height="22" rx="3"/>
+        </g>
+        <g fill="#fff" class="lbl" text-anchor="middle"><text x="30" y="125">A0</text><text x="90" y="125">A1</text><text x="150" y="125">A2</text><text x="210" y="125">A3</text></g>
+        <g stroke="#16181d" stroke-width="1.2" marker-end="url(#a4)">
+          <line x1="76" y1="47" x2="30" y2="108"/><line x1="100" y1="47" x2="90" y2="108"/>
+          <line x1="124" y1="47" x2="150" y2="108"/><line x1="148" y1="47" x2="210" y2="108"/>
+        </g>
+        <defs><marker id="a4" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L5,3 L0,6 Z" fill="#16181d"/></marker></defs>
+      </svg>
+    </div>
+  </div>
+  <div class="callout"><span class="lbl">API</span><span class="small"><code class="inline">MPI_Bcast(buf, count, type, root, comm)</code> · <code class="inline">MPI_Scatter</code> / <code class="inline">MPI_Gather</code> (and the <code class="inline">v</code> / <code class="inline">All</code> variants for uneven sizes &amp; all-receive).</span></div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Reduce &amp; Allreduce</h2>
+  <div class="cols">
+    <div>
+      <div class="callout takeaway"><span class="lbl">MPI_Reduce</span>Combines a value from every process with an operator (e.g. <code class="inline">MPI_SUM</code>) and delivers the result to the <strong>root</strong>.</div>
+      <pre><code class="language-c" data-trim>
+MPI_Reduce(&amp;mypart, &amp;total, 1,
+           MPI_DOUBLE, MPI_SUM,
+           0, MPI_COMM_WORLD);
+</code></pre>
+      <div class="callout"><span class="lbl">MPI_Allreduce</span>Same, but <strong>every</strong> process gets the result (Reduce + Bcast in one call).</div>
+    </div>
+    <div>
+      <div class="center">
+        <svg viewBox="0 0 220 150" class="chart" style="max-width:240px">
+          <text x="110" y="12" text-anchor="middle" class="note">tree reduction (+)</text>
+          <g fill="#3b82f6"><rect x="10" y="20" width="34" height="20" rx="3"/><rect x="62" y="20" width="34" height="20" rx="3"/><rect x="120" y="20" width="34" height="20" rx="3"/><rect x="176" y="20" width="34" height="20" rx="3"/></g>
+          <g fill="#fff" class="lbl" text-anchor="middle"><text x="27" y="34">A0</text><text x="79" y="34">A1</text><text x="137" y="34">A2</text><text x="193" y="34">A3</text></g>
+          <g fill="#60a5fa"><rect x="36" y="70" width="34" height="20" rx="3"/><rect x="150" y="70" width="34" height="20" rx="3"/></g>
+          <g fill="#fff" class="tiny" text-anchor="middle"><text x="53" y="83">A0+A1</text><text x="167" y="83">A2+A3</text></g>
+          <rect x="88" y="118" width="44" height="20" rx="3" fill="#CC0000"/><text x="110" y="131" text-anchor="middle" fill="#fff" class="tiny">Σ A</text>
+          <g stroke="#16181d" stroke-width="1.2">
+            <line x1="27" y1="40" x2="53" y2="70"/><line x1="79" y1="40" x2="53" y2="70"/>
+            <line x1="137" y1="40" x2="167" y2="70"/><line x1="193" y1="40" x2="167" y2="70"/>
+            <line x1="53" y1="90" x2="110" y2="118"/><line x1="167" y1="90" x2="110" y2="118"/>
+          </g>
+        </svg>
+      </div>
+      <table style="font-size:.78em">
+        <tr><th>op</th><th>op</th><th>op</th></tr>
+        <tr><td><code class="inline">MPI_SUM</code></td><td><code class="inline">MPI_MAX</code></td><td><code class="inline">MPI_MIN</code></td></tr>
+        <tr><td><code class="inline">MPI_PROD</code></td><td><code class="inline">MPI_LAND</code></td><td><code class="inline">MPI_LOR</code></td></tr>
+      </table>
+      <p class="tiny muted">Predefined ops are associative &amp; commutative; user ops must be associative.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 3 — Review</h2>
+  <div class="qa">
+    <p class="q">1. How does a collective differ from point-to-point?</p>
+    <div class="fragment"><div class="a">Every process in the communicator must call it; there are <strong>no tags</strong>; and it is blocking (in MPI-1). One call replaces a hand-written tree of sends/recvs.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. When would you choose <code class="inline">MPI_Allreduce</code> over <code class="inline">MPI_Reduce</code>?</p>
+    <div class="fragment"><div class="a">When <strong>all</strong> processes need the combined result (e.g. a global residual norm each rank must test) — it fuses the reduce and the broadcast into one efficient call.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 4 — COMMUNICATORS, GROUPS & DATATYPES
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 4</div>
+  <div class="mod-title">Communicators, Groups &amp; Datatypes</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Explain how (group, context) form a communicator and why contexts beat tags</li>
+      <li>Create a sub-communicator with <code class="inline">MPI_Comm_split</code> / group calls</li>
+      <li>Build a derived datatype for non-contiguous data</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Communicators, Groups &amp; Contexts</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Communicator</span>A <strong>(group, context)</strong> pair. The group is an ordered set of processes; a process is identified by its <strong>rank</strong> in that group.</div>
+      <p class="small">Every message lives in a <strong>context</strong> and must be received in the same context. <code class="inline">MPI_COMM_WORLD</code> is the default communicator with all initial processes.</p>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Context vs. tag</span>Tags can collide between libraries and be defeated by wildcards. <strong>Contexts have no wildcards</strong> and are allocated by the system — so a library's messages never clash with yours.</div>
+      <div class="code-label">Make a sub-communicator</div>
+      <pre><code class="language-c" data-trim>
+MPI_Comm_split(MPI_COMM_WORLD,
+               color, key, &amp;newcomm);
+// or: Comm_group / Group_incl
+//     / Comm_create
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>MPI Datatypes</h2>
+  <div class="cols">
+    <div>
+      <p class="small">A message's data is a triple <code class="inline">(address, count, datatype)</code>. A datatype is recursively defined:</p>
+      <ul class="small">
+        <li><strong>predefined</strong> — <code class="inline">MPI_INT</code>, <code class="inline">MPI_DOUBLE</code>, …</li>
+        <li>a <strong>contiguous</strong> array of datatypes</li>
+        <li>a <strong>strided</strong> block (vector)</li>
+        <li>an <strong>indexed</strong> array of blocks</li>
+        <li>an arbitrary <strong>struct</strong> of datatypes</li>
+      </ul>
+    </div>
+    <div>
+      <table style="font-size:.76em">
+        <tr><th>MPI type</th><th>C type</th></tr>
+        <tr><td><code class="inline">MPI_CHAR</code></td><td>signed char</td></tr>
+        <tr><td class="hi"><code class="inline">MPI_INT</code></td><td>signed int</td></tr>
+        <tr><td><code class="inline">MPI_LONG</code></td><td>signed long int</td></tr>
+        <tr><td><code class="inline">MPI_FLOAT</code></td><td>float</td></tr>
+        <tr><td class="hi"><code class="inline">MPI_DOUBLE</code></td><td>double</td></tr>
+        <tr><td><code class="inline">MPI_BYTE</code></td><td>(raw bytes)</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Why &amp; How: Derived Datatypes</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Why bother</span>Describe an <strong>application-oriented memory layout</strong> directly — e.g. a column of a row-major matrix, or an array of <code class="inline">(int,float)</code> pairs.</div>
+      <ul class="small">
+        <li>Avoids manual pack/unpack and extra memory-to-memory copies</li>
+        <li>Enables hardware <strong>scatter/gather</strong> when available</li>
+        <li>Supports <strong>heterogeneous</strong> communication across machine types</li>
+      </ul>
+    </div>
+    <div>
+      <div class="code-label">A strided vector type</div>
+      <pre><code class="language-c" data-trim>
+MPI_Datatype col;
+// count blocks, 1 element each,
+// stride = N elements apart
+MPI_Type_vector(N, 1, N,
+                MPI_DOUBLE, &amp;col);
+MPI_Type_commit(&amp;col);
+
+MPI_Send(&amp;A[0][j], 1, col,
+         dest, 0, MPI_COMM_WORLD);
+MPI_Type_free(&amp;col);
+</code></pre>
+      <p class="tiny muted">Other builders: <code class="inline">MPI_Type_contiguous</code>, <code class="inline">_indexed</code>, <code class="inline">_create_struct</code>.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 4 — Review</h2>
+  <div class="qa">
+    <p class="q">1. Why are contexts safer than tags for library code?</p>
+    <div class="fragment"><div class="a">A context is allocated by the system and admits <strong>no wildcards</strong>, so a library's messages cannot be accidentally matched (or hijacked) by application code using the same tag values.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. What problem does a derived datatype solve?</p>
+    <div class="fragment"><div class="a">It lets you send <strong>non-contiguous</strong> data (a matrix column, a struct) in one call, letting MPI handle the gather/scatter and avoid manual packing and extra copies.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 5 — WORKED EXAMPLE: PARALLEL PI
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 5</div>
+  <div class="mod-title">Worked Example — Parallel PI</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Read a complete MPI program end-to-end</li>
+      <li>See how <code class="inline">Bcast</code> + <code class="inline">Reduce</code> replace hand-coded messaging</li>
+      <li>Recognize the SPMD "decompose → local compute → combine" pattern</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Computing PI by Integration</h2>
+  <div class="cols w-64">
+    <div>
+      <p class="small">PI is the integral of <span class="eq small">\( \frac{4}{1+x^2} \)</span> from 0 to 1. Approximate it with the midpoint rule over <code class="inline">n</code> intervals of width <code class="inline">h = 1/n</code>:</p>
+      <p class="eq small">\( \pi \approx h \sum_{i=1}^{n} \frac{4}{1 + ((i-0.5)h)^2} \)</p>
+      <div class="callout"><span class="lbl">Parallel plan</span><span class="small">Process 0 reads <code class="inline">n</code> and <strong>broadcasts</strong> it. Each rank sums a <strong>strided slice</strong> of the intervals. A <strong>reduction</strong> adds the partials.</span></div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 220 160" class="chart" style="max-width:240px">
+        <line x1="20" y1="130" x2="210" y2="130" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="20" y1="130" x2="20" y2="20" stroke="#16181d" stroke-width="1.5"/>
+        <path d="M20,40 Q115,60 200,128" fill="none" stroke="#CC0000" stroke-width="2"/>
+        <g fill="#93c5fd" stroke="#3b82f6" stroke-width="0.8" opacity="0.8">
+          <rect x="20" y="44" width="30" height="86"/><rect x="50" y="52" width="30" height="78"/>
+          <rect x="80" y="64" width="30" height="66"/><rect x="110" y="80" width="30" height="50"/>
+          <rect x="140" y="98" width="30" height="32"/><rect x="170" y="116" width="30" height="14"/>
+        </g>
+        <text x="115" y="150" text-anchor="middle" class="note">midpoint rectangles, width h</text>
+        <text x="10" y="30" class="note">4/(1+x²)</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Parallel PI in C — the Full Program</h2>
+  <div class="cols">
+    <div>
+      <pre><code class="language-c" data-trim>
+#include "mpi.h"
+#include &lt;math.h&gt;
+
+int main(int argc, char *argv[]) {
+  int n, myid, numprocs, i;
+  double PI25 = 3.141592653589793238462643;
+  double mypi, pi, h, sum, x;
+
+  MPI_Init(&amp;argc, &amp;argv);
+  MPI_Comm_size(MPI_COMM_WORLD, &amp;numprocs);
+  MPI_Comm_rank(MPI_COMM_WORLD, &amp;myid);
+
+  if (myid == 0) {
+    printf("Enter # intervals: ");
+    scanf("%d", &amp;n);
+  }
+  MPI_Bcast(&amp;n, 1, MPI_INT, 0,
+            MPI_COMM_WORLD);
+</code></pre>
+    </div>
+    <div>
+      <pre><code class="language-c" data-trim>
+  h   = 1.0 / (double) n;
+  sum = 0.0;
+  for (i = myid+1; i &lt;= n; i += numprocs) {
+    x = h * ((double)i - 0.5);
+    sum += 4.0 / (1.0 + x*x);
+  }
+  mypi = h * sum;
+
+  MPI_Reduce(&amp;mypi, &amp;pi, 1, MPI_DOUBLE,
+             MPI_SUM, 0, MPI_COMM_WORLD);
+
+  if (myid == 0)
+    printf("pi ~ %.16f, error %.16f\n",
+           pi, fabs(pi - PI25));
+
+  MPI_Finalize();
+  return 0;
+}
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Dissecting the PI Example</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">1 · Distribute</span><span class="small">Only rank 0 reads <code class="inline">n</code>; <code class="inline">MPI_Bcast</code> hands it to everyone — no per-rank send/recv.</span></div>
+    <div class="callout"><span class="lbl">2 · Decompose</span><span class="small">The loop <code class="inline">i = myid+1; i &lt;= n; i += numprocs</code> gives each rank a <strong>strided</strong> (cyclic) slice — automatic load balance.</span></div>
+    <div class="callout"><span class="lbl">3 · Combine</span><span class="small"><code class="inline">MPI_Reduce(MPI_SUM)</code> adds every <code class="inline">mypi</code> into <code class="inline">pi</code> on rank 0.</span></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">The MPI pattern</span>
+    Almost every MPI program is this shape: <strong>broadcast inputs → compute on a local slice → reduce partial results</strong>. Master with point-to-point only when the structure is irregular.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>MPI is Simple — the Core Six</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Many parallel programs need only these six calls, only two of which are non-trivial:</p>
+      <table style="font-size:.84em">
+        <tr><td class="hi"><code class="inline">MPI_Init</code></td><td>start up</td></tr>
+        <tr><td class="hi"><code class="inline">MPI_Finalize</code></td><td>shut down</td></tr>
+        <tr><td><code class="inline">MPI_Comm_size</code></td><td>how many?</td></tr>
+        <tr><td><code class="inline">MPI_Comm_rank</code></td><td>which am I?</td></tr>
+        <tr><td><code class="inline">MPI_Send</code></td><td>send a message</td></tr>
+        <tr><td><code class="inline">MPI_Recv</code></td><td>receive a message</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Collective variant</span>Swap <code class="inline">Send</code>/<code class="inline">Recv</code> for <code class="inline">MPI_Bcast</code> + <code class="inline">MPI_Reduce</code> and you can write the PI program — and many others — with no point-to-point at all.</div>
+      <p class="tiny muted">Everything beyond the core six — modes, derived types, communicators, one-sided RMA, sessions — is refinement for performance, structure, or irregular communication.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== BIG PICTURE ===== -->
+<section data-background-color="#ffffff">
+  <h2>MPI — Big Picture</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Model</span>Separate address spaces; cooperate by explicit messages. SPMD: one program, branch on rank.</div>
+    <div class="callout"><span class="lbl">Point-to-point</span><code class="inline">Send</code>/<code class="inline">Recv</code> + tags &amp; status; go <strong>nonblocking</strong> to dodge deadlock and hide latency.</div>
+    <div class="callout"><span class="lbl">Collectives</span><code class="inline">Bcast</code>, <code class="inline">Scatter</code>/<code class="inline">Gather</code>, <code class="inline">Reduce</code>/<code class="inline">Allreduce</code>, <code class="inline">Barrier</code> — all-process, no tags.</div>
+  </div>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Structure</span>Communicators (group + context) isolate libraries; derived datatypes describe non-contiguous data.</div>
+    <div class="callout"><span class="lbl">Beyond MPI-1</span>One-sided RMA (<code class="inline">Put</code>/<code class="inline">Get</code>), parallel I/O, dynamic processes, nonblocking collectives, sessions.</div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">One sentence</span>
+    <strong>Decompose the data across ranks, broadcast the inputs, compute on each local slice, and reduce the partials — reaching for point-to-point only when the structure is irregular.</strong></div>
+</section>
+
+<!-- ===== REFERENCES ===== -->
+<section data-background-color="#f6f8fb">
+  <h2>References</h2>
+  <div class="callout"><span class="lbl">Course material</span>
+    Adapted from the CSC 548 <em>T2 — Message Passing (Using MPI)</em> notes (Rauber &amp; Rünger Ch. 5; Foster Ch. 8) and the standard MPI tutorials.</div>
+  <ul class="small">
+    <li>T. Rauber &amp; G. Rünger, <em>Parallel Programming: For Multicore and Cluster Systems</em>, 2nd ed., Springer, 2013.</li>
+    <li>W. Gropp, E. Lusk &amp; A. Skjellum, <em>Using MPI</em>, MIT Press.</li>
+    <li>I. Foster, <em>Designing and Building Parallel Programs</em>, Addison-Wesley, 1995.</li>
+    <li>MPI Forum standard — <a href="https://www.mpi-forum.org">mpi-forum.org</a>; MPICH — <a href="https://www.mcs.anl.gov/mpi">mcs.anl.gov/mpi</a>.</li>
+    <li><strong>CSC 548</strong>, J. Li.</li>
+  </ul>
+</section>
+
+</div>
+
+<!-- deck-level fixed footer -->
+<div class="deck-footer"><span class="tag">CSC 548</span><span class="sep">·</span>Message Passing (MPI)</div>
+</div>
+
+<!-- reveal.js core + plugins -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/math/math.js"></script>
+<script>
+  Reveal.initialize({
+    width: 1280, height: 720, margin: 0.04,
+    minScale: 0.2, maxScale: 1.6,
+    center: false,
+    hash: true, slideNumber: 'c/t', history: true,
+    transition: 'slide', transitionSpeed: 'fast',
+    plugins: [ RevealNotes, RevealHighlight, RevealMath.KaTeX ],
+    katex: { delimiters: [
+      {left:'\\(', right:'\\)', display:false},
+      {left:'$$', right:'$$', display:true}
+    ]},
+  });
+</script>
+<script>
+/* Auto-fit: shrink any slide whose content would exceed 720px. */
+(function(){
+  function fit(s){ if(!s) return;
+    s.style.setProperty('--nc-fit','1');
+    var h=s.scrollHeight;
+    if(h>724){ var k=Math.max(0.6, Math.min(1, 720/h));
+      s.style.setProperty('--nc-fit', k.toFixed(3)); }
+  }
+  if(window.Reveal){
+    Reveal.on('ready', function(e){ fit(e.currentSlide); });
+    Reveal.on('slidechanged', function(e){ fit(e.currentSlide); });
+    try{ if(Reveal.isReady && Reveal.isReady()) fit(Reveal.getCurrentSlide()); }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>

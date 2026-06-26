@@ -43,22 +43,22 @@
 
 <main>
   <div class="grid">
-    <a class="card todo" href="intro.html"><div class="num">TOPIC 0</div><h3>Introduction &amp; Logistics</h3><p>Why parallelism, course overview, and the parallel-systems landscape.</p><span class="badge soon">soon</span></a>
-    <a class="card todo" href="performance.html"><div class="num">TOPIC 2</div><h3>Performance Analysis</h3><p>Speedup, efficiency, scalability, Amdahl's &amp; Gustafson's laws, profiling &amp; tracing.</p><span class="badge soon">soon</span></a>
-    <a class="card todo" href="mpi.html"><div class="num">TOPIC 3</div><h3>Message Passing (MPI)</h3><p>Point-to-point &amp; collective communication, communicators, derived datatypes.</p><span class="badge soon">soon</span></a>
+    <a class="card" href="intro.html"><div class="num">TOPIC 0</div><h3>Introduction &amp; Logistics</h3><p>Why parallelism, course overview, and the parallel-systems landscape.</p><span class="badge">✓ new</span></a>
+    <a class="card" href="performance.html"><div class="num">TOPIC 2</div><h3>Performance Analysis</h3><p>Speedup, efficiency, scalability, Amdahl's &amp; Gustafson's laws, profiling &amp; tracing.</p><span class="badge">✓ new</span></a>
+    <a class="card" href="mpi.html"><div class="num">TOPIC 3</div><h3>Message Passing (MPI)</h3><p>Point-to-point &amp; collective communication, communicators, derived datatypes.</p><span class="badge">✓ new</span></a>
     <a class="card" href="openmp.html"><div class="num">TOPIC 4</div><h3>Shared-Memory Programming (OpenMP)</h3><p>SMPs &amp; threads, pthreads, fork-join, work-sharing &amp; schedules, data environment, reduction, sync constructs, tasks &amp; SIMD — expanded for a systems course.</p><span class="badge">✓ new</span></a>
-    <a class="card todo" href="simd.html"><div class="num">TOPIC 5</div><h3>Vector Programming (SIMD)</h3><p>Data-level parallelism, intrinsics, vectorization &amp; optimization.</p><span class="badge soon">soon</span></a>
+    <a class="card" href="simd.html"><div class="num">TOPIC 5</div><h3>Vector Programming (SIMD)</h3><p>Data-level parallelism, intrinsics, vectorization &amp; optimization.</p><span class="badge">✓ new</span></a>
 
     <a class="card" href="gpu1.html"><div class="num" style="color:#0d9488">TOPIC 6 · GPU SESSION 1</div><h3>The CUDA Programming Model</h3><p>Host/device, kernels, the grid/block/thread hierarchy &amp; indexing, memory transfers, naive matmul.</p><span class="badge reuse">✓ reused from 506</span></a>
     <a class="card" href="gpu2.html"><div class="num" style="color:#0d9488">TOPIC 6 · GPU SESSION 2</div><h3>Memory, Sync &amp; Tiling</h3><p>Function qualifiers, warps &amp; divergence, the memory hierarchy, <code>__syncthreads</code>, tiled (shared-memory) matmul.</p><span class="badge reuse">✓ reused + trimmed</span></a>
     <a class="card" href="gpu3.html"><div class="num" style="color:#0d9488">TOPIC 6 · GPU SESSION 3</div><h3>Performance Optimization</h3><p>Reduction, warp divergence, memory coalescing, bank conflicts, occupancy, unrolling &amp; granularity.</p><span class="badge reuse">✓ reused from 506</span></a>
 
-    <a class="card todo" href="cache-memory.html"><div class="num">TOPIC 7</div><h3>Cache &amp; Memory Systems</h3><p>Memory hierarchy, locality &amp; coherence — a brief, programmer-oriented treatment.</p><span class="badge soon">soon</span></a>
+    <a class="card" href="cache-memory.html"><div class="num">TOPIC 7</div><h3>Cache &amp; Memory Systems</h3><p>Memory hierarchy, locality &amp; coherence — a brief, programmer-oriented treatment.</p><span class="badge">✓ new</span></a>
     <a class="card" href="interconnection.html"><div class="num">TOPIC 7</div><h3>Interconnection Networks</h3><p>Topology, flow control, routing, deadlock avoidance &amp; router microarchitecture.</p><span class="badge reuse">✓ reused from 506</span></a>
 
-    <a class="card todo" href="bigdata.html"><div class="num">TOPIC 8</div><h3>MapReduce &amp; Spark</h3><p>The MapReduce model, Hadoop, and Spark for large-scale data-parallel processing.</p><span class="badge soon">soon</span></a>
-    <a class="card todo" href="io.html"><div class="num">TOPIC 8</div><h3>Parallel I/O</h3><p>Parallel file systems and MPI-IO for high-throughput data movement.</p><span class="badge soon">soon</span></a>
-    <a class="card todo" href="nn.html"><div class="num">TOPIC 9</div><h3>Parallel Deep Learning</h3><p>Data / model / pipeline parallelism, 3D parallelism, and model compression (pruning, quantization).</p><span class="badge soon">soon</span></a>
+    <a class="card" href="bigdata.html"><div class="num">TOPIC 8</div><h3>MapReduce &amp; Spark</h3><p>The MapReduce model, Hadoop, and Spark for large-scale data-parallel processing.</p><span class="badge">✓ new</span></a>
+    <a class="card" href="io.html"><div class="num">TOPIC 8</div><h3>Parallel I/O</h3><p>Parallel file systems and MPI-IO for high-throughput data movement.</p><span class="badge">✓ new</span></a>
+    <a class="card" href="nn.html"><div class="num">TOPIC 9</div><h3>Parallel Deep Learning</h3><p>Data / model / pipeline parallelism, 3D parallelism, and model compression (pruning, quantization).</p><span class="badge">✓ new</span></a>
 
     <a class="card" href="tenstorrent.html"><div class="num" style="color:#7c3aed">ADVANCED</div><h3>Tenstorrent &amp; TT-Metalium</h3><p>Tensix architecture (NoC, RISC-V, circular buffers, tiles) and two matrix-multiply labs: single- and multi-core.</p><span class="badge reuse">✓ reused from 506</span></a>
   </div>

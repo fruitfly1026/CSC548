@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSC 548 · Cache &amp; Memory Systems</title>
+
+<!-- reveal.js core (CDN) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/theme.css?v=11">
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================ TITLE ============================ -->
+<section class="title-slide" data-background-color="#ffffff">
+  <div class="eyebrow">CSC 548 / ECE 591 · Parallel Systems</div>
+  <h1>Cache &amp; Memory Systems</h1>
+  <div class="sub">The memory hierarchy from a <strong>programmer's</strong> view — locality, cache basics, false sharing, NUMA, and how to lay out &amp; tile data for speed</div>
+  <aside class="notes">
+    In CSC 548 we treat caches lightly and from a programmer's perspective — the deep architecture is
+    CSC 506's job. The goal here is the handful of things a parallel programmer <em>must</em> know:
+    why memory is the bottleneck, how locality interacts with cache lines, what false sharing and NUMA
+    do to your multicore code, and the few code transformations (tiling, data layout, padding) that
+    recover most of the lost performance.
+  </aside>
+</section>
+
+<!-- Agenda -->
+<section data-background-color="#ffffff">
+  <h2>Agenda</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">1 · Hierarchy &amp; Locality</span><span class="small">The memory wall, the latency/bandwidth gap, temporal &amp; spatial locality.</span></div>
+    <div class="callout"><span class="lbl">2 · Cache Basics</span><span class="small">Lines, associativity, the 3 C's, AMAT — just enough.</span></div>
+    <div class="callout"><span class="lbl">3 · Multicore Concerns</span><span class="small">Coherence, <strong>false sharing</strong>, NUMA &amp; first-touch.</span></div>
+    <div class="callout"><span class="lbl">4 · Programmer Takeaways</span><span class="small">Tiling, AoS vs SoA, padding — write cache-friendly code.</span></div>
+    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">You can't change the hardware, but how you <em>access</em> memory often decides your speed more than your FLOPs.</span></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 1 — HIERARCHY & LOCALITY
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 1</div>
+  <div class="mod-title">The Memory Hierarchy &amp; Locality</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Explain the "memory wall" and why memory — not arithmetic — is usually the bottleneck</li>
+      <li>Read a hierarchy by speed, size &amp; cost, and place data accordingly</li>
+      <li>Define temporal vs. spatial locality and recognize them in code</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The Memory Wall</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">Run time =</span>cycles <em>computing</em> + cycles <em>waiting for memory</em>.</div>
+      <p class="small">For decades CPU speed grew ~50%/yr while DRAM speed crawled. The gap — the <strong>memory wall</strong> — means a modern core can issue dozens of instructions in the time one DRAM access takes.</p>
+      <div class="callout takeaway"><span class="lbl">Consequence</span>Memory access, not the floating-point unit, is the bottleneck. A cache is just a fast level in the hierarchy that hides this latency.</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 320 200" class="chart" style="max-width:340px">
+        <line x1="40" y1="170" x2="310" y2="170" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="40" y1="170" x2="40" y2="20" stroke="#16181d" stroke-width="1.5"/>
+        <text x="175" y="192" text-anchor="middle" class="note">year →</text>
+        <text x="14" y="95" text-anchor="middle" class="note" transform="rotate(-90 14 95)">performance (log)</text>
+        <path d="M40,150 C120,120 200,70 300,30" fill="none" stroke="#CC0000" stroke-width="2.5"/>
+        <path d="M40,158 C120,152 200,146 300,138" fill="none" stroke="#3b82f6" stroke-width="2.5"/>
+        <text x="250" y="36" class="lbl" fill="#CC0000">CPU</text>
+        <text x="250" y="132" class="lbl" fill="#3b82f6">DRAM</text>
+        <text x="175" y="90" text-anchor="middle" class="note" fill="#CC0000">the gap</text>
+      </svg>
+      <div class="src">CPU vs. memory speed over time.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The Hierarchy — Speed vs. Size</h2>
+  <div class="cols w-64">
+    <div>
+      <p class="small">Each level trades capacity for latency: <strong>smaller is faster, slower is cheaper</strong>. Data you reuse should live as high as possible.</p>
+      <table style="font-size:.8em">
+        <tr><th>Level</th><th>Typical latency</th><th>Size</th></tr>
+        <tr><td class="hi">Registers</td><td>~1 cycle</td><td>100s of B</td></tr>
+        <tr><td class="hi">L1 cache</td><td>~4 cycles</td><td>tens of KB</td></tr>
+        <tr><td>L2 cache</td><td>~10–15 cyc</td><td>100s of KB</td></tr>
+        <tr><td>L3 cache</td><td>~40 cyc</td><td>MBs (shared)</td></tr>
+        <tr><td>Main mem (DRAM)</td><td>~200+ cyc</td><td>GBs</td></tr>
+        <tr><td>SSD / disk</td><td>10<sup>4</sup>–10<sup>6</sup> cyc</td><td>TBs</td></tr>
+      </table>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 220 210" class="chart" style="max-width:240px">
+        <polygon points="110,10 130,55 90,55" fill="#CC0000"/><text x="110" y="46" text-anchor="middle" fill="#fff" class="lbl">Reg</text>
+        <polygon points="90,55 130,55 145,100 75,100" fill="#3b82f6"/><text x="110" y="86" text-anchor="middle" fill="#fff" class="lbl">L1 / L2</text>
+        <polygon points="75,100 145,100 165,150 55,150" fill="#60a5fa"/><text x="110" y="132" text-anchor="middle" fill="#fff" class="lbl">L3 cache</text>
+        <polygon points="55,150 165,150 185,200 35,200" fill="#cbd5e1"/><text x="110" y="182" text-anchor="middle" class="lbl">DRAM / disk</text>
+        <text x="200" y="30" class="note">fast</text>
+        <text x="195" y="198" class="note">big</text>
+      </svg>
+      <div class="src">Higher = faster &amp; smaller.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Locality — Why Caches Work</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Temporal</span>An item used now is likely used again <strong>soon</strong> → keep it in cache and reuse it.</div>
+      <div class="callout"><span class="lbl">Spatial</span>Using an item makes its <strong>neighbors</strong> likely next → memory moves in <em>cache lines</em>, not single words.</div>
+      <p class="small">Programs touch a small subset of memory in a regular way (the "90/10 rule": ~90% of time in ~10% of code). Hardware bets on locality; your job is to <em>give it</em> locality.</p>
+    </div>
+    <div>
+      <div class="code-label">Spatial: row-major sweep is friendly</div>
+      <pre><code class="language-c" data-trim>
+for (i = 0; i &lt; N; i++)
+  for (j = 0; j &lt; N; j++)
+    a[i][j] *= 2;   // contiguous in memory
+</code></pre>
+      <div class="code-label">Temporal: reuse <code class="inline">x</code> while it's hot</div>
+      <pre><code class="language-c" data-trim>
+for (i = 0; i &lt; N; i++)
+  y[i] = x * w[i] + b;  // x reused every iter
+</code></pre>
+      <p class="tiny muted">A cache line is typically 64 bytes (32–128). One miss pulls in a whole line.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 2 — CACHE BASICS
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 2</div>
+  <div class="mod-title">Cache Basics — Just Enough</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Describe a cache line and direct-mapped vs. set-associative placement</li>
+      <li>Classify a miss as compulsory, capacity, or conflict (the 3 C's)</li>
+      <li>Use AMAT to reason about whether a miss rate matters</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Lines &amp; Associativity</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Cache moves data in fixed <strong>lines</strong> (e.g., 64 B). Where can a memory line live in the cache?</p>
+      <div class="callout"><span class="lbl">Direct-mapped</span>Each address has exactly <strong>one</strong> slot (<code class="inline">addr mod size</code>). Cheap, but two hot addresses mapping to the same slot evict each other.</div>
+      <div class="callout"><span class="lbl">N-way set-associative</span>Each set has <strong>N</strong> slots; the line may go in any of them. Fewer conflicts; a replacement policy (LRU / random) picks the victim.</div>
+      <p class="tiny muted">Fully associative = "any slot" — flexible but costly; rare for large caches.</p>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 280 200" class="chart" style="max-width:300px">
+        <text x="70" y="16" text-anchor="middle" class="note">direct-mapped</text>
+        <g>
+          <rect x="40" y="26" width="60" height="20" fill="#e5e7eb" stroke="#cbd5e1"/>
+          <rect x="40" y="46" width="60" height="20" fill="#fca5a5" stroke="#cbd5e1"/>
+          <rect x="40" y="66" width="60" height="20" fill="#e5e7eb" stroke="#cbd5e1"/>
+          <rect x="40" y="86" width="60" height="20" fill="#e5e7eb" stroke="#cbd5e1"/>
+        </g>
+        <text x="70" y="60" text-anchor="middle" class="lbl">1 slot</text>
+        <text x="210" y="16" text-anchor="middle" class="note">2-way set assoc.</text>
+        <g>
+          <rect x="160" y="26" width="40" height="20" fill="#93c5fd" stroke="#cbd5e1"/>
+          <rect x="200" y="26" width="40" height="20" fill="#bfdbfe" stroke="#cbd5e1"/>
+          <rect x="160" y="46" width="40" height="20" fill="#86efac" stroke="#cbd5e1"/>
+          <rect x="200" y="46" width="40" height="20" fill="#bbf7d0" stroke="#cbd5e1"/>
+          <rect x="160" y="66" width="40" height="20" fill="#e5e7eb" stroke="#cbd5e1"/>
+          <rect x="200" y="66" width="40" height="20" fill="#e5e7eb" stroke="#cbd5e1"/>
+        </g>
+        <text x="200" y="120" text-anchor="middle" class="note">a "set" = 2 slots</text>
+      </svg>
+      <div class="src">More ways → fewer conflict misses.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The 3 C's of Misses</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Compulsory</span><span class="small">First-ever touch of a line — "cold miss." Unavoidable; prefetching can hide it.</span></div>
+    <div class="callout"><span class="lbl">Capacity</span><span class="small">Working set &gt; cache size — lines get evicted before reuse. Fix by <strong>blocking/tiling</strong>.</span></div>
+    <div class="callout"><span class="lbl">Conflict</span><span class="small">Too many hot lines map to the same set, even though the cache isn't full. Fix by <strong>padding</strong> / more associativity.</span></div>
+  </div>
+  <div class="callout warn"><span class="lbl">Why a programmer cares</span>
+    You can't remove compulsory misses, but <strong>capacity</strong> and <strong>conflict</strong> misses are largely under your control — they're created (or avoided) by how you size, lay out, and traverse your data.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>AMAT — Does a Miss Rate Matter?</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Average Memory Access Time</span>
+        <span class="eq small">\( \text{AMAT} = t_{hit} + \text{(miss rate)} \times t_{penalty} \)</span></div>
+      <p class="small">The miss <em>penalty</em> dominates: even a small miss rate hurts when the penalty is 100s of cycles.</p>
+      <div class="callout takeaway"><span class="lbl">Lesson</span>Reducing the miss <strong>rate</strong> (via locality) pays off precisely because the miss <strong>penalty</strong> is so large.</div>
+    </div>
+    <div>
+      <div class="code-label">Worked example</div>
+      <pre><code class="language-c" data-trim>
+t_hit     = 1 cycle
+miss_rate = 5% = 0.05
+penalty   = 200 cycles
+
+AMAT = 1 + 0.05 * 200
+     = 1 + 10 = 11 cycles
+</code></pre>
+      <p class="tiny muted">A 5% miss rate turns a 1-cycle access into 11 cycles on average — an 11x slowdown driven entirely by misses.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Modules 1–2 — Review</h2>
+  <div class="qa">
+    <p class="q">1. You stride through a big array column-by-column in a row-major (C) layout and it's slow. Which "C" is biting you, and why?</p>
+    <div class="fragment"><div class="a">Mostly <strong>capacity / poor spatial locality</strong>: each step jumps a full row, so every access touches a new cache line and reuses almost none of it before eviction. Traverse in row-major (contiguous) order instead.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. With <code class="inline">t_hit=1</code>, penalty 100 cycles, why does cutting miss rate from 4% to 1% matter so much?</p>
+    <div class="fragment"><div class="a">AMAT goes 1+0.04·100 = <strong>5</strong> → 1+0.01·100 = <strong>2</strong> cycles — a 2.5x speedup on memory, because the penalty multiplies the rate.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 3 — MULTICORE CONCERNS
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 3</div>
+  <div class="mod-title">Multicore: Coherence, False Sharing &amp; NUMA</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>State at a high level what cache coherence guarantees (and costs)</li>
+      <li>Diagnose <strong>false sharing</strong> and fix it</li>
+      <li>Apply the <strong>first-touch</strong> rule on a NUMA machine</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Cache Coherence (High Level)</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Each core has private caches but they share one address space. <strong>Coherence</strong> hardware keeps everyone's view consistent — at the granularity of a <strong>cache line</strong>.</p>
+      <div class="callout"><span class="lbl">MESI, informally</span>Each line is <strong>M</strong>odified, <strong>E</strong>xclusive, <strong>S</strong>hared, or <strong>I</strong>nvalid. A write must gain exclusive ownership, <em>invalidating</em> copies in other cores' caches.</div>
+      <div class="callout warn"><span class="lbl">The cost</span>Cross-core invalidation traffic. Frequent writes to lines that other cores hold = an expensive coherence "ping-pong."</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 260 180" class="chart" style="max-width:280px">
+        <rect x="20" y="20" width="90" height="30" rx="4" fill="#3b82f6"/><text x="65" y="40" text-anchor="middle" fill="#fff" class="lbl">Core A</text>
+        <rect x="150" y="20" width="90" height="30" rx="4" fill="#3b82f6"/><text x="195" y="40" text-anchor="middle" fill="#fff" class="lbl">Core B</text>
+        <rect x="20" y="55" width="90" height="24" rx="4" fill="#fca5a5"/><text x="65" y="71" text-anchor="middle" class="lbl">line X: M</text>
+        <rect x="150" y="55" width="90" height="24" rx="4" fill="#cbd5e1"/><text x="195" y="71" text-anchor="middle" class="lbl">line X: I</text>
+        <line x1="110" y1="67" x2="150" y2="67" stroke="#CC0000" stroke-width="2"/>
+        <text x="130" y="60" text-anchor="middle" class="note" fill="#CC0000">invalidate</text>
+        <rect x="40" y="130" width="180" height="28" rx="5" fill="#CC0000"/><text x="130" y="149" text-anchor="middle" fill="#fff" class="lbl">Shared memory / bus</text>
+        <line x1="65" y1="79" x2="65" y2="130" stroke="#16181d" stroke-width="1"/>
+        <line x1="195" y1="79" x2="195" y2="130" stroke="#16181d" stroke-width="1"/>
+      </svg>
+      <div class="src">A's write invalidates B's copy.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>False Sharing — the Silent Killer</h2>
+  <div class="cols">
+    <div>
+      <div class="callout warn"><span class="lbl">What</span>Two threads write <em>different</em> variables that happen to sit on the <strong>same cache line</strong>. No logical sharing — but the line ping-pongs between cores anyway.</div>
+      <div class="code-label">BAD: per-thread counters packed tight</div>
+      <pre><code class="language-c" data-trim>
+long sum[NUM_THREADS];   // adjacent -&gt; 1 line
+#pragma omp parallel
+{
+  int id = omp_get_thread_num();
+  for (i = id; i &lt; N; i += NUM_THREADS)
+    sum[id] += a[i];     // each write
+}                        // invalidates others
+</code></pre>
+      <p class="tiny muted">8-byte longs: 8 of them fit in one 64-byte line, so all threads fight over it.</p>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 260 200" class="chart" style="max-width:280px">
+        <text x="130" y="16" text-anchor="middle" class="note">one 64-byte line</text>
+        <g>
+          <rect x="20" y="26" width="28" height="26" fill="#fca5a5" stroke="#fff"/><text x="34" y="44" text-anchor="middle" class="tiny">s0</text>
+          <rect x="48" y="26" width="28" height="26" fill="#fdba74" stroke="#fff"/><text x="62" y="44" text-anchor="middle" class="tiny">s1</text>
+          <rect x="76" y="26" width="28" height="26" fill="#fde68a" stroke="#fff"/><text x="90" y="44" text-anchor="middle" class="tiny">s2</text>
+          <rect x="104" y="26" width="28" height="26" fill="#86efac" stroke="#fff"/><text x="118" y="44" text-anchor="middle" class="tiny">s3</text>
+          <rect x="132" y="26" width="28" height="26" fill="#6ee7b7" stroke="#fff"/><text x="146" y="44" text-anchor="middle" class="tiny">s4</text>
+          <rect x="160" y="26" width="28" height="26" fill="#93c5fd" stroke="#fff"/><text x="174" y="44" text-anchor="middle" class="tiny">s5</text>
+          <rect x="188" y="26" width="28" height="26" fill="#a5b4fc" stroke="#fff"/><text x="202" y="44" text-anchor="middle" class="tiny">s6</text>
+          <rect x="216" y="26" width="28" height="26" fill="#c4b5fd" stroke="#fff"/><text x="230" y="44" text-anchor="middle" class="tiny">s7</text>
+        </g>
+        <text x="130" y="80" text-anchor="middle" class="note" fill="#CC0000">every write invalidates the whole line</text>
+        <g stroke="#CC0000" stroke-width="2" fill="none">
+          <path d="M60,110 C90,135 170,135 200,110"/>
+          <path d="M200,140 C170,165 90,165 60,140"/>
+          <polygon points="60,110 52,118 68,120" fill="#CC0000" stroke="none"/>
+          <polygon points="200,140 208,132 192,130" fill="#CC0000" stroke="none"/>
+        </g>
+        <text x="130" y="190" text-anchor="middle" class="note">cores ping-pong the line</text>
+      </svg>
+      <div class="src">Logically private, physically shared.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Fixing False Sharing</h2>
+  <div class="cols">
+    <div>
+      <div class="callout takeaway"><span class="lbl">Best fix</span>Don't share the line at all — accumulate in a <strong>private scalar</strong> (or use a <code class="inline">reduction</code>) and write the shared result <em>once</em>.</div>
+      <pre><code class="language-c" data-trim>
+double sum = 0.0;
+#pragma omp parallel for reduction(+:sum)
+for (i = 0; i &lt; N; i++)
+    sum += a[i];   // no shared line in hot loop
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Alt: pad / align</span>Force each thread's datum onto its own line.</div>
+      <pre><code class="language-c" data-trim>
+struct {
+  long val;
+  char pad[64 - sizeof(long)];  // fill line
+} counter[NUM_THREADS];
+
+// or: alignas(64), or _Alignas(64)
+</code></pre>
+      <p class="tiny muted">Padding wastes a little memory to buy back parallel scalability. Prefer the private/reduction fix when you can.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>NUMA &amp; the First-Touch Rule</h2>
+  <div class="cols w-64">
+    <div>
+      <p class="small">On a multi-socket server, memory is <strong>NUMA</strong> — Non-Uniform Memory Access. Each socket owns local DRAM; reaching another socket's memory is slower.</p>
+      <div class="callout"><span class="lbl">First-touch policy</span>Linux maps a page to the DRAM of the core that <strong>first writes</strong> it — not where it was <code class="inline">malloc</code>'d.</div>
+      <div class="callout warn"><span class="lbl">Pitfall</span>Initialize a big array serially and <em>every</em> page lands on one socket. Then all threads hammer that socket's memory remotely.</div>
+    </div>
+    <div>
+      <div class="code-label">Parallel first-touch init</div>
+      <pre><code class="language-c" data-trim>
+// touch with the SAME loop that
+// will later compute -&gt; pages land local
+#pragma omp parallel for
+for (i = 0; i &lt; N; i++)
+    a[i] = 0.0;        // first-touch here
+
+#pragma omp parallel for
+for (i = 0; i &lt; N; i++)
+    a[i] = f(i);       // now local access
+</code></pre>
+      <p class="tiny muted">Rule of thumb: initialize data with the same parallel pattern you'll use to process it.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 3 — Review</h2>
+  <div class="qa">
+    <p class="q">1. Your OpenMP loop scales poorly; <code class="inline">perf</code> shows huge coherence traffic on a small per-thread array. What is it, and the cleanest fix?</p>
+    <div class="fragment"><div class="a"><strong>False sharing</strong> — the per-thread entries share a cache line. Cleanest fix: accumulate in a private scalar / <code class="inline">reduction</code>; alternatively pad each entry to its own 64-byte line.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. Why can a serial <code class="inline">for(i) a[i]=0</code> init hurt NUMA performance?</p>
+    <div class="fragment"><div class="a">First-touch places every page on the <strong>one</strong> socket that ran the init. Later parallel work then makes remote accesses. Initialize in parallel so pages land near the threads that use them.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 4 — PROGRAMMER TAKEAWAYS
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 4</div>
+  <div class="mod-title">Programmer Takeaways</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Block/tile a loop nest to turn capacity misses into reuse</li>
+      <li>Choose AoS vs. SoA for the access pattern at hand</li>
+      <li>Combine layout, tiling &amp; padding into a cache-friendly habit</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Blocking / Tiling for Locality</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">Naïve matmul — streams B repeatedly</div>
+      <pre><code class="language-c" data-trim>
+for (i = 0; i &lt; N; i++)
+ for (j = 0; j &lt; N; j++)
+  for (k = 0; k &lt; N; k++)
+   C[i][j] += A[i][k]*B[k][j];
+</code></pre>
+      <p class="tiny muted">Re-reads all of B for each row of A → ~2N<sup>3</sup>+N<sup>2</sup> traffic; little reuse once data &gt; cache.</p>
+    </div>
+    <div>
+      <div class="code-label">Tiled — operate on B×B subblocks</div>
+      <pre><code class="language-c" data-trim>
+for (jj=0; jj&lt;N; jj+=B)
+ for (kk=0; kk&lt;N; kk+=B)
+  for (i=0; i&lt;N; i++)
+   for (j=jj; j&lt;min(jj+B,N); j++)
+    for (k=kk; k&lt;min(kk+B,N); k++)
+     C[i][j] += A[i][k]*B[k][j];
+</code></pre>
+      <p class="tiny muted">Capacity misses drop ~2N<sup>3</sup> → ~N<sup>3</sup>/B. Pick B so the working blocks fit in cache (≈ 80–90% of capacity).</p>
+    </div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Idea</span>Reuse a small block many times while it's hot, instead of sweeping whole rows/columns and evicting everything. This is what optimized BLAS (e.g., ATLAS) does for you — use the library when one exists.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Data Layout — AoS vs. SoA</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">Array of Structs (AoS)</div>
+      <pre><code class="language-c" data-trim>
+struct P { float x, y, z; int id; };
+struct P pts[N];
+
+for (i=0;i&lt;N;i++) pts[i].x += dx; // strided
+</code></pre>
+      <p class="tiny muted">Touching only <code class="inline">x</code> drags <code class="inline">y,z,id</code> into the line too → wasted bandwidth, poor for SIMD.</p>
+    </div>
+    <div>
+      <div class="code-label">Struct of Arrays (SoA)</div>
+      <pre><code class="language-c" data-trim>
+struct Pts {
+  float x[N], y[N], z[N]; int id[N];
+};
+struct Pts pts;
+
+for (i=0;i&lt;N;i++) pts.x[i] += dx; // packed
+</code></pre>
+      <p class="tiny muted">All <code class="inline">x</code> values are contiguous → full line utilization, vectorizes cleanly.</p>
+    </div>
+  </div>
+  <div class="callout"><span class="lbl">Rule</span>Lay data out to match the <strong>access pattern</strong>. Sweep one field across all elements → SoA. Touch all fields of one element together → AoS. (Related: <em>merging arrays</em> into one struct improves spatial locality when fields are used together.)</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Padding to Avoid Conflicts &amp; Sharing</h2>
+  <div class="cols">
+    <div>
+      <div class="callout warn"><span class="lbl">Conflict by power-of-two</span>Equal-sized arrays whose elements map to the <strong>same set</strong> evict each other every iteration.</div>
+      <pre><code class="language-c" data-trim>
+#define DIM (1024*1024)
+float a[DIM], b[DIM];
+// a[i] &amp; b[i] may collide in a
+// direct-mapped / low-assoc cache
+</code></pre>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Fix: pad between</span>Offset one array so the pair no longer aliases the same set.</div>
+      <pre><code class="language-c" data-trim>
+float a[DIM];
+char  pad[128];   // &gt; one cache line
+float b[DIM];
+</code></pre>
+      <p class="tiny muted">Same trick (padding to a line boundary) fixes both <strong>conflict misses</strong> and <strong>false sharing</strong> — it just separates things that shouldn't share a line.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== BIG PICTURE ===== -->
+<section data-background-color="#ffffff">
+  <h2>Big Picture — What a Programmer Must Know</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Memory is the wall</span><span class="small">Misses cost 100s of cycles; AMAT is dominated by the penalty.</span></div>
+    <div class="callout"><span class="lbl">Give it locality</span><span class="small">Traverse contiguously (spatial); reuse while hot (temporal).</span></div>
+    <div class="callout"><span class="lbl">Tile big problems</span><span class="small">Block loop nests so the working set fits in cache.</span></div>
+    <div class="callout"><span class="lbl">Layout matters</span><span class="small">AoS vs. SoA to match the access pattern; merge co-used fields.</span></div>
+    <div class="callout"><span class="lbl">Mind multicore</span><span class="small">Avoid false sharing; respect NUMA first-touch.</span></div>
+    <div class="callout"><span class="lbl">Use the library</span><span class="small">Tuned BLAS / ATLAS already does the hard tiling — reach for it first.</span></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">One sentence</span>
+    <strong>You rarely change the hardware — but choosing the right data layout, traversal order, tile size, and padding is how you keep the caches full and the cores from fighting each other.</strong></div>
+</section>
+
+<!-- ===== REFERENCES ===== -->
+<section data-background-color="#f6f8fb">
+  <h2>References</h2>
+  <div class="callout"><span class="lbl">Course material</span>
+    Adapted from the CSC 548 <em>Lecture 7 — Caches &amp; Memory Systems</em> notes (Rauber &amp; Rünger, Ch. 4), with matrix-multiply locality analysis after the Berkeley CS267 / VT CS2506 material.</div>
+  <ul class="small">
+    <li>T. Rauber &amp; G. Rünger, <em>Parallel Programming: For Multicore and Cluster Systems</em>, 2nd ed., Springer, 2013.</li>
+    <li>Hennessy &amp; Patterson, <em>Computer Architecture: A Quantitative Approach</em> — memory hierarchy &amp; the 3 C's.</li>
+    <li>ATLAS — Automatically Tuned Linear Algebra Software, <a href="https://www.netlib.org/atlas/">netlib.org/atlas</a>; BLAS/LAPACK, <a href="https://www.netlib.org/blas/">netlib.org/blas</a>.</li>
+    <li><strong>CSC 548</strong>, J. Li.</li>
+  </ul>
+</section>
+
+</div>
+
+<!-- deck-level fixed footer -->
+<div class="deck-footer"><span class="tag">CSC 548</span><span class="sep">·</span>Cache &amp; Memory Systems</div>
+</div>
+
+<!-- reveal.js core + plugins -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/math/math.js"></script>
+<script>
+  Reveal.initialize({
+    width: 1280, height: 720, margin: 0.04,
+    minScale: 0.2, maxScale: 1.6,
+    center: false,
+    hash: true, slideNumber: 'c/t', history: true,
+    transition: 'slide', transitionSpeed: 'fast',
+    plugins: [ RevealNotes, RevealHighlight, RevealMath.KaTeX ],
+    katex: { delimiters: [
+      {left:'\\(', right:'\\)', display:false},
+      {left:'$$', right:'$$', display:true}
+    ]},
+  });
+</script>
+<script>
+/* Auto-fit: shrink any slide whose content would exceed 720px. */
+(function(){
+  function fit(s){ if(!s) return;
+    s.style.setProperty('--nc-fit','1');
+    var h=s.scrollHeight;
+    if(h>724){ var k=Math.max(0.6, Math.min(1, 720/h));
+      s.style.setProperty('--nc-fit', k.toFixed(3)); }
+  }
+  if(window.Reveal){
+    Reveal.on('ready', function(e){ fit(e.currentSlide); });
+    Reveal.on('slidechanged', function(e){ fit(e.currentSlide); });
+    try{ if(Reveal.isReady && Reveal.isReady()) fit(Reveal.getCurrentSlide()); }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>

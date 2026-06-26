@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSC 548 · Parallel I/O</title>
+
+<!-- reveal.js core (CDN) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/theme.css?v=11">
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================ TITLE ============================ -->
+<section class="title-slide" data-background-color="#ffffff">
+  <div class="eyebrow">CSC 548 / ECE 591 · Parallel Systems</div>
+  <h1>Parallel I/O</h1>
+  <div class="sub">Why storage is the wall — parallel file systems, <strong>MPI-IO</strong>, collective I/O, file views &amp; high-level libraries (HDF5, NetCDF, ADIOS)</div>
+  <aside class="notes">
+    This lecture is the storage half of the performance story. Compute and communication get fast,
+    but if every process funnels data through one serial stream the application stalls at the I/O wall.
+    We motivate parallel file systems (Lustre, GPFS) and their striping model, then spend most of the
+    time on MPI-IO: open/read_at/write_at, individual vs. collective calls, and file views built from
+    derived datatypes. We close with the high-level libraries and a short best-practices checklist.
+  </aside>
+</section>
+
+<!-- Agenda -->
+<section data-background-color="#ffffff">
+  <h2>Agenda</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">1 · The I/O Wall</span><span class="small">Why storage limits HPC; parallel file systems, stripes &amp; OSTs.</span></div>
+    <div class="callout"><span class="lbl">2 · I/O Strategies</span><span class="small">File-per-process vs. single shared file; common patterns.</span></div>
+    <div class="callout"><span class="lbl">3 · MPI-IO</span><span class="small">open / read_at / write_at, individual vs. collective.</span></div>
+    <div class="callout"><span class="lbl">4 · File Views</span><span class="small">Noncontiguous access with derived datatypes.</span></div>
+    <div class="callout"><span class="lbl">5 · High-Level Libraries</span><span class="small">HDF5, NetCDF / pNetCDF, ADIOS.</span></div>
+    <div class="callout"><span class="lbl">6 · Best Practices</span><span class="small">Big contiguous I/O, collectives, stripe alignment.</span></div>
+    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Tell the I/O system the <em>big picture</em> so it can build large, aligned transfers.</span></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 1 — THE I/O BOTTLENECK & PARALLEL FILE SYSTEMS
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 1</div>
+  <div class="mod-title">The I/O Bottleneck &amp; Parallel File Systems</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Explain why storage is often the performance wall in HPC</li>
+      <li>Describe how a parallel file system stripes a file across OSTs</li>
+      <li>Read and set Lustre striping with <code class="inline">lfs</code></li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>What &amp; Why: Parallel I/O</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Parallel I/O</span>Multiple processes of one parallel program read/write a <strong>common file</strong> at the same time.</div>
+      <p class="small"><strong>Performance:</strong> aggregate bandwidth far beyond one serial stream.<br>
+      <strong>Management:</strong> a <em>single</em> output file is easy to archive, post-process and restart from — and is independent of the process count.</p>
+      <div class="callout warn"><span class="lbl">The wall</span>CPUs and networks scale; spinning/flash storage does not. Naive serial I/O quickly dominates wall-clock time.</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 200" class="chart" style="max-width:330px">
+        <rect x="20" y="20" width="260" height="34" rx="5" fill="#CC0000"/>
+        <text x="150" y="42" text-anchor="middle" fill="#fff" class="lbl">Shared FILE</text>
+        <g>
+          <rect x="20" y="150" width="50" height="26" rx="4" fill="#3b82f6"/><text x="45" y="168" text-anchor="middle" fill="#fff" class="lbl">P0</text>
+          <rect x="90" y="150" width="50" height="26" rx="4" fill="#3b82f6"/><text x="115" y="168" text-anchor="middle" fill="#fff" class="lbl">P1</text>
+          <rect x="160" y="150" width="50" height="26" rx="4" fill="#3b82f6"/><text x="185" y="168" text-anchor="middle" fill="#fff" class="lbl">P2</text>
+          <rect x="230" y="150" width="50" height="26" rx="4" fill="#3b82f6"/><text x="255" y="168" text-anchor="middle" fill="#fff" class="lbl">P(n-1)</text>
+        </g>
+        <g stroke="#16181d" stroke-width="1.5">
+          <line x1="45" y1="150" x2="80" y2="54"/><line x1="115" y1="150" x2="120" y2="54"/>
+          <line x1="185" y1="150" x2="180" y2="54"/><line x1="255" y1="150" x2="220" y2="54"/>
+        </g>
+      </svg>
+      <div class="src">All processes share one file.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Parallel File Systems</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">Server-side view</span>Parallel I/O = <strong>simultaneous transfer from many storage servers</strong>. One logical file is spread across many disks.</div>
+      <p class="small">Widely deployed: <strong>Lustre</strong>, <strong>GPFS</strong>, PVFS, Ceph, BeeGFS, Google File System. They separate <em>metadata</em> (where the bytes live) from <em>data</em> (the bytes themselves) so both scale independently.</p>
+      <div class="callout takeaway"><span class="lbl">Key idea</span>Bandwidth comes from <strong>parallelism in the storage tier</strong>, not from a faster single disk.</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 210" class="chart" style="max-width:320px">
+        <rect x="100" y="10" width="100" height="26" rx="4" fill="#10b981"/><text x="150" y="28" text-anchor="middle" fill="#fff" class="lbl">Clients</text>
+        <rect x="100" y="56" width="100" height="24" rx="4" fill="#6366f1"/><text x="150" y="73" text-anchor="middle" fill="#fff" class="lbl">Metadata (MDS)</text>
+        <line x1="150" y1="36" x2="150" y2="56" stroke="#16181d" stroke-width="1.5"/>
+        <g>
+          <rect x="10"  y="120" width="60" height="40" rx="4" fill="#3b82f6"/><text x="40"  y="144" text-anchor="middle" fill="#fff" class="lbl">OST 0</text>
+          <rect x="85"  y="120" width="60" height="40" rx="4" fill="#3b82f6"/><text x="115" y="144" text-anchor="middle" fill="#fff" class="lbl">OST 1</text>
+          <rect x="160" y="120" width="60" height="40" rx="4" fill="#3b82f6"/><text x="190" y="144" text-anchor="middle" fill="#fff" class="lbl">OST 2</text>
+          <rect x="235" y="120" width="55" height="40" rx="4" fill="#3b82f6"/><text x="262" y="144" text-anchor="middle" fill="#fff" class="lbl">OST 3</text>
+        </g>
+        <g stroke="#16181d" stroke-width="1.2">
+          <line x1="120" y1="80" x2="40"  y2="120"/><line x1="135" y1="80" x2="115" y2="120"/>
+          <line x1="165" y1="80" x2="190" y2="120"/><line x1="180" y1="80" x2="262" y2="120"/>
+        </g>
+        <text x="150" y="185" text-anchor="middle" class="note">data striped across object storage targets</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Striping: How One File Spans Many OSTs</h2>
+  <div class="cols">
+    <div>
+      <p class="small">A file is cut into fixed-size <strong>stripes</strong> dealt round-robin across a set of <strong>OSTs</strong> (object storage targets). Two knobs:</p>
+      <div class="callout"><span class="lbl">stripe size</span>bytes written to one OST before moving to the next (Lustre default ~1 MB).</div>
+      <div class="callout"><span class="lbl">stripe count</span>how many OSTs the file spans (default often 1–2; <code class="inline">-1</code> = all).</div>
+      <p class="tiny muted">Striping is set when the file is <strong>created</strong> and cannot change afterward.</p>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 180" class="chart" style="max-width:320px">
+        <text x="150" y="16" text-anchor="middle" class="note">logical file (stripes 0..5)</text>
+        <g>
+          <rect x="20"  y="26" width="40" height="24" fill="#93c5fd"/><text x="40"  y="43" text-anchor="middle" class="lbl">0</text>
+          <rect x="62"  y="26" width="40" height="24" fill="#86efac"/><text x="82"  y="43" text-anchor="middle" class="lbl">1</text>
+          <rect x="104" y="26" width="40" height="24" fill="#fca5a5"/><text x="124" y="43" text-anchor="middle" class="lbl">2</text>
+          <rect x="146" y="26" width="40" height="24" fill="#93c5fd"/><text x="166" y="43" text-anchor="middle" class="lbl">3</text>
+          <rect x="188" y="26" width="40" height="24" fill="#86efac"/><text x="208" y="43" text-anchor="middle" class="lbl">4</text>
+          <rect x="230" y="26" width="40" height="24" fill="#fca5a5"/><text x="250" y="43" text-anchor="middle" class="lbl">5</text>
+        </g>
+        <g>
+          <rect x="40"  y="120" width="60" height="40" rx="4" fill="#3b82f6"/><text x="70"  y="144" text-anchor="middle" fill="#fff" class="lbl">OST 0</text>
+          <rect x="120" y="120" width="60" height="40" rx="4" fill="#3b82f6"/><text x="150" y="144" text-anchor="middle" fill="#fff" class="lbl">OST 1</text>
+          <rect x="200" y="120" width="60" height="40" rx="4" fill="#3b82f6"/><text x="230" y="144" text-anchor="middle" fill="#fff" class="lbl">OST 2</text>
+        </g>
+        <g stroke="#16181d" stroke-width="1.1">
+          <line x1="40"  y1="50" x2="70"  y2="120"/><line x1="166" y1="50" x2="70"  y2="120"/>
+          <line x1="82"  y1="50" x2="150" y2="120"/><line x1="208" y1="50" x2="150" y2="120"/>
+          <line x1="124" y1="50" x2="230" y2="120"/><line x1="250" y1="50" x2="230" y2="120"/>
+        </g>
+        <text x="150" y="178" text-anchor="middle" class="note">stripe count = 3, round-robin</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Controlling Striping: <code class="inline">lfs</code></h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">Set &amp; show stripe layout</div>
+      <pre><code class="language-bash" data-trim>
+# size  start  count
+lfs setstripe -S 1M -i -1 -c 4 mydir
+#   -S 1M : 1 MB stripe size
+#   -i -1 : let system pick first OST
+#   -c 4  : stripe over 4 OSTs
+
+lfs getstripe --verbose myfile
+#   lmm_stripe_count: 4
+#   lmm_stripe_size:  1048576
+
+lfs df          # per-OST capacity / usage
+</code></pre>
+    </div>
+    <div>
+      <table style="font-size:.8em">
+        <tr><th>Situation</th><th>Striping rule of thumb</th></tr>
+        <tr><td class="hi">One large file</td><td>stripe over <strong>all</strong> OSTs</td></tr>
+        <tr><td class="hi">Many files (≳ 2× #OSTs)</td><td>turn striping <strong>off</strong> (count = 1)</td></tr>
+        <tr><td>Many clients, one file</td><td>do stripe (spread the load)</td></tr>
+        <tr><td>Few clients, big chunks</td><td>stripe over enough OSTs to stay busy</td></tr>
+      </table>
+      <div class="callout warn"><span class="lbl">Goal</span>Keep <strong>all OSTs occupied</strong> without creating directory or block-boundary contention.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 1 — Review</h2>
+  <div class="qa">
+    <p class="q">1. Where does a parallel file system's bandwidth come from?</p>
+    <div class="fragment"><div class="a">From <strong>striping</strong> one file across many OSTs so several storage servers transfer data <strong>simultaneously</strong> — not from a single faster disk.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. You have 10,000 ranks each writing its own small file. Stripe count?</p>
+    <div class="fragment"><div class="a"><strong>1</strong> (no striping). With far more files than OSTs, keep each file on a single OST to avoid directory and metadata contention.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 2 — I/O STRATEGIES
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 2</div>
+  <div class="mod-title">I/O Strategies</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Contrast one-file-per-process with a single shared file</li>
+      <li>Name the contention each pattern creates</li>
+      <li>Pick a hybrid layout for a given scale</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>File-per-Process vs. Single Shared File</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">N files (one per rank)</span>Simple, no coordination, good small-scale bandwidth — but <strong>thousands of files</strong> stress metadata &amp; directories, and post-processing must stitch them back together.</div>
+      <div class="callout"><span class="lbl">1 shared file</span>Single artifact, easy to manage and restart, layout independent of #ranks — but ranks <strong>contend</strong> for the file and at block boundaries.</div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Hybrid: k files, l ranks each</span>The middle ground: low directory contention, low per-file contention, low block-boundary contention. The practical choice at large scale (a.k.a. subfiling).</div>
+      <table style="font-size:.8em">
+        <tr><th>Pattern</th><th>Dir.</th><th>File</th></tr>
+        <tr><td>N files</td><td class="hi">high</td><td>low</td></tr>
+        <tr><td>1 file</td><td>low</td><td class="hi">high</td></tr>
+        <tr><td>Hybrid (k files)</td><td>low</td><td>low</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Independent vs. Collective I/O</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Independent</span>Each process states only what <strong>it</strong> will do. The file system cannot see relationships between separate processes' requests → many small scattered accesses.</div>
+      <div class="callout takeaway"><span class="lbl">Collective</span>All processes in the communicator call together. The library sees the <strong>aggregate</strong> access and can merge it into a few large, aligned transfers.</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 180" class="chart" style="max-width:320px">
+        <text x="75" y="16" text-anchor="middle" class="note">independent</text>
+        <g fill="#fca5a5">
+          <rect x="20" y="30" width="18" height="14"/><rect x="55" y="30" width="18" height="14"/>
+          <rect x="90" y="30" width="18" height="14"/><rect x="20" y="55" width="18" height="14"/>
+          <rect x="55" y="55" width="18" height="14"/><rect x="90" y="55" width="18" height="14"/>
+        </g>
+        <text x="75" y="92" text-anchor="middle" class="tiny muted">many small requests</text>
+        <text x="225" y="16" text-anchor="middle" class="note">collective</text>
+        <rect x="170" y="30" width="110" height="40" fill="#86efac"/>
+        <text x="225" y="92" text-anchor="middle" class="tiny muted">one large aligned access</text>
+        <line x1="150" y1="20" x2="150" y2="160" stroke="#cbd5e1" stroke-dasharray="3"/>
+        <text x="150" y="150" text-anchor="middle" class="note" fill="#CC0000">2-phase: aggregate, then write</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 3 — MPI-IO
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 3</div>
+  <div class="mod-title">MPI-IO — the Programming Interface</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Open, read, write and close a file with MPI-IO</li>
+      <li>Use individual pointers, explicit offsets &amp; nonblocking I/O</li>
+      <li>Convert independent calls to <code class="inline">_all</code> collective calls</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>MPI-IO Background</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Where it came from</span>Snir et al. (IBM, 1994) explored MPI as a context for parallel I/O; the MPI-IO group joined the MPI Forum in 1996.</div>
+      <div class="callout takeaway"><span class="lbl">Standardized</span>MPI-IO is <strong>Chapter 9 of MPI-2</strong> (1997) — a portable, parallel read/write API with collective operations and derived-datatype file views.</div>
+    </div>
+    <div>
+      <p class="small"><strong>What MPI-IO gives you over POSIX:</strong></p>
+      <ul class="small">
+        <li>Open a file <em>collectively</em> across a communicator</li>
+        <li>Express <strong>noncontiguous</strong> access in one call (derived datatypes)</li>
+        <li>Collective calls let the library optimize the whole access</li>
+        <li>Portable across every parallel file system</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Simple Reads: Pointers vs. Offsets</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">Individual file pointer + seek</div>
+      <pre><code class="language-c" data-trim>
+MPI_File fh;  MPI_Status status;
+int *buf, nints;
+
+bufsize = FILESIZE / nprocs;
+nints   = bufsize / sizeof(int);
+
+MPI_File_open(MPI_COMM_WORLD, "/pfs/datafile",
+    MPI_MODE_RDONLY, MPI_INFO_NULL, &amp;fh);
+MPI_File_seek(fh, rank * bufsize, MPI_SEEK_SET);
+MPI_File_read(fh, buf, nints, MPI_INT, &amp;status);
+MPI_File_close(&amp;fh);
+</code></pre>
+    </div>
+    <div>
+      <div class="code-label">Explicit offset (no seek)</div>
+      <pre><code class="language-c" data-trim>
+MPI_File_open(MPI_COMM_WORLD, "/pfs/datafile",
+    MPI_MODE_RDONLY, MPI_INFO_NULL, &amp;fh);
+
+MPI_File_read_at(fh, rank * bufsize,
+    buf, nints, MPI_INT, &amp;status);
+
+MPI_File_close(&amp;fh);
+</code></pre>
+      <p class="small">Each rank reads its own <strong>chunk</strong> of the common file. <code class="inline">_at</code> folds the offset into the call — thread-safe and no separate seek.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Writing &amp; Nonblocking I/O</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Writing</span>Use <code class="inline">MPI_File_write</code> / <code class="inline">write_at</code> with <code class="inline">MPI_MODE_WRONLY</code> or <code class="inline">RDWR</code>; add <code class="inline">MPI_MODE_CREATE</code> if the file may not exist.</div>
+      <pre><code class="language-c" data-trim>
+MPI_File_open(MPI_COMM_WORLD, "out",
+    MPI_MODE_CREATE | MPI_MODE_WRONLY,
+    MPI_INFO_NULL, &amp;fh);
+MPI_File_write_at(fh, rank*bufsize, buf,
+    nints, MPI_INT, &amp;status);
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Nonblocking</span>Like nonblocking communication: start the I/O, overlap with compute, then <code class="inline">MPI_Wait</code>.</div>
+      <pre><code class="language-c" data-trim>
+MPI_Request request;
+MPI_File_iwrite_at(fh, offset, buf,
+    count, MPI_INT, &amp;request);
+
+for (i = 0; i &lt; 1000; i++) {
+    /* overlap: do computation */
+}
+MPI_Wait(&amp;request, &amp;status);
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Collective I/O: the <code class="inline">_all</code> Calls</h2>
+  <div class="cols">
+    <div>
+      <div class="callout takeaway"><span class="lbl">Why collective</span>A critical optimization. Every rank states only its own access, but the library sees the <strong>whole picture</strong> and builds large transfers (2-phase I/O: communicate, then read/write).</div>
+      <p class="small">The <code class="inline">_all</code> suffix means <em>all</em> processes in the communicator passed to <code class="inline">MPI_File_open</code> call it — an implicit synchronization.</p>
+    </div>
+    <div>
+      <table style="font-size:.82em">
+        <tr><th>Independent</th><th>Collective</th></tr>
+        <tr><td><code class="inline">MPI_File_read</code></td><td><code class="inline">MPI_File_read_all</code></td></tr>
+        <tr><td><code class="inline">MPI_File_read_at</code></td><td><code class="inline">MPI_File_read_at_all</code></td></tr>
+        <tr><td><code class="inline">MPI_File_write</code></td><td><code class="inline">MPI_File_write_all</code></td></tr>
+        <tr><td><code class="inline">MPI_File_write_at</code></td><td><code class="inline">MPI_File_write_at_all</code></td></tr>
+      </table>
+      <div class="callout warn"><span class="lbl">Rule</span>If all ranks do I/O in a phase, prefer the collective form — it is usually <strong>much</strong> faster on a shared file.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 3 — Review</h2>
+  <div class="qa">
+    <p class="q">1. What does <code class="inline">MPI_File_read_at</code> do that <code class="inline">MPI_File_read</code> needs a second call for?</p>
+    <div class="fragment"><div class="a">It takes the <strong>offset</strong> as an argument, so no separate <code class="inline">MPI_File_seek</code> is needed — and it is safe under concurrency since no shared pointer is mutated.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. Why does <code class="inline">MPI_File_write_all</code> usually beat <code class="inline">MPI_File_write</code> on a shared file?</p>
+    <div class="fragment"><div class="a">It is <strong>collective</strong>: the library aggregates all ranks' requests (2-phase I/O) into a few large, aligned transfers instead of many small scattered ones.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 4 — FILE VIEWS & DERIVED DATATYPES
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 4</div>
+  <div class="mod-title">File Views &amp; Noncontiguous Access</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Define a file view with <code class="inline">(disp, etype, filetype)</code></li>
+      <li>Build vector / resized-contiguous filetypes for strided data</li>
+      <li>Use <code class="inline">MPI_Type_create_darray</code> for a distributed array</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Noncontiguous Access &amp; File Views</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Distributed arrays land in the file in pieces — each process owns scattered regions. MPI-IO can describe these <strong>noncontiguous</strong> accesses (in memory, in file, or both) with a <strong>single call</strong> using a derived datatype.</p>
+      <div class="callout"><span class="lbl">File view</span><code class="inline">MPI_File_set_view</code> assigns each process the portion of the file it may see — set by a triplet:</div>
+      <ul class="small">
+        <li><strong>displacement</strong> — bytes skipped from start of file</li>
+        <li><strong>etype</strong> — basic unit of access (e.g. <code class="inline">MPI_INT</code>)</li>
+        <li><strong>filetype</strong> — which slices of the file are visible here</li>
+      </ul>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 150" class="chart" style="max-width:320px">
+        <text x="150" y="14" text-anchor="middle" class="note">file (one process's view)</text>
+        <rect x="10" y="30" width="280" height="28" fill="none" stroke="#cbd5e1"/>
+        <rect x="10" y="30" width="30" height="28" fill="#e5e7eb"/><text x="25" y="48" text-anchor="middle" class="tiny">disp</text>
+        <g fill="#3b82f6">
+          <rect x="40" y="30" width="20" height="28"/><rect x="60" y="30" width="20" height="28"/>
+        </g>
+        <rect x="80" y="30" width="40" height="28" fill="#f1f5f9"/>
+        <g fill="#3b82f6">
+          <rect x="120" y="30" width="20" height="28"/><rect x="140" y="30" width="20" height="28"/>
+        </g>
+        <rect x="160" y="30" width="40" height="28" fill="#f1f5f9"/>
+        <g fill="#3b82f6">
+          <rect x="200" y="30" width="20" height="28"/><rect x="220" y="30" width="20" height="28"/>
+        </g>
+        <text x="70" y="80" text-anchor="middle" class="tiny muted">filetype</text>
+        <text x="150" y="80" text-anchor="middle" class="tiny muted">gap</text>
+        <text x="150" y="110" text-anchor="middle" class="note">2 ints visible, then a 4-int gap, repeating</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Building Datatypes: contiguous &amp; vector</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">Contiguous — N in a row</div>
+      <pre><code class="language-c" data-trim>
+MPI_Datatype newtype;
+MPI_Type_contiguous(2, MPI_INT, &amp;newtype);
+MPI_Type_commit(&amp;newtype);   /* required! */
+</code></pre>
+      <div class="code-label">Vector — blocks with a stride</div>
+      <pre><code class="language-c" data-trim>
+/* count blocks, blocklen each,
+   stride elements apart           */
+MPI_Type_vector(2, 3, 5, MPI_INT, &amp;newtype);
+/* count=2, blocklen=3, stride=5   */
+MPI_Type_commit(&amp;newtype);
+</code></pre>
+    </div>
+    <div>
+      <p class="small">A <strong>vector</strong> type captures a regular strided pattern: <code class="inline">count</code> blocks of <code class="inline">blocklen</code> elements, each block starting <code class="inline">stride</code> elements after the last.</p>
+      <div class="callout warn"><span class="lbl">Always commit</span>A derived datatype must be passed to <code class="inline">MPI_Type_commit</code> before use, and freed with <code class="inline">MPI_Type_free</code> when done.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>A Simple File View (write)</h2>
+  <pre><code class="language-c" data-trim>
+MPI_File thefile;
+for (i = 0; i &lt; BUFSIZE; i++)
+    buf[i] = myrank * BUFSIZE + i;          /* this rank's data */
+
+MPI_File_open(MPI_COMM_WORLD, "testfile",
+    MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &amp;thefile);
+
+/* displacement = myrank*BUFSIZE ints; etype = filetype = MPI_INT */
+MPI_File_set_view(thefile, myrank * BUFSIZE * sizeof(int),
+    MPI_INT, MPI_INT, "native", MPI_INFO_NULL);
+
+MPI_File_write(thefile, buf, BUFSIZE, MPI_INT, MPI_STATUS_IGNORE);
+MPI_File_close(&amp;thefile);
+</code></pre>
+  <p class="small">Each rank's view starts at its own displacement, so the same simple <code class="inline">write</code> lands each block in the right place — the file ends up in rank order.</p>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>A Noncontiguous File View</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Goal: this process sees <strong>2 ints, then a 4-int gap</strong>, repeating. Build it from a contiguous pair whose <em>extent</em> is resized to 6 ints, so the gap is baked in.</p>
+      <div class="callout"><span class="lbl">resize</span><code class="inline">MPI_Type_create_resized</code> changes a type's extent (lower bound + total span) without changing its content — that is what creates the stride.</div>
+    </div>
+    <div>
+      <pre><code class="language-c" data-trim>
+MPI_Aint lb, extent;
+MPI_Datatype etype, filetype, contig;
+MPI_Offset disp;
+
+MPI_Type_contiguous(2, MPI_INT, &amp;contig);
+lb = 0;  extent = 6 * sizeof(int);
+MPI_Type_create_resized(contig, lb, extent,
+    &amp;filetype);
+MPI_Type_commit(&amp;filetype);
+
+disp  = 5 * sizeof(int);
+etype = MPI_INT;
+MPI_File_open(MPI_COMM_WORLD, "/pfs/datafile",
+    MPI_MODE_CREATE | MPI_MODE_RDWR,
+    MPI_INFO_NULL, &amp;fh);
+MPI_File_set_view(fh, disp, etype, filetype,
+    "native", MPI_INFO_NULL);
+MPI_File_write(fh, buf, 1000, MPI_INT,
+    MPI_STATUS_IGNORE);
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Distributed Arrays: <code class="inline">darray</code></h2>
+  <div class="cols">
+    <div>
+      <p class="small">A 2-D global array block-distributed over a process grid maps to scattered file regions. <code class="inline">MPI_Type_create_darray</code> builds the filetype for you — describe the global array and the decomposition, and one collective write stores it all.</p>
+      <pre><code class="language-c" data-trim>
+int gsizes[2]  = { m, n };          /* global */
+int distribs[2]= { MPI_DISTRIBUTE_BLOCK,
+                   MPI_DISTRIBUTE_BLOCK };
+int dargs[2]   = { MPI_DISTRIBUTE_DFLT_DARG,
+                   MPI_DISTRIBUTE_DFLT_DARG };
+int psizes[2]  = { 2, 3 };          /* proc grid */
+</code></pre>
+    </div>
+    <div>
+      <pre><code class="language-c" data-trim>
+MPI_Comm_rank(MPI_COMM_WORLD, &amp;rank);
+MPI_Type_create_darray(6, rank, 2, gsizes,
+    distribs, dargs, psizes,
+    MPI_ORDER_C, MPI_FLOAT, &amp;filetype);
+MPI_Type_commit(&amp;filetype);
+
+MPI_File_open(MPI_COMM_WORLD, "/gpfs/datafile",
+    MPI_MODE_CREATE | MPI_MODE_WRONLY,
+    MPI_INFO_NULL, &amp;fh);
+MPI_File_set_view(fh, 0, MPI_FLOAT, filetype,
+    "native", MPI_INFO_NULL);
+MPI_File_write_all(fh, local_array,
+    local_size, MPI_FLOAT, &amp;status);
+MPI_File_close(&amp;fh);
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 4 — Review</h2>
+  <div class="qa">
+    <p class="q">1. What three things define a file view, and what does each do?</p>
+    <div class="fragment"><div class="a"><strong>displacement</strong> (bytes skipped at the start), <strong>etype</strong> (basic access unit), <strong>filetype</strong> (which slices of the file this process can see). Together they let each rank "see" only its scattered regions.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. Why resize a contiguous type when building a strided filetype?</p>
+    <div class="fragment"><div class="a">Resizing the <strong>extent</strong> larger than the data leaves a gap after each block — so the type repeats with a stride, producing the noncontiguous pattern without writing the gap.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 5 — HIGH-LEVEL LIBRARIES
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 5</div>
+  <div class="mod-title">High-Level I/O Libraries</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Place HDF5, NetCDF and ADIOS in the I/O software stack</li>
+      <li>Say why a self-describing format beats raw bytes</li>
+      <li>Choose a library layer for a given need</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The I/O Software Stack</h2>
+  <div class="cols w-64">
+    <div>
+      <p class="small">Each layer adds structure and hands the <em>big picture</em> down to the next:</p>
+      <ul class="small">
+        <li><strong>POSIX</strong> — raw <code class="inline">read</code>/<code class="inline">write</code>, no format.</li>
+        <li><strong>MPI-IO</strong> — parallel API + collectives, still no format.</li>
+        <li><strong>HDF5 / NetCDF / ADIOS</strong> — API <em>plus</em> a self-describing, portable on-disk format. Most build on MPI-IO underneath.</li>
+      </ul>
+      <div class="callout takeaway"><span class="lbl">Self-describing</span>The file carries its own dimensions, types &amp; metadata — readable by any tool, on any machine, years later.</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 260 200" class="chart" style="max-width:300px">
+        <rect x="30" y="14" width="200" height="30" rx="4" fill="#10b981"/><text x="130" y="33" text-anchor="middle" fill="#fff" class="lbl">Application</text>
+        <rect x="30" y="50" width="200" height="30" rx="4" fill="#6366f1"/><text x="130" y="69" text-anchor="middle" fill="#fff" class="lbl">HDF5 / NetCDF / ADIOS</text>
+        <rect x="30" y="86" width="200" height="30" rx="4" fill="#3b82f6"/><text x="130" y="105" text-anchor="middle" fill="#fff" class="lbl">MPI-IO</text>
+        <rect x="30" y="122" width="200" height="30" rx="4" fill="#94a3b8"/><text x="130" y="141" text-anchor="middle" fill="#fff" class="lbl">Parallel File System</text>
+        <rect x="30" y="158" width="200" height="30" rx="4" fill="#CC0000"/><text x="130" y="177" text-anchor="middle" fill="#fff" class="lbl">Storage hardware (OSTs)</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>HDF5 · NetCDF · ADIOS</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">HDF5</span><span class="small"><strong>H</strong>ierarchical <strong>D</strong>ata <strong>F</strong>ormat. Groups &amp; datasets in a file-system-like tree; rich types, chunking &amp; compression; parallel HDF5 runs on MPI-IO.</span></div>
+    <div class="callout"><span class="lbl">NetCDF / pNetCDF</span><span class="small"><strong>Net</strong>work <strong>C</strong>ommon <strong>D</strong>ata <strong>F</strong>orm — array-oriented, big in climate/weather. Parallel-NetCDF adds collective parallel access.</span></div>
+    <div class="callout"><span class="lbl">ADIOS</span><span class="small"><strong>Ada</strong>ptable <strong>IO</strong> <strong>S</strong>ystem — built on MPI-IO; an XML/external config selects the I/O method <em>without</em> recompiling.</span></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Why use them</span>You write in terms of <strong>arrays and variables</strong>, not byte offsets; the library handles layout, portability &amp; metadata — and still gets parallel performance via MPI-IO.</div>
+</section>
+
+<!-- ==================================================================
+     MODULE 6 — BEST PRACTICES
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 6</div>
+  <div class="mod-title">Best Practices</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Apply the rules that keep parallel I/O fast</li>
+      <li>Match access size and alignment to the stripe layout</li>
+      <li>Diagnose a slow I/O pattern</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Rules of Thumb for Fast Parallel I/O</h2>
+  <div class="cols">
+    <div>
+      <div class="callout takeaway"><span class="lbl">1 · Go big &amp; contiguous</span>Few large transfers beat many small ones — metadata and seek overhead dominate small accesses.</div>
+      <div class="callout takeaway"><span class="lbl">2 · Use collective I/O</span>Prefer the <code class="inline">_all</code> calls on a shared file; 2-phase I/O aggregates ranks into large writes.</div>
+      <div class="callout takeaway"><span class="lbl">3 · Describe noncontiguity</span>Use file views / derived datatypes so one call passes the whole pattern to the library.</div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">4 · Align to stripes</span>Match access size &amp; offsets to the <strong>stripe size</strong> so a rank's writes don't straddle OST boundaries.</div>
+      <div class="callout takeaway"><span class="lbl">5 · Set striping deliberately</span>One big file → stripe over all OSTs; many small files → don't stripe. Set it at <em>create</em> time.</div>
+      <div class="callout takeaway"><span class="lbl">6 · Move up the stack</span>Let HDF5 / NetCDF / ADIOS handle layout &amp; portability when you can.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Stripe Alignment, Visually</h2>
+  <div class="cols">
+    <div>
+      <div class="callout warn"><span class="lbl">Unaligned</span>A rank's block crosses a stripe boundary → the write touches <strong>two OSTs</strong> and both must coordinate at the shared block. Contention &amp; serialization.</div>
+      <div class="callout"><span class="lbl">Aligned</span>Each rank's access starts on a stripe boundary and is a multiple of the stripe size → one OST per rank, no boundary contention.</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 180" class="chart" style="max-width:320px">
+        <text x="150" y="14" text-anchor="middle" class="note">unaligned</text>
+        <g>
+          <rect x="20" y="24" width="80" height="22" fill="#dbeafe" stroke="#94a3b8"/>
+          <rect x="100" y="24" width="80" height="22" fill="#dbeafe" stroke="#94a3b8"/>
+          <rect x="180" y="24" width="80" height="22" fill="#dbeafe" stroke="#94a3b8"/>
+          <rect x="60" y="24" width="80" height="22" fill="#fca5a5" opacity="0.7"/>
+        </g>
+        <text x="100" y="60" text-anchor="middle" class="tiny" fill="#CC0000">rank write spans 2 stripes</text>
+
+        <text x="150" y="98" text-anchor="middle" class="note">aligned</text>
+        <g>
+          <rect x="20" y="108" width="80" height="22" fill="#dbeafe" stroke="#94a3b8"/>
+          <rect x="100" y="108" width="80" height="22" fill="#dbeafe" stroke="#94a3b8"/>
+          <rect x="180" y="108" width="80" height="22" fill="#dbeafe" stroke="#94a3b8"/>
+          <rect x="100" y="108" width="80" height="22" fill="#86efac" opacity="0.7"/>
+        </g>
+        <text x="140" y="150" text-anchor="middle" class="tiny" fill="#16a34a">one stripe = one OST</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ===== BIG PICTURE ===== -->
+<section data-background-color="#ffffff">
+  <h2>Parallel I/O — Big Picture</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Storage is parallel</span>Bandwidth comes from <strong>striping</strong> across many OSTs, not one fast disk.</div>
+    <div class="callout"><span class="lbl">One shared file</span>Manageable &amp; restartable; beats N files at scale (or go hybrid).</div>
+    <div class="callout"><span class="lbl">MPI-IO</span><code class="inline">open</code> · <code class="inline">read_at</code>/<code class="inline">write_at</code> · views · <code class="inline">_all</code> collectives.</div>
+  </div>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Describe the access</span>File views + derived datatypes pass noncontiguous patterns in one call → the library optimizes.</div>
+    <div class="callout"><span class="lbl">Go high-level</span>HDF5 / NetCDF / ADIOS give portable, self-describing files on top of MPI-IO.</div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">One sentence</span>
+    <strong>Write large, contiguous, stripe-aligned blocks with collective MPI-IO — and tell the I/O system the whole access at once so it can do the same.</strong></div>
+</section>
+
+<!-- ===== REFERENCES ===== -->
+<section data-background-color="#f6f8fb">
+  <h2>References</h2>
+  <div class="callout"><span class="lbl">Course material</span>
+    Adapted from the CSC 548 <em>Lecture 11 — Parallel I/O (with and without MPI)</em> notes, the MPI-2 standard (Chapter 9, I/O), and parallel file system documentation (Lustre, Ceph, GFS).</div>
+  <ul class="small">
+    <li>MPI Forum, <em>MPI-2: Extensions to the Message-Passing Interface</em>, Ch. 9 (I/O), 1997; <a href="https://www.mpi-forum.org">mpi-forum.org</a>.</li>
+    <li>W. Gropp, E. Lusk &amp; R. Thakur, <em>Using MPI-2</em>, MIT Press.</li>
+    <li>S. Weil et al., "Ceph: A Scalable, High-Performance Distributed File System," OSDI 2006.</li>
+    <li>S. Ghemawat et al., "The Google File System," SOSP 2003.</li>
+    <li>The HDF Group (HDF5), Unidata (NetCDF), ADIOS — project documentation.</li>
+    <li><strong>CSC 548</strong>, J. Li.</li>
+  </ul>
+</section>
+
+</div>
+
+<!-- deck-level fixed footer -->
+<div class="deck-footer"><span class="tag">CSC 548</span><span class="sep">·</span>Parallel I/O</div>
+</div>
+
+<!-- reveal.js core + plugins -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/math/math.js"></script>
+<script>
+  Reveal.initialize({
+    width: 1280, height: 720, margin: 0.04,
+    minScale: 0.2, maxScale: 1.6,
+    center: false,
+    hash: true, slideNumber: 'c/t', history: true,
+    transition: 'slide', transitionSpeed: 'fast',
+    plugins: [ RevealNotes, RevealHighlight, RevealMath.KaTeX ],
+    katex: { delimiters: [
+      {left:'\\(', right:'\\)', display:false},
+      {left:'$$', right:'$$', display:true}
+    ]},
+  });
+</script>
+<script>
+/* Auto-fit: shrink any slide whose content would exceed 720px. */
+(function(){
+  function fit(s){ if(!s) return;
+    s.style.setProperty('--nc-fit','1');
+    var h=s.scrollHeight;
+    if(h>724){ var k=Math.max(0.6, Math.min(1, 720/h));
+      s.style.setProperty('--nc-fit', k.toFixed(3)); }
+  }
+  if(window.Reveal){
+    Reveal.on('ready', function(e){ fit(e.currentSlide); });
+    Reveal.on('slidechanged', function(e){ fit(e.currentSlide); });
+    try{ if(Reveal.isReady && Reveal.isReady()) fit(Reveal.getCurrentSlide()); }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>

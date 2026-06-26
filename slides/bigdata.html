@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSC 548 · Big Data: MapReduce &amp; Spark</title>
+
+<!-- reveal.js core (CDN) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/theme.css?v=11">
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================ TITLE ============================ -->
+<section class="title-slide" data-background-color="#ffffff">
+  <div class="eyebrow">CSC 548 / ECE 591 · Parallel Systems</div>
+  <h1>Big Data: MapReduce &amp; Spark</h1>
+  <div class="sub">Data-parallel processing at scale — distributed file systems, the <strong>MapReduce</strong> model, the Hadoop ecosystem, and <strong>Apache Spark</strong> RDDs</div>
+  <aside class="notes">
+    This is the big-data half of the distributed-systems story. We start from why scale-out
+    processing needs a distributed file system, work through the MapReduce programming model and its
+    fault tolerance, tour the Hadoop ecosystem, then move to Apache Spark — RDDs, lazy
+    transformations vs. actions, the DAG, and in-memory caching — and close with when to use which.
+  </aside>
+</section>
+
+<!-- Agenda -->
+<section data-background-color="#ffffff">
+  <h2>Agenda</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">1 · Motivation</span><span class="small">Data at scale, scale-out vs. scale-up, GFS/HDFS distributed file systems.</span></div>
+    <div class="callout"><span class="lbl">2 · MapReduce</span><span class="small">map / shuffle / reduce, word-count, fault tolerance.</span></div>
+    <div class="callout"><span class="lbl">3 · Hadoop</span><span class="small">HDFS, JobTracker/TaskTracker, the stack.</span></div>
+    <div class="callout"><span class="lbl">4 · Apache Spark</span><span class="small">RDDs, transformations vs. actions, the DAG, caching.</span></div>
+    <div class="callout"><span class="lbl">5 · Which &amp; When</span><span class="small">MapReduce vs. Spark trade-offs.</span></div>
+    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Move the <em>computation to the data</em>, express it as map + reduce, and let the framework handle distribution &amp; failure.</span></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 1 — MOTIVATION
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 1</div>
+  <div class="mod-title">Motivation — Processing Data at Scale</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Contrast scale-up with scale-out and say why big data favors scale-out</li>
+      <li>Explain why bulk processing needs a distributed file system</li>
+      <li>Describe how GFS/HDFS store and replicate large files</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>What Makes It "Big Data"?</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Out-of-core</span>The data <strong>cannot fit in one machine's memory</strong> — or even on one disk. Think the whole Web: billions of pages.</div>
+      <p class="small"><strong>Bulk, highly parallel</strong> processing: lots of <em>independent</em> tasks. This differs from classic HPC, where tasks are tightly <em>dependent</em> and communicate constantly.</p>
+      <div class="callout warn"><span class="lbl">Bottleneck</span>Performance is limited by <strong>I/O and network bandwidth</strong>, not by floating-point throughput.</div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Good fits</span><span class="small">Term frequencies across the Web; URL access counts; building a reverse web-link graph; sort.</span></div>
+      <div class="callout warn"><span class="lbl">Poor fits</span><span class="small">Small data; tightly-coupled, highly-dependent computation; finding a single record; low-latency queries.</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Scale-Up vs. Scale-Out</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Scale-up (vertical)</span>One bigger box — more cores, more RAM, faster disks. Simple, but bounded and expensive at the top end.</div>
+      <div class="callout takeaway"><span class="lbl">Scale-out (horizontal)</span>Many <strong>commodity</strong> machines cooperating. Add nodes to add capacity; expect — and tolerate — failures.</div>
+      <p class="small">Big data picks scale-out: hardware is cheap, datasets are enormous, and at 1000s of nodes <strong>something is always failing</strong>.</p>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 200" class="chart" style="max-width:330px">
+        <text x="75" y="20" text-anchor="middle" class="note">scale-up</text>
+        <rect x="50" y="30" width="50" height="120" rx="5" fill="#3b82f6"/>
+        <text x="75" y="95" text-anchor="middle" fill="#fff" class="lbl">1 big</text>
+        <text x="75" y="110" text-anchor="middle" fill="#fff" class="lbl">node</text>
+        <text x="225" y="20" text-anchor="middle" class="note">scale-out</text>
+        <g fill="#CC0000">
+          <rect x="160" y="30" width="28" height="28" rx="3"/><rect x="196" y="30" width="28" height="28" rx="3"/><rect x="232" y="30" width="28" height="28" rx="3"/>
+          <rect x="160" y="64" width="28" height="28" rx="3"/><rect x="196" y="64" width="28" height="28" rx="3"/><rect x="232" y="64" width="28" height="28" rx="3"/>
+          <rect x="160" y="98" width="28" height="28" rx="3"/><rect x="196" y="98" width="28" height="28" rx="3"/><rect x="232" y="98" width="28" height="28" rx="3"/>
+        </g>
+        <text x="210" y="148" text-anchor="middle" class="note">many commodity nodes</text>
+      </svg>
+      <div class="src">Add nodes, not a bigger box.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The Distributed File System</h2>
+  <div class="cols w-64">
+    <div>
+      <p class="small">Bulk processing needs the data spread across the cluster so many workers can read in parallel. That is the job of a <strong>parallel/distributed file system (PFS/DFS)</strong>.</p>
+      <div class="callout"><span class="lbl">Two worlds</span><span class="small"><strong>HPC:</strong> PVFS, Lustre, BeeGFS. &nbsp; <strong>Big Data:</strong> Google FS (GFS), HDFS.</span></div>
+      <div class="callout takeaway"><span class="lbl">Key ideas</span><span class="small">Split each file into large <strong>blocks</strong>; <strong>replicate</strong> blocks across nodes; expect failures and recover automatically.</span></div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 200" class="chart" style="max-width:320px">
+        <rect x="20" y="14" width="260" height="22" rx="4" fill="#16181d"/>
+        <text x="150" y="29" text-anchor="middle" fill="#fff" class="lbl">big file = blocks B1 B2 B3</text>
+        <g font-size="10">
+          <rect x="20" y="70" width="70" height="80" rx="5" fill="none" stroke="#cbd5e1"/><text x="55" y="64" text-anchor="middle" class="note">node 1</text>
+          <rect x="115" y="70" width="70" height="80" rx="5" fill="none" stroke="#cbd5e1"/><text x="150" y="64" text-anchor="middle" class="note">node 2</text>
+          <rect x="210" y="70" width="70" height="80" rx="5" fill="none" stroke="#cbd5e1"/><text x="245" y="64" text-anchor="middle" class="note">node 3</text>
+          <rect x="28" y="80" width="54" height="18" rx="3" fill="#3b82f6"/><text x="55" y="93" text-anchor="middle" fill="#fff" class="lbl">B1</text>
+          <rect x="28" y="102" width="54" height="18" rx="3" fill="#86efac"/><text x="55" y="115" text-anchor="middle" class="lbl">B2</text>
+          <rect x="123" y="80" width="54" height="18" rx="3" fill="#86efac"/><text x="150" y="93" text-anchor="middle" class="lbl">B2</text>
+          <rect x="123" y="102" width="54" height="18" rx="3" fill="#fca5a5"/><text x="150" y="115" text-anchor="middle" class="lbl">B3</text>
+          <rect x="218" y="80" width="54" height="18" rx="3" fill="#3b82f6"/><text x="245" y="93" text-anchor="middle" fill="#fff" class="lbl">B1</text>
+          <rect x="218" y="102" width="54" height="18" rx="3" fill="#fca5a5"/><text x="245" y="115" text-anchor="middle" class="lbl">B3</text>
+        </g>
+        <text x="150" y="175" text-anchor="middle" class="note">each block replicated on multiple nodes</text>
+      </svg>
+      <div class="src">Blocks + replicas = parallel reads &amp; fault tolerance.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 2 — THE MapReduce MODEL
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 2</div>
+  <div class="mod-title">The MapReduce Programming Model</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Write the type signatures of <code class="inline">map</code> and <code class="inline">reduce</code></li>
+      <li>Trace the canonical word-count through map → shuffle → reduce</li>
+      <li>Explain how re-execution gives fault tolerance</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>MapReduce — the Big Idea</h2>
+  <div class="cols">
+    <div>
+      <p class="small">A programming model (Dean &amp; Ghemawat, Google, OSDI 2004) for processing large distributed datasets on a cluster of commodity machines.</p>
+      <div class="callout"><span class="lbl">map</span><span class="small">Applied to each input record; emits intermediate key/value pairs.<br><code class="inline">map: (k1,v1) -&gt; list(k2,v2)</code></span></div>
+      <div class="callout"><span class="lbl">reduce</span><span class="small">Merges all values that share an intermediate key.<br><code class="inline">reduce: (k2,list(v2)) -&gt; list(v2)</code></span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Bag-of-tasks</span><span class="small">
+        1. Map tasks assigned to workers<br>
+        2. <strong>Shuffle</strong> intermediate data by key<br>
+        3. Reduce tasks assigned to workers</span></div>
+      <p class="small">Borrows from Lisp's <code class="inline">map</code>/<code class="inline">reduce</code>. Relatives: Pig/Pig&nbsp;Latin (Yahoo), Dryad (Microsoft). Re-engineered open-source as <strong>Hadoop</strong>.</p>
+      <p class="tiny muted">Assumption: records are independent (no correlation), or the data is small.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Dataflow: Map → Shuffle → Reduce</h2>
+  <div class="center">
+    <svg viewBox="0 0 760 300" class="chart" style="max-width:880px">
+      <!-- column labels -->
+      <text x="95"  y="22" text-anchor="middle" class="note">input splits</text>
+      <text x="270" y="22" text-anchor="middle" class="note">map workers</text>
+      <text x="455" y="22" text-anchor="middle" class="note">shuffle (by key)</text>
+      <text x="660" y="22" text-anchor="middle" class="note">reduce workers</text>
+      <!-- input splits -->
+      <g font-size="11">
+        <rect x="30" y="50"  width="130" height="34" rx="4" fill="#e5e7eb"/><text x="95" y="71" text-anchor="middle" class="lbl">split 1</text>
+        <rect x="30" y="130" width="130" height="34" rx="4" fill="#e5e7eb"/><text x="95" y="151" text-anchor="middle" class="lbl">split 2</text>
+        <rect x="30" y="210" width="130" height="34" rx="4" fill="#e5e7eb"/><text x="95" y="231" text-anchor="middle" class="lbl">split 3</text>
+      </g>
+      <!-- map workers -->
+      <g font-size="11">
+        <rect x="205" y="50"  width="130" height="34" rx="4" fill="#3b82f6"/><text x="270" y="71" text-anchor="middle" fill="#fff" class="lbl">map()</text>
+        <rect x="205" y="130" width="130" height="34" rx="4" fill="#3b82f6"/><text x="270" y="151" text-anchor="middle" fill="#fff" class="lbl">map()</text>
+        <rect x="205" y="210" width="130" height="34" rx="4" fill="#3b82f6"/><text x="270" y="231" text-anchor="middle" fill="#fff" class="lbl">map()</text>
+      </g>
+      <!-- arrows input->map -->
+      <g stroke="#16181d" stroke-width="1.5" marker-end="url(#ar)">
+        <line x1="160" y1="67"  x2="203" y2="67"/>
+        <line x1="160" y1="147" x2="203" y2="147"/>
+        <line x1="160" y1="227" x2="203" y2="227"/>
+      </g>
+      <!-- shuffle node -->
+      <rect x="400" y="95" width="110" height="110" rx="8" fill="none" stroke="#CC0000" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="455" y="155" text-anchor="middle" fill="#CC0000" class="lbl">group by</text>
+      <text x="455" y="170" text-anchor="middle" fill="#CC0000" class="lbl">key</text>
+      <!-- arrows map->shuffle (crossing) -->
+      <g stroke="#94a3b8" stroke-width="1.3">
+        <line x1="335" y1="67"  x2="400" y2="120"/>
+        <line x1="335" y1="147" x2="400" y2="150"/>
+        <line x1="335" y1="227" x2="400" y2="180"/>
+      </g>
+      <!-- reduce workers -->
+      <g font-size="11">
+        <rect x="595" y="90"  width="130" height="34" rx="4" fill="#CC0000"/><text x="660" y="111" text-anchor="middle" fill="#fff" class="lbl">reduce() A–M</text>
+        <rect x="595" y="176" width="130" height="34" rx="4" fill="#CC0000"/><text x="660" y="197" text-anchor="middle" fill="#fff" class="lbl">reduce() N–Z</text>
+      </g>
+      <g stroke="#16181d" stroke-width="1.5" marker-end="url(#ar)">
+        <line x1="510" y1="125" x2="593" y2="107"/>
+        <line x1="510" y1="175" x2="593" y2="193"/>
+      </g>
+      <defs>
+        <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="#16181d"/>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+  <p class="small center">Each <code class="inline">map</code> output pair is routed to the reducer responsible for its key; reducers sort and group their input, then process one group at a time.</p>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Canonical Example: Word Count</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">map &amp; reduce (pseudocode)</div>
+      <pre><code class="language-python" data-trim>
+# key: document name + line no
+# value: the line's text
+def map(key, value):
+    for w in value.split():
+        emit(w, "1")
+
+# key: a word
+# values: a list of counts
+def reduce(key, values):
+    result = 0
+    for v in values:
+        result += int(v)
+    emit(key, result)
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Input</span><span class="small">
+        P1: <em>the weather is good</em><br>
+        P2: <em>today is good</em><br>
+        P3: <em>good weather is good</em></span></div>
+      <div class="callout"><span class="lbl">After shuffle (grouped)</span><span class="small">
+        <code class="inline">good -&gt; {1,1,1,1}</code><br>
+        <code class="inline">is&nbsp;&nbsp;&nbsp;-&gt; {1,1,1}</code><br>
+        <code class="inline">weather -&gt; {1,1}</code></span></div>
+      <div class="callout takeaway"><span class="lbl">Output</span><span class="small"><code class="inline">good 4 · is 3 · weather 2 · the 1 · today 1</code></span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Designing a MapReduce Job</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">map</span><span class="small">Acts on <strong>one</strong> record at a time — cannot look at other pairs. Good for filtering and for emitting several intermediate pairs per input (e.g. one <code class="inline">(word,1)</code> per word).</span></div>
+      <div class="callout"><span class="lbl">reduce</span><span class="small">Aggregates — may look at many values, but only those <code class="inline">map</code> sent to the <strong>same key</strong>. Good for sums, counts, joins.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">The key decision</span>Choose the <strong>intermediate key</strong> so that everything reduce must see together arrives under one key.</div>
+      <div class="callout warn"><span class="lbl">Stateless!</span><span class="small">No static variables, no remembering past records. There are <em>no guarantees</em> about which worker gets which pairs.</span></div>
+      <div class="callout warn"><span class="lbl">No DIY I/O</span><span class="small">Don't open files yourself. All input arrives as arguments; all output goes through <code class="inline">emit</code>.</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The Runtime: Master &amp; Workers</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Three moving parts make it work:</p>
+      <div class="callout"><span class="lbl">Distributed file system</span><span class="small">Stores inputs, outputs, and temporary results across all nodes (GFS/HDFS).</span></div>
+      <div class="callout"><span class="lbl">Driver program</span><span class="small">Runs on one node; names the inputs/outputs, the mapper and reducer, and any custom behavior.</span></div>
+      <div class="callout"><span class="lbl">Runtime system</span><span class="small">Supervises task execution across nodes (the <strong>master</strong> / JobTracker).</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Master state</span><span class="small">For every task: state (<em>idle / in-progress / completed</em>), the worker handling it, and the location of map output regions to push to reducers.</span></div>
+      <div class="callout"><span class="lbl">Task granularity</span><span class="small">Make <strong>M</strong> map tasks and <strong>R</strong> reduce tasks ≫ #machines → dynamic load balance and faster recovery.<br>Cost: O(M+R) scheduling, O(M·R) state.</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Fault Tolerance by Re-execution</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Worker failure</span><span class="small">Detected by missing <strong>heartbeats</strong>. Completed <em>and</em> in-progress map tasks are re-run; in-progress reduce tasks are re-run.</span></div>
+      <p class="small">Safe because tasks are <strong>idempotent</strong> — recomputing gives the same result. Completion is committed through the master.</p>
+      <div class="callout"><span class="lbl">Stragglers</span><span class="small">A task taking too long is <strong>duplicated</strong> (speculative execution); first to finish wins — agnostic to the cause of the slowdown.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Locality</span><span class="small">Input lives in GFS with several replicas. The scheduler places a task <strong>on or near</strong> a node holding the data — <em>move computation to the data</em>, since moving data is the expensive part.</span></div>
+      <div class="callout"><span class="lbl">Master failure</span><span class="small">Rare; the original design simply aborts and retries the job rather than replicating the master.</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Case Study: Distributed Sort</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Problem</span><span class="small">Sort 1&nbsp;TB = 10<sup>10</sup> records of 100 bytes (TeraSort-style).</span></div>
+      <pre><code class="language-text" data-trim>
+map:    emit(10-byte key, 100-byte record)
+reduce: identity (just write through)
+M = 15000   R = 4000
+output: 2-way replicated (GFS redundancy)
+</code></pre>
+      <p class="tiny muted">A pre-pass MapReduce may sample keys to balance reduce partitions.</p>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Observed</span><span class="small">
+        • Scan 10<sup>10</sup> records for a rare pattern (~92K hits): <strong>150&nbsp;s</strong>.<br>
+        • Full sort: <strong>~839&nbsp;s</strong>.</span></div>
+      <p class="small"><strong>Rates tell the story:</strong> input &gt; shuffle &gt; output. Reading is fast (locality); the shuffle moves data over the network; output is slowest because it writes <strong>two replicas</strong>.</p>
+      <p class="small">Speculative backup tasks and graceful handling of machine failures keep the job's tail latency in check.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 2 — Review</h2>
+  <div class="qa">
+    <p class="q">1. In word-count, why must <code class="inline">map</code> emit the <em>word</em> as the key rather than the line number?</p>
+    <div class="fragment"><div class="a"><code class="inline">reduce</code> only sees values that share a key. To total each word's count, every <code class="inline">(word,1)</code> for the same word must land at the same reducer — so the word is the intermediate key.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. Why can MapReduce safely re-run a task that may have already completed?</p>
+    <div class="fragment"><div class="a">Tasks are <strong>idempotent</strong> and side-effect-free (all output via <code class="inline">emit</code>, committed through the master), so recomputation yields the same result — enabling recovery from worker failures and stragglers.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 3 — HADOOP
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 3</div>
+  <div class="mod-title">The Hadoop Ecosystem</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Describe how HDFS stores, replicates, and recovers blocks</li>
+      <li>Name the roles of NameNode, DataNode, JobTracker, TaskTracker</li>
+      <li>Place HBase, Hive, Pig in the Hadoop stack</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>HDFS — Structure &amp; Replication</h2>
+  <div class="cols">
+    <div>
+      <p class="small">The open-source counterpart of GFS: redundant storage on commodity hardware, built to <strong>expect and tolerate failures</strong>, optimized for large files and batch reads.</p>
+      <div class="callout"><span class="lbl">Layout</span><span class="small">Files = collections of <strong>blocks</strong> (classically 64&nbsp;MB). Every block replicated on <strong>≥ 3</strong> nodes.</span></div>
+      <div class="callout"><span class="lbl">Roles</span><span class="small"><strong>NameNode</strong> holds metadata (files→blocks); <strong>SecondaryNameNode</strong> backs it up; <strong>DataNodes</strong> store &amp; serve blocks.</span></div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 200" class="chart" style="max-width:320px">
+        <text x="75"  y="20" text-anchor="middle" class="note">Rack 1</text>
+        <text x="225" y="20" text-anchor="middle" class="note">Rack 2</text>
+        <rect x="20" y="28" width="110" height="150" rx="6" fill="none" stroke="#cbd5e1"/>
+        <rect x="170" y="28" width="110" height="150" rx="6" fill="none" stroke="#cbd5e1"/>
+        <g font-size="10">
+          <rect x="34" y="46" width="82" height="22" rx="3" fill="#3b82f6"/><text x="75" y="61" text-anchor="middle" fill="#fff" class="lbl">DN: B (copy 1)</text>
+          <rect x="34" y="78" width="82" height="22" rx="3" fill="#86efac"/><text x="75" y="93" text-anchor="middle" class="lbl">DN: B (copy 2)</text>
+          <rect x="184" y="46" width="82" height="22" rx="3" fill="#fca5a5"/><text x="225" y="61" text-anchor="middle" class="lbl">DN: B (copy 3)</text>
+        </g>
+        <text x="150" y="130" text-anchor="middle" class="note">copies 1 &amp; 2: same rack</text>
+        <text x="150" y="146" text-anchor="middle" class="note">copy 3: different rack</text>
+        <text x="150" y="168" text-anchor="middle" class="note">→ survives a whole-rack outage</text>
+      </svg>
+      <div class="src">Rack-aware replica placement.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>HDFS — Failure Handling</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Health checks</span>DataNodes periodically <strong>check in</strong> with the NameNode to report they are alive and which blocks they hold.</div>
+      <div class="callout"><span class="lbl">On node loss</span>The NameNode notices missing check-ins and orders surviving DataNodes to <strong>re-replicate</strong> any now under-replicated blocks. Fail-over is automated.</div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">What it optimizes for</span><span class="small"><strong>Durability and throughput on huge files</strong>, not low latency or small random reads. Re-replication is simple and robust — but bandwidth-hungry.</span></div>
+      <p class="small">This is the classic big-data bargain: pay extra storage and network for replication, and in return survive arbitrary node and rack failures with no operator intervention.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Hadoop Jobs, Tasks &amp; Trackers</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Job</span><span class="small">A user-submitted map/reduce program.</span></div>
+      <div class="callout"><span class="lbl">Task</span><span class="small">A single mapper or reducer instance. Failed tasks are retried automatically; run <strong>local to their data</strong> when possible.</span></div>
+      <div class="callout"><span class="lbl">JobTracker (JT)</span><span class="small">Manages job submission and delegates tasks.</span></div>
+      <div class="callout"><span class="lbl">TaskTrackers (TT)</span><span class="small">Ask for work and execute tasks; fetch data from a DataNode if it isn't already local.</span></div>
+    </div>
+    <div>
+      <div class="callout warn"><span class="lbl">Tasks WILL fail</span><span class="small">The JT retries a task up to <strong>N</strong> times; after N failures the whole job fails (so a deterministic bug can't loop forever).</span></div>
+      <div class="callout takeaway"><span class="lbl">Speculative execution</span><span class="small">The JT may launch <strong>duplicate</strong> copies of a slow task; the first to finish wins, the rest are killed — masking a slow node.</span></div>
+      <div class="callout"><span class="lbl">Data locality</span><span class="small">Schedule tasks where the data already lives; moving data between nodes is assumed costly.</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The Hadoop Stack</h2>
+  <div class="center">
+    <svg viewBox="0 0 620 240" class="chart" style="max-width:760px">
+      <!-- coordination spine -->
+      <rect x="20" y="30" width="60" height="180" rx="6" fill="#fde68a"/>
+      <text x="50" y="125" text-anchor="middle" class="lbl" transform="rotate(-90 50 125)">ZooKeeper (coordination)</text>
+      <!-- HDFS base -->
+      <rect x="100" y="180" width="500" height="32" rx="5" fill="#16181d"/>
+      <text x="350" y="201" text-anchor="middle" fill="#fff" class="lbl">HDFS — distributed, replicated storage</text>
+      <!-- MapReduce / YARN -->
+      <rect x="100" y="138" width="500" height="32" rx="5" fill="#CC0000"/>
+      <text x="350" y="159" text-anchor="middle" fill="#fff" class="lbl">MapReduce execution engine</text>
+      <!-- higher-level components -->
+      <g font-size="11">
+        <rect x="100" y="60" width="92"  height="66" rx="5" fill="#3b82f6"/><text x="146" y="90" text-anchor="middle" fill="#fff" class="lbl">HBase</text><text x="146" y="106" text-anchor="middle" fill="#fff" class="note">NoSQL store</text>
+        <rect x="202" y="60" width="92"  height="66" rx="5" fill="#3b82f6"/><text x="248" y="90" text-anchor="middle" fill="#fff" class="lbl">Pig</text><text x="248" y="106" text-anchor="middle" fill="#fff" class="note">dataflow lang</text>
+        <rect x="304" y="60" width="92"  height="66" rx="5" fill="#3b82f6"/><text x="350" y="90" text-anchor="middle" fill="#fff" class="lbl">Hive</text><text x="350" y="106" text-anchor="middle" fill="#fff" class="note">SQL warehouse</text>
+        <rect x="406" y="60" width="92"  height="66" rx="5" fill="#3b82f6"/><text x="452" y="90" text-anchor="middle" fill="#fff" class="lbl">Cascading</text><text x="452" y="106" text-anchor="middle" fill="#fff" class="note">workflows</text>
+        <rect x="508" y="60" width="92"  height="66" rx="5" fill="#94a3b8"/><text x="554" y="90" text-anchor="middle" fill="#fff" class="lbl">…</text><text x="554" y="106" text-anchor="middle" fill="#fff" class="note">more</text>
+      </g>
+    </svg>
+  </div>
+  <p class="tiny muted center"><strong>HBase</strong>: sparse NoSQL store · <strong>Pig</strong>: Pig&nbsp;Latin → MapReduce · <strong>Hive</strong>: SQL-like queries · <strong>Cascading</strong>: complex workflows · <strong>ZooKeeper</strong>: coordinates &amp; monitors components.</p>
+</section>
+
+<!-- ==================================================================
+     MODULE 4 — APACHE SPARK
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 4</div>
+  <div class="mod-title">Apache Spark — RDDs &amp; In-Memory Computing</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Explain why iterative/interactive workloads outgrew MapReduce</li>
+      <li>Distinguish RDD <strong>transformations</strong> (lazy) from <strong>actions</strong> (eager)</li>
+      <li>Read the DAG/lineage and say how Spark recovers a lost partition</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Why a New Model? Data Sharing</h2>
+  <div class="cols">
+    <div>
+      <p class="small">MapReduce simplified big-data analysis — but users wanted <strong>multi-stage</strong> apps (iterative graph &amp; ML algorithms) and <strong>interactive</strong> ad-hoc queries. Both need fast data sharing <em>across</em> jobs.</p>
+      <div class="callout warn"><span class="lbl">MapReduce way</span><span class="small">Every stage writes to HDFS and the next reads it back — <strong>replication + serialization + disk I/O</strong> between every iteration. Slow.</span></div>
+      <div class="callout takeaway"><span class="lbl">Spark way</span><span class="small">Keep working data in <strong>distributed memory</strong>; load once, reuse across iterations and queries — <strong>10–100×</strong> faster than going through network and disk.</span></div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 220" class="chart" style="max-width:330px">
+        <text x="75" y="16" text-anchor="middle" class="note">MapReduce</text>
+        <g font-size="9">
+          <rect x="40" y="26" width="70" height="22" rx="3" fill="#e5e7eb"/><text x="75" y="41" text-anchor="middle" class="lbl">iter 1</text>
+          <rect x="40" y="92" width="70" height="22" rx="3" fill="#e5e7eb"/><text x="75" y="107" text-anchor="middle" class="lbl">iter 2</text>
+        </g>
+        <line x1="75" y1="48" x2="75" y2="92" stroke="#CC0000" stroke-width="2" marker-end="url(#ar2)"/>
+        <text x="120" y="74" class="note" fill="#CC0000">HDFS w/r</text>
+        <text x="225" y="16" text-anchor="middle" class="note">Spark</text>
+        <g font-size="9">
+          <rect x="190" y="26" width="70" height="22" rx="3" fill="#86efac"/><text x="225" y="41" text-anchor="middle" class="lbl">iter 1</text>
+          <rect x="190" y="92" width="70" height="22" rx="3" fill="#86efac"/><text x="225" y="107" text-anchor="middle" class="lbl">iter 2</text>
+        </g>
+        <line x1="225" y1="48" x2="225" y2="92" stroke="#3b82f6" stroke-width="2" marker-end="url(#ar2)"/>
+        <text x="270" y="74" text-anchor="end" class="note" fill="#3b82f6">in-memory</text>
+        <rect x="40" y="150" width="220" height="46" rx="5" fill="none" stroke="#cbd5e1"/>
+        <text x="150" y="170" text-anchor="middle" class="note">load input once</text>
+        <text x="150" y="186" text-anchor="middle" class="note">memory is 10–100× faster than disk</text>
+        <defs><marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#16181d"/></marker></defs>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Spark System &amp; SparkContext</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Driver + workers</span><span class="small">The <strong>driver</strong> defines the computation; <strong>worker</strong> programs run on cluster nodes (or local threads) and hold the data.</span></div>
+      <p class="small">Not a fork of Hadoop — a separate, fast, MapReduce-<em>like</em> engine that's <strong>compatible with Hadoop storage</strong>: it can read/write HDFS, HBase, SequenceFiles, and more.</p>
+      <div class="callout takeaway"><span class="lbl">RDD</span><span class="small"><strong>Resilient Distributed Dataset</strong> — a distributed collection partitioned across workers, cacheable in memory, rebuilt on failure.</span></div>
+    </div>
+    <div>
+      <div class="code-label">Create a SparkContext (Python)</div>
+      <pre><code class="language-python" data-trim>
+from pyspark import SparkContext
+sc = SparkContext(
+    "masterUrl",   # cluster, or local / local[N]
+    "name",        # app name
+    "sparkHome",   # Spark install path
+    ["library.py"] # JARs/files to ship
+)
+</code></pre>
+      <p class="tiny muted">APIs in Scala, Java, Python, R. The context is the handle through which you build RDDs.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>RDDs: Transformations vs. Actions</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Build an RDD</span><span class="small">Parallelize a collection, read a file (HDFS/S3/HBase), or <strong>transform</strong> an existing RDD. Programmer chooses #partitions.</span></div>
+      <div class="callout takeaway"><span class="lbl">Transformations — LAZY</span><span class="small"><code class="inline">map</code>, <code class="inline">filter</code>, <code class="inline">flatMap</code>, <code class="inline">union</code>…<br>Define a <em>new</em> RDD but compute <strong>nothing</strong> yet — they just record what to do.</span></div>
+      <div class="callout"><span class="lbl">Actions — EAGER</span><span class="small"><code class="inline">collect</code>, <code class="inline">count</code>, <code class="inline">reduce</code>, <code class="inline">take</code>…<br>Force evaluation: run all the pending transformations and return a result.</span></div>
+    </div>
+    <div>
+      <div class="code-label">{1, 2, 3, 3} → transformations</div>
+      <pre><code class="language-python" data-trim>
+rdd.map(lambda x: x + 1)    # {2,3,4,4}
+rdd.filter(lambda x: x != 1)# {2,3,3}
+rdd.flatMap(lambda x:        # {1,2,3,2,
+            range(x,4))      #  3,3,3}
+rdd.distinct()              # {1,2,3}
+</code></pre>
+      <div class="code-label">→ actions</div>
+      <pre><code class="language-python" data-trim>
+rdd.collect()               # {1,2,3,3}
+rdd.count()                 # 4
+rdd.take(2)                 # {1,2}
+rdd.reduce(lambda x,y: x+y) # 9
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Why Laziness? The DAG &amp; Lineage</h2>
+  <div class="cols w-64">
+    <div>
+      <p class="small">Because transformations are deferred, Spark sees the <strong>whole chain</strong> before running anything. It builds a <strong>DAG</strong> of operations and optimizes it — pipelining stages, pruning, choosing where to shuffle — then executes only when an <strong>action</strong> demands a result.</p>
+      <div class="callout takeaway"><span class="lbl">Lineage = fault tolerance</span><span class="small">Each RDD remembers <strong>how it was derived</strong> from its parents. Lose a partition? Recompute just that partition by replaying its lineage — no replication needed.</span></div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 260 240" class="chart" style="max-width:280px">
+        <g font-size="10">
+          <rect x="55" y="14" width="150" height="30" rx="5" fill="#e5e7eb"/><text x="130" y="33" text-anchor="middle" class="lbl">HDFS file</text>
+          <rect x="55" y="78" width="150" height="30" rx="5" fill="#3b82f6"/><text x="130" y="97" text-anchor="middle" fill="#fff" class="lbl">filter(startsWith ERROR)</text>
+          <rect x="55" y="142" width="150" height="30" rx="5" fill="#3b82f6"/><text x="130" y="161" text-anchor="middle" fill="#fff" class="lbl">map(split, take col 3)</text>
+          <rect x="55" y="200" width="150" height="30" rx="5" fill="#CC0000"/><text x="130" y="219" text-anchor="middle" fill="#fff" class="lbl">count()  ← action</text>
+        </g>
+        <g stroke="#16181d" stroke-width="1.5" marker-end="url(#ar3)">
+          <line x1="130" y1="44" x2="130" y2="76"/>
+          <line x1="130" y1="108" x2="130" y2="140"/>
+          <line x1="130" y1="172" x2="130" y2="198"/>
+        </g>
+        <defs><marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#16181d"/></marker></defs>
+      </svg>
+      <div class="src">Lineage DAG; runs only at the action.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Example: Log Mining (interactive)</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">Cache once, query many times (Scala)</div>
+      <pre><code class="language-scala" data-trim>
+val lines  = spark.textFile("hdfs://...")
+val errors = lines.filter(_.startsWith("ERROR"))
+val msgs   = errors.map(_.split('\t')(2))
+val cached = msgs.cache()   // persist in RAM
+
+cached.filter(_.contains("foo")).count   // action
+cached.filter(_.contains("bar")).count   // action
+</code></pre>
+      <p class="small">First action loads &amp; caches the error lines; later queries hit <strong>memory</strong>, not disk.</p>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Result</span><span class="small">Full-text search over 1&nbsp;TB scaled data: <strong>5–7&nbsp;s</strong> (vs ~170&nbsp;s on disk); cached follow-up queries in <strong>&lt; 1&nbsp;s</strong>.</span></div>
+      <div class="callout"><span class="lbl">cache() / persist()</span><span class="small">Each partition is kept in memory and reused by later actions on that RDD. If a cached partition is lost, lineage recomputes it.</span></div>
+      <p class="tiny muted">Storage levels trade space vs. CPU vs. durability: <code class="inline">MEMORY_ONLY</code>, <code class="inline">MEMORY_AND_DISK</code>, <code class="inline">..._SER</code> (serialized), <code class="inline">..._2</code> (2 replicas), <code class="inline">DISK_ONLY</code>.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Iterative Workloads Shine: ML</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">Logistic regression (Scala)</div>
+      <pre><code class="language-scala" data-trim>
+val data = spark.textFile(...)
+              .map(readPoint).cache()
+var w = Vector.random(D)
+for (i &lt;- 1 to ITERATIONS) {
+  val gradient = data.map(p =&gt;
+    (1/(1+exp(-p.y*(w dot p.x))) - 1)
+        * p.y * p.x
+  ).reduce(_ + _)
+  w -= gradient
+}
+println("Final w: " + w)
+</code></pre>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Why it's fast</span><span class="small"><code class="inline">data</code> is loaded and <strong>cached once</strong>. Every iteration re-reads it from <strong>memory</strong> — no HDFS round-trip per pass like MapReduce would force.</span></div>
+      <p class="small">The same pattern powers iterative graph algorithms and most machine-learning training loops — exactly the workloads that made MapReduce painful.</p>
+      <div class="callout"><span class="lbl">Word-count, Spark style</span>
+        <pre style="margin-top:.4em"><code class="language-python" data-trim>
+lines.flatMap(lambda l: l.split())
+     .map(lambda w: (w, 1))
+     .reduceByKey(lambda a,b: a+b)
+</code></pre></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Shared Variables</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Broadcast variables</span><span class="small">Spark's version of Hadoop's DistributedCache. A <strong>read-only</strong> value cached on each node; Spark distributes it to minimize communication cost (e.g. a lookup table shared by all tasks).</span></div>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Accumulators</span><span class="small">Spark's version of Hadoop's Counter. <strong>Add-only</strong> variables combined through an associative operation; native numeric types &amp; mutable collections, extensible. Only the <strong>driver</strong> reads the value.</span></div>
+    </div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Why these exist</span>RDD closures are shipped to every task, so a large lookup would be copied per task. Broadcast sends it <strong>once per node</strong>; accumulators give a safe way to gather a global count/sum back at the driver without a full reduce.</div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 4 — Review</h2>
+  <div class="qa">
+    <p class="q">1. You chain ten <code class="inline">map</code>/<code class="inline">filter</code> calls and nothing runs. Why — and what triggers execution?</p>
+    <div class="fragment"><div class="a">Transformations are <strong>lazy</strong>: they only extend the lineage DAG. Computation starts when an <strong>action</strong> (<code class="inline">count</code>, <code class="inline">collect</code>, <code class="inline">reduce</code>…) forces a result, letting Spark optimize the whole chain first.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. A cached partition is lost to a node crash. How does Spark recover without replication?</p>
+    <div class="fragment"><div class="a">Each RDD records its <strong>lineage</strong> — the transformations that built it from its parents. Spark recomputes only the lost partition by replaying that lineage.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 5 — WHICH & WHEN
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 5</div>
+  <div class="mod-title">When to Use Which</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Match a workload to MapReduce vs. Spark vs. neither</li>
+      <li>Explain the in-memory speedup and when it doesn't help</li>
+      <li>State the limits of the map/reduce abstraction</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>MapReduce: Good, OK, Bad</h2>
+  <div class="cols c3">
+    <div class="callout takeaway"><span class="lbl">Good for</span><span class="small">Embarrassingly-parallel jobs; summing, grouping, filtering, joining; offline batch over massive data; scanning an <em>entire</em> dataset.</span></div>
+    <div class="callout"><span class="lbl">OK for</span><span class="small">Iterative jobs (graph algorithms) — but each iteration reads/writes disk, so per-iteration I/O latency is high.</span></div>
+    <div class="callout warn"><span class="lbl">Bad for</span><span class="small">Shared state / coordination (tasks must be share-nothing); low-latency jobs; small datasets; finding individual records.</span></div>
+  </div>
+  <div class="callout"><span class="lbl">Abstraction limit</span>MapReduce only fits <strong>idempotent, share-nothing</strong> operations. That constraint is exactly what buys it transparent scaling and fault tolerance — but it rules out tightly-coupled algorithms.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>MapReduce vs. Spark</h2>
+  <table style="font-size:.8em">
+    <tr><th>Dimension</th><th>Hadoop MapReduce</th><th>Apache Spark</th></tr>
+    <tr><td class="hi">Data sharing</td><td>Through HDFS between every stage</td><td>In-memory RDDs reused across stages</td></tr>
+    <tr><td class="hi">Iterative / interactive</td><td>Slow — disk I/O per pass</td><td>Fast — load once, <strong>10–100×</strong></td></tr>
+    <tr><td>Programming model</td><td>map + reduce only</td><td>map/reduce, DAG, streaming, vertex-based</td></tr>
+    <tr><td>Evaluation</td><td>Eager, stage by stage</td><td>Lazy transformations + eager actions</td></tr>
+    <tr><td>Fault tolerance</td><td>Re-execute idempotent tasks</td><td>Recompute partitions from lineage</td></tr>
+    <tr><td>APIs</td><td>Java (Pig/Hive on top)</td><td>Scala, Java, Python, R</td></tr>
+  </table>
+  <div class="callout warn"><span class="lbl">When MapReduce still wins</span>A single huge batch pass that streams once through data far larger than cluster memory — there's little to reuse, so Spark's in-memory edge mostly disappears.</div>
+</section>
+
+<!-- ===== BIG PICTURE ===== -->
+<section data-background-color="#ffffff">
+  <h2>Big Data — Big Picture</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Store</span>Split files into replicated <strong>blocks</strong> on a DFS (GFS/HDFS); survive node &amp; rack failure.</div>
+    <div class="callout"><span class="lbl">Compute</span><strong>map</strong> per record → <strong>shuffle</strong> by key → <strong>reduce</strong> per group; move computation to the data.</div>
+    <div class="callout"><span class="lbl">Recover</span>Re-run idempotent tasks (MapReduce) or replay <strong>lineage</strong> (Spark) — no manual intervention.</div>
+  </div>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Iterate fast</span>Spark keeps working sets in <strong>distributed memory</strong>; lazy DAGs let it optimize before running.</div>
+    <div class="callout"><span class="lbl">Choose</span>Batch one-pass scans → MapReduce; iterative/interactive/ML → Spark; tiny or tightly-coupled → neither.</div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">One sentence</span>
+    <strong>Express your computation as map + reduce over a replicated distributed dataset, let the framework handle distribution and failure, and cache in memory when you'll touch the data more than once.</strong></div>
+</section>
+
+<!-- ===== REFERENCES ===== -->
+<section data-background-color="#f6f8fb">
+  <h2>References</h2>
+  <div class="callout"><span class="lbl">Course material</span>
+    Adapted from the CSC 548 <em>Big Data: MapReduce &amp; Spark</em> lecture notes.</div>
+  <ul class="small">
+    <li>J. Dean &amp; S. Ghemawat, "MapReduce: Simplified Data Processing on Large Clusters," <em>OSDI</em> 2004, pp. 137–150.</li>
+    <li>S. Ghemawat, H. Gobioff &amp; S-T. Leung, "The Google File System," <em>SOSP</em> 2003.</li>
+    <li>M. Zaharia et al., "Resilient Distributed Datasets: A Fault-Tolerant Abstraction for In-Memory Cluster Computing," <em>NSDI</em> 2012.</li>
+    <li>Apache Hadoop — <a href="https://hadoop.apache.org">hadoop.apache.org</a>; Apache Spark — <a href="https://spark.apache.org">spark.apache.org</a>.</li>
+    <li><strong>CSC 548</strong>, J. Li.</li>
+  </ul>
+</section>
+
+</div>
+
+<!-- deck-level fixed footer -->
+<div class="deck-footer"><span class="tag">CSC 548</span><span class="sep">·</span>Big Data: MapReduce &amp; Spark</div>
+</div>
+
+<!-- reveal.js core + plugins -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/math/math.js"></script>
+<script>
+  Reveal.initialize({
+    width: 1280, height: 720, margin: 0.04,
+    minScale: 0.2, maxScale: 1.6,
+    center: false,
+    hash: true, slideNumber: 'c/t', history: true,
+    transition: 'slide', transitionSpeed: 'fast',
+    plugins: [ RevealNotes, RevealHighlight, RevealMath.KaTeX ],
+    katex: { delimiters: [
+      {left:'\\(', right:'\\)', display:false},
+      {left:'$$', right:'$$', display:true}
+    ]},
+  });
+</script>
+<script>
+/* Auto-fit: shrink any slide whose content would exceed 720px. */
+(function(){
+  function fit(s){ if(!s) return;
+    s.style.setProperty('--nc-fit','1');
+    var h=s.scrollHeight;
+    if(h>724){ var k=Math.max(0.6, Math.min(1, 720/h));
+      s.style.setProperty('--nc-fit', k.toFixed(3)); }
+  }
+  if(window.Reveal){
+    Reveal.on('ready', function(e){ fit(e.currentSlide); });
+    Reveal.on('slidechanged', function(e){ fit(e.currentSlide); });
+    try{ if(Reveal.isReady && Reveal.isReady()) fit(Reveal.getCurrentSlide()); }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>
