@@ -1,6 +1,6 @@
-# CSC 548 / ECE 591 — Parallel Systems (NCSU)
+# CSC 548 — Parallel Systems (NCSU)
 
-Interactive HTML lecture decks (reveal.js) for **CSC 548 / ECE 591: Parallel Systems**, Fall 2026.
+Interactive HTML lecture decks (reveal.js) for **CSC 548: Parallel Systems**, Fall 2026.
 The course is programming-focused (MPI · OpenMP · SIMD · CUDA · Big Data · Parallel I/O · Parallel Deep Learning).
 
 ## Decks
