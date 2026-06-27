@@ -51,14 +51,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 1</div>
   <div class="mod-title">Data-Level Parallelism &amp; Flynn's Taxonomy</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Place SIMD in Flynn's taxonomy (SISD / SIMD / MISD / MIMD)</li>
-      <li>Contrast scalar execution with vector (packed) execution</li>
-      <li>Recognize the loop shapes that expose data-level parallelism</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -163,14 +155,6 @@ for (int i = 0; i &lt; n; i++)
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 2</div>
   <div class="mod-title">SIMD Hardware — Registers, Widths &amp; Lanes</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Trace the Intel SIMD lineage: MMX → SSE → AVX → AVX-512</li>
-      <li>Compute how many lanes a register holds for a given type</li>
-      <li>Read the SSE/AVX operand naming (<code class="inline">PS</code>, <code class="inline">SD</code>, aligned/unaligned)</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -274,14 +258,6 @@ for (int i = 0; i &lt; n; i++)
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 3</div>
   <div class="mod-title">Using SIMD — Auto-Vectorization &amp; <code class="inline">omp simd</code></div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Get a loop vectorized by the compiler and read its report</li>
-      <li>Use <code class="inline">#pragma omp simd</code> to force/guide vectorization</li>
-      <li>Help the compiler with alignment and <code class="inline">restrict</code></li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -390,14 +366,6 @@ void axpy(int n, float s,
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 4</div>
   <div class="mod-title">Intrinsics — Hand-Written Vector Code</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Read AVX intrinsic names (<code class="inline">__m256</code>, <code class="inline">_mm256_add_ps</code>)</li>
-      <li>Load, compute, and store a vector register</li>
-      <li>Vectorize SAXPY by hand, including the remainder tail</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -534,14 +502,6 @@ void saxpy_avx(int n, float a,
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 5</div>
   <div class="mod-title">Pitfalls — When Vectorization Fails</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Spot loop-carried dependences that block vectorization</li>
-      <li>Use masking for conditional / partial vector work</li>
-      <li>Diagnose alignment and aliasing failures from the report</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">

@@ -56,15 +56,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 1</div>
   <div class="mod-title">Tenstorrent Architecture</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Define a <strong>dataflow architecture</strong> and explain why Tenstorrent is one</li>
-      <li>Contrast it with the <strong>shared-memory multicore</strong> at the heart of this course (coherence, communication, execution model)</li>
-      <li>Describe the <strong>Tensix core internals</strong>: 5 RISC-V cores, FPU / SFPU / ThCon engines, 2 NoC routers, L1 SRAM</li>
-      <li>Explain <strong>distributed directly-addressable SRAM</strong>, the 2-D torus NoC, generations &amp; the Ethernet scale-out story</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Dataflow architecture intro -->
@@ -414,15 +405,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 2</div>
   <div class="mod-title">The Programming Stack</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Place the layers: <strong>Hardware → TT-Metalium → TT-NN → TT-Forge / TT-MLIR</strong> + runtime tools</li>
-      <li>Describe what each layer does and which problems it solves</li>
-      <li>Explain the <strong>TT-MLIR</strong> dialects and passes that lower a model down to Metalium</li>
-      <li>Say <strong>where the labs sit</strong> and why an open / RISC-V stack matters vs. closed CUDA</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Layered stack diagram -->
@@ -596,15 +578,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Lab 1</div>
   <div class="mod-title">Single-Core Matmul</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Apply <strong>loop tiling</strong> and reason about the host/device memory model</li>
-      <li>Walk the <strong>TT-Metalium host API lifecycle</strong> and implement a single-core tiled matmul</li>
-      <li>Write <strong>reader / compute / writer</strong> kernels with circular buffers</li>
-      <li>Debug with <strong>DPRINT</strong>, <strong>tt-triage</strong>, and the device profiler, and validate vs. a CPU golden result</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Lab 1 problem + tiling -->
@@ -867,14 +840,6 @@ tt-triage
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Lab 2</div>
   <div class="mod-title">Multi-Core Matmul (SPMD)</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Explain <strong>SPMD static work assignment</strong> and how it differs from GPU dynamic scheduling</li>
-      <li>Use <strong>split_work_to_cores()</strong> to partition output tiles across a grid (incl. uneven splits)</li>
-      <li>Pass per-core tile ranges through <strong>SetRuntimeArgs</strong> over core ranges</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Lab 2 SPMD idea -->

@@ -52,14 +52,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 1</div>
   <div class="mod-title">Shared-Memory Processors &amp; Threads</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Contrast a uniprocessor with an SMP and say what threads share</li>
-      <li>List what a thread holds privately vs. what it shares with its process</li>
-      <li>Name the portable shared-memory programming options</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -138,14 +130,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 2</div>
   <div class="mod-title">pthreads &amp; Synchronization</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Create/join threads and protect shared data with a mutex</li>
-      <li>Define race condition, critical section, deadlock, starvation</li>
-      <li>Use a condition variable to build producer/consumer</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -278,14 +262,6 @@ unlock(&amp;m);
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 3</div>
   <div class="mod-title">OpenMP Basics — Fork-Join</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Explain the fork-join execution model</li>
-      <li>Write a parallel region and read <code class="inline">omp_get_thread_num()</code></li>
-      <li>Name the five categories of OpenMP constructs</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -366,14 +342,6 @@ omp_set_num_threads(4);
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 4</div>
   <div class="mod-title">Work-Sharing Constructs</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Split a loop across a team with <code class="inline">omp for</code></li>
-      <li>Choose static / dynamic / guided scheduling</li>
-      <li>Use <code class="inline">sections</code> and the combined <code class="inline">parallel for</code></li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -452,14 +420,6 @@ for (i=0; i&lt;MAX; i++)
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 5</div>
   <div class="mod-title">Data Environment</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Predict the default scope of a variable in a parallel region</li>
-      <li>Apply private / firstprivate / lastprivate / threadprivate</li>
-      <li>Parallelize a sum correctly with <code class="inline">reduction</code></li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -565,14 +525,6 @@ for (i=0; i&lt;n; i++)
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 6</div>
   <div class="mod-title">Synchronization Constructs</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Choose among critical, atomic, barrier, ordered, single, master</li>
-      <li>Identify OpenMP's <strong>implicit</strong> barriers</li>
-      <li>Explain &amp; avoid false sharing in a parallel sum</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -630,14 +582,6 @@ sum[id] += 4.0/(1.0+x*x);
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 7</div>
   <div class="mod-title">Tasks &amp; Advanced Features</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Use <code class="inline">task</code> / <code class="inline">taskwait</code> for irregular &amp; recursive parallelism</li>
-      <li>Apply <code class="inline">collapse</code> and <code class="inline">simd</code></li>
-      <li>Query the runtime with <code class="inline">omp_*</code> routines</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">

@@ -50,14 +50,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 1</div>
   <div class="mod-title">The Message-Passing Model &amp; SPMD</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Explain the message-passing model and how it differs from shared memory</li>
-      <li>Describe SPMD and the cooperative (push) communication model</li>
-      <li>Write, compile &amp; run an MPI "Hello, World" with rank and size</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -221,14 +213,6 @@ int main(int argc, char *argv[]) {
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 2</div>
   <div class="mod-title">Point-to-Point Communication</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Use blocking <code class="inline">MPI_Send</code>/<code class="inline">MPI_Recv</code> with tags and <code class="inline">MPI_Status</code></li>
-      <li>Recognize and fix deadlock in "unsafe" send/recv ordering</li>
-      <li>Overlap communication with computation using <code class="inline">MPI_Isend</code>/<code class="inline">MPI_Irecv</code> + <code class="inline">MPI_Wait</code></li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -396,14 +380,6 @@ MPI_Wait(&amp;req, MPI_STATUS_IGNORE);
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 3</div>
   <div class="mod-title">Collective Operations</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Use <code class="inline">MPI_Bcast</code>, <code class="inline">Reduce</code>, <code class="inline">Allreduce</code>, <code class="inline">Scatter</code>, <code class="inline">Gather</code>, <code class="inline">Barrier</code></li>
-      <li>Replace hand-coded send/recv with a single collective</li>
-      <li>Pick the right reduction operator</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -539,14 +515,6 @@ MPI_Reduce(&amp;mypart, &amp;total, 1,
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 4</div>
   <div class="mod-title">Communicators, Groups &amp; Datatypes</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Explain how (group, context) form a communicator and why contexts beat tags</li>
-      <li>Create a sub-communicator with <code class="inline">MPI_Comm_split</code> / group calls</li>
-      <li>Build a derived datatype for non-contiguous data</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -644,14 +612,6 @@ MPI_Type_free(&amp;col);
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 5</div>
   <div class="mod-title">Worked Example — Parallel PI</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Read a complete MPI program end-to-end</li>
-      <li>See how <code class="inline">Bcast</code> + <code class="inline">Reduce</code> replace hand-coded messaging</li>
-      <li>Recognize the SPMD "decompose → local compute → combine" pattern</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">

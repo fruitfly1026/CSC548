@@ -69,14 +69,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 1</div>
   <div class="mod-title">Parallel Reduction Revisited</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Trace a tree-based reduction over 8 elements</li>
-      <li>Compare the <strong>interleaved</strong> and <strong>contiguous</strong> reduction kernels</li>
-      <li>Explain why the difference is just one branch condition — but matters a lot</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Reduction tree -->
@@ -203,14 +195,6 @@ for (stride = blockDim.x/2; stride &gt; 0; stride /= 2){
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 2</div>
   <div class="mod-title">Warp Partitioning</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Map 1D / 2D / 3D thread blocks onto warps</li>
-      <li>Decide whether a branch diverges <em>within</em> a warp</li>
-      <li>Use warps to explain why contiguous reduction beats interleaved</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Warp partitioning def -->
@@ -309,14 +293,6 @@ if (threadIdx.x &gt; warpSize - 1) { /* ... */ }
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 3</div>
   <div class="mod-title">Memory Coalescing</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Pick the access pattern a warp can coalesce into one DRAM transaction</li>
-      <li>Recall GPU DRAM bandwidths across generations</li>
-      <li>State the global→shared staging strategy</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Coalescing Q -->
@@ -366,14 +342,6 @@ if (threadIdx.x &gt; warpSize - 1) { /* ... */ }
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 4</div>
   <div class="mod-title">Bank Conflicts</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Explain shared-memory banks and the word → bank mapping</li>
-      <li>Identify a bank conflict and its serialization cost</li>
-      <li>Predict conflict-free strides (odd, coprime with 32)</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Banks def -->
@@ -444,14 +412,6 @@ float f = shared[index + s * threadIdx.x];
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 5</div>
   <div class="mod-title">SM Resource Partitioning (Occupancy)</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>List the four SM resources partitioned dynamically</li>
-      <li>Compute how block/thread/register limits cap occupancy</li>
-      <li>Explain the performance cliff</li>
-    </ul>
-  </div>
 </section>
 
 <!-- SM resources table -->
@@ -513,13 +473,6 @@ float f = shared[index + s * threadIdx.x];
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 6</div>
   <div class="mod-title">Data Prefetching</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Use independent instructions to hide global-memory latency</li>
-      <li>Restructure tiled matmul to prefetch the next tile</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Prefetch idea -->
@@ -565,13 +518,6 @@ for (/* each tile */) {
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 7</div>
   <div class="mod-title">Instruction Mix &amp; Loop Unrolling</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Account for the non-FP overhead in a tight loop</li>
-      <li>Unroll to eliminate loop and address-arithmetic instructions</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Instruction mix -->
@@ -623,13 +569,6 @@ Pvalue += Ms[ty][0]*Ns[0][tx] + Ms[ty][1]*Ns[1][tx]
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 8</div>
   <div class="mod-title">Thread Granularity</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Decide how much work to put in one thread</li>
-      <li>Trade redundant memory traffic against occupancy</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Thread granularity -->

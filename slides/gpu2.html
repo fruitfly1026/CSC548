@@ -58,15 +58,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part A</div>
   <div class="mod-title">Built-in Variables &amp; Functions</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Choose the right <strong>function qualifier</strong> (<code class="inline">__global__</code> / <code class="inline">__device__</code> / <code class="inline">__host__</code>)</li>
-      <li>State the <strong>constraints</strong> on device and global functions</li>
-      <li>Use CUDA <strong>math functions</strong> and faster <strong>intrinsics</strong></li>
-      <li>Use <strong>vector types</strong> (<code class="inline">int2</code>, <code class="inline">float4</code>, …) and their constructors</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Function qualifiers -->
@@ -154,15 +145,6 @@ f4.x; f4.y; f4.z; f4.w;     // NOT .r .g .b .a
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part B</div>
   <div class="mod-title">Scheduling Threads — Warps &amp; the SM</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Describe the hardware organization of an <strong>SM</strong></li>
-      <li>Define a <strong>warp</strong> and explain <strong>zero-overhead</strong> scheduling</li>
-      <li>Explain <strong>branch divergence</strong> and its performance cost</li>
-      <li>Compute warps, dispatch cycles, and <strong>warps needed to hide latency</strong></li>
-    </ul>
-  </div>
 </section>
 
 <!-- SM architecture intro -->
@@ -315,15 +297,6 @@ if (threadIdx.x &lt; 16) {
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part C</div>
   <div class="mod-title">The CUDA Memory Model</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Place each memory space in the <strong>hierarchy</strong> (registers → global)</li>
-      <li>Reason about <strong>registers</strong>, <strong>local</strong>, <strong>shared</strong>, <strong>global</strong>, <strong>constant</strong> memory</li>
-      <li>Connect register/shared-memory limits to <strong>occupancy</strong></li>
-      <li>Pick the right <strong>variable qualifier</strong></li>
-    </ul>
-  </div>
 </section>
 
 <!-- Memory hierarchy diagram -->
@@ -456,14 +429,6 @@ cudaMemcpyToSymbol(constData, data, sizeof(data));
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part D</div>
   <div class="mod-title">Synchronizing Threads</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Use <code class="inline">__syncthreads()</code> as a <strong>block barrier</strong></li>
-      <li>Explain why it works <strong>only within a block</strong></li>
-      <li>Avoid the <strong>conditional-barrier deadlock</strong> hazard</li>
-    </ul>
-  </div>
 </section>
 
 <!-- __syncthreads() -->
@@ -548,15 +513,6 @@ if (cond) {
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part E</div>
   <div class="mod-title">Tiled Matrix Multiply</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Write a <strong>naive</strong> multi-block matmul kernel</li>
-      <li>Explain the <strong>global-memory bandwidth bottleneck</strong></li>
-      <li>Rewrite it with <strong>shared-memory tiling</strong></li>
-      <li>Choose <strong>TILE_WIDTH</strong> from hardware limits</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Naive kernel -->

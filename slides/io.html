@@ -52,14 +52,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 1</div>
   <div class="mod-title">The I/O Bottleneck &amp; Parallel File Systems</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Explain why storage is often the performance wall in HPC</li>
-      <li>Describe how a parallel file system stripes a file across OSTs</li>
-      <li>Read and set Lustre striping with <code class="inline">lfs</code></li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -206,14 +198,6 @@ lfs df          # per-OST capacity / usage
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 2</div>
   <div class="mod-title">I/O Strategies</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Contrast one-file-per-process with a single shared file</li>
-      <li>Name the contention each pattern creates</li>
-      <li>Pick a hybrid layout for a given scale</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -267,14 +251,6 @@ lfs df          # per-OST capacity / usage
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 3</div>
   <div class="mod-title">MPI-IO — the Programming Interface</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Open, read, write and close a file with MPI-IO</li>
-      <li>Use individual pointers, explicit offsets &amp; nonblocking I/O</li>
-      <li>Convert independent calls to <code class="inline">_all</code> collective calls</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -398,14 +374,6 @@ MPI_Wait(&amp;request, &amp;status);
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 4</div>
   <div class="mod-title">File Views &amp; Noncontiguous Access</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Define a file view with <code class="inline">(disp, etype, filetype)</code></li>
-      <li>Build vector / resized-contiguous filetypes for strided data</li>
-      <li>Use <code class="inline">MPI_Type_create_darray</code> for a distributed array</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -576,14 +544,6 @@ MPI_File_close(&amp;fh);
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 5</div>
   <div class="mod-title">High-Level I/O Libraries</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Place HDF5, NetCDF and ADIOS in the I/O software stack</li>
-      <li>Say why a self-describing format beats raw bytes</li>
-      <li>Choose a library layer for a given need</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -626,14 +586,6 @@ MPI_File_close(&amp;fh);
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 6</div>
   <div class="mod-title">Best Practices</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Apply the rules that keep parallel I/O fast</li>
-      <li>Match access size and alignment to the stripe layout</li>
-      <li>Diagnose a slow I/O pattern</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">

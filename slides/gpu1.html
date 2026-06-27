@@ -61,14 +61,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 1</div>
   <div class="mod-title">GPU Computing: History &amp; APIs</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Explain how the GPU evolved from a fixed-function graphics chip into a <strong>data-parallel coprocessor</strong></li>
-      <li>Place CUDA, OpenCL, Vulkan, Metal, and WebGPU on a <strong>timeline</strong></li>
-      <li>Say what <strong>"GPU Computing"</strong> means and why CUDA made it mainstream</li>
-    </ul>
-  </div>
 </section>
 
 <!-- History timeline -->
@@ -96,14 +88,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 2</div>
   <div class="mod-title">Heterogeneous Computing</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Define <strong>host</strong> and <strong>device</strong> and the role of each</li>
-      <li>Explain why host and device usually have <strong>separate memories</strong></li>
-      <li>Say what a <strong>kernel</strong> is and what happens when you invoke one</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Host / device terms -->
@@ -137,14 +121,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 3</div>
   <div class="mod-title">Writing Kernels</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Write a <code class="inline">__global__</code> kernel and launch it with an <strong>execution configuration</strong></li>
-      <li>Use <code class="inline">threadIdx</code> to give each thread its own work</li>
-      <li>Trace the <strong>lifecycle</strong> of a CUDA program: serial CPU → parallel grid → serial CPU</li>
-    </ul>
-  </div>
 </section>
 
 <!-- First kernel: vectorAdd -->
@@ -207,15 +183,6 @@ int main() {
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 4</div>
   <div class="mod-title">The Thread Hierarchy</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Describe the <strong>grid → block → thread</strong> hierarchy and its 1D/2D/3D shapes</li>
-      <li>Compute a flattened <strong>thread ID</strong> in 1D, 2D, and 3D</li>
-      <li>Index a 2D matrix across <strong>one block</strong> and across <strong>many blocks</strong></li>
-      <li>Explain <strong>block independence</strong> and automatic scalability</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Thread hierarchy concept -->
@@ -426,14 +393,6 @@ dim3 blocks(N / threadsPerBlock.x,
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 5</div>
   <div class="mod-title">CUDA Memory Model &amp; Transfers</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Lay out the CUDA <strong>memory spaces</strong>: registers, local, shared, global, constant</li>
-      <li>Allocate and free device memory with <code class="inline">cudaMalloc</code> / <code class="inline">cudaFree</code></li>
-      <li>Copy data with <code class="inline">cudaMemcpy</code> in the right <strong>direction</strong></li>
-    </ul>
-  </div>
 </section>
 
 <!-- Memory model -->
@@ -556,14 +515,6 @@ cudaMemcpy(hostPtr, devicePtr, size,
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 6</div>
   <div class="mod-title">Matrix Multiply: P = M · N</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Estimate the <strong>operation count</strong> of a dense matrix multiply</li>
-      <li>Write the CPU <strong>triple-nested loop</strong> and port it to the GPU in 3 steps</li>
-      <li>Write a <strong>naive single-block</strong> matmul kernel and critique its performance</li>
-    </ul>
-  </div>
 </section>
 
 <!-- Matmul ops question -->

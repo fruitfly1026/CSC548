@@ -51,14 +51,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 1</div>
   <div class="mod-title">Introduction to Neural Networks</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Describe a DNN as a trainable composition of layers and how SGD trains it</li>
-      <li>Recognize the core models — CNNs, Transformers, GNNs — and their key operation</li>
-      <li>Explain why compute demand has grown faster than any single device</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -263,14 +255,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 2</div>
   <div class="mod-title">Data Parallelism</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Explain replicated training and the role of <code class="inline">all-reduce</code></li>
-      <li>Write the data-parallel training step at a high level</li>
-      <li>State the memory limitation that motivates model parallelism</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -339,14 +323,6 @@ model = optimizer.step(model, g)  # identical update
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 3</div>
   <div class="mod-title">Model &amp; Tensor Parallelism</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Split a model across devices by subgraph and by tensor</li>
-      <li>Explain why device placement is a hard optimization problem</li>
-      <li>Contrast data parallelism with tensor model parallelism</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -449,14 +425,6 @@ model = optimizer.step(model, g)  # identical update
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 4</div>
   <div class="mod-title">Pipeline Parallelism</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Describe GPipe-style micro-batching and the pipeline <strong>bubble</strong></li>
-      <li>Explain how 1F1B and interleaved schedules cut idle time &amp; memory</li>
-      <li>Reason about the utilization / memory trade-offs of pipelining</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -537,14 +505,6 @@ model = optimizer.step(model, g)  # identical update
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 5</div>
   <div class="mod-title">3D Parallelism</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Combine data, tensor, and pipeline parallelism on one cluster</li>
-      <li>Map each axis to the right level of the interconnect hierarchy</li>
-      <li>Recognize the DeepSpeed 3D-parallelism arrangement</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -613,14 +573,6 @@ model = optimizer.step(model, g)  # identical update
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 6</div>
   <div class="mod-title">Model Compression</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Name the three families: pruning, quantization, low-rank</li>
-      <li>Distinguish structured vs. unstructured pruning and pick a sparse format</li>
-      <li>Explain why compression cuts size, latency, and energy together</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">

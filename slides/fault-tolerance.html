@@ -50,14 +50,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 1</div>
   <div class="mod-title">Why Resilience?</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Explain why <strong>system</strong> MTBF shrinks as you add nodes</li>
-      <li>Distinguish faults, errors, failures; transient vs permanent; fail-stop vs silent (SDC)</li>
-      <li>Contrast the two recovery philosophies: <strong>rollback</strong> vs <strong>forward</strong></li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -144,15 +136,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 2</div>
   <div class="mod-title">Checkpoint / Restart — the Workhorse</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Describe coordinated checkpointing and why it is the #1 use of parallel I/O</li>
-      <li>State the orphan / in-flight message problem with uncoordinated checkpoints</li>
-      <li>Compute the <strong>optimal checkpoint interval</strong> (Young/Daly) and reason about overhead</li>
-      <li>Explain multi-level / burst-buffer checkpointing and message logging</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -314,15 +297,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 3</div>
   <div class="mod-title">Beyond Rollback</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Say when replication beats checkpointing, and at what cost</li>
-      <li>Explain proactive / prediction-based migration</li>
-      <li>Apply the matrix-multiply checksum to detect, locate, and correct a corrupted entry (ABFT)</li>
-      <li>Choose a strategy for detecting silent data corruption (SDC)</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -447,14 +421,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 4</div>
   <div class="mod-title">Resilience Across the Stack</div>
-  <div class="objectives" style="margin-top:1em;">
-    <h4>By the end you can…</h4>
-    <ul>
-      <li>Explain MPI's default abort-on-failure and what <strong>ULFM</strong> adds</li>
-      <li>Describe Spark <strong>RDD lineage</strong> as recompute-based, uncoordinated recovery</li>
-      <li>Say why large-scale deep-learning training depends on checkpointing model + optimizer state</li>
-    </ul>
-  </div>
 </section>
 
 <section data-background-color="#ffffff">
