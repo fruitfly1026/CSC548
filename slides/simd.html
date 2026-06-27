@@ -137,17 +137,7 @@ for (int i = 0; i &lt; n; i++)
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 1 — Review</h2>
-  <div class="qa">
-    <p class="q">1. In Flynn's taxonomy, what are the two streams that define SIMD?</p>
-    <div class="fragment"><div class="a"><strong>One</strong> instruction stream applied to <strong>many</strong> data streams — the same operation runs on every lane of a vector simultaneously.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why is a tight array loop the natural home for SIMD?</p>
-    <div class="fragment"><div class="a">Its iterations are independent, do identical work, and touch <strong>contiguous</strong> memory — the compiler can pack several iterations into one packed instruction.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 2 — SIMD HARDWARE
@@ -240,17 +230,7 @@ for (int i = 0; i &lt; n; i++)
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 2 — Review</h2>
-  <div class="qa">
-    <p class="q">1. How many <code class="inline">double</code> lanes fit in an AVX-512 (ZMM) register?</p>
-    <div class="fragment"><div class="a">512 bits ÷ (8 × 8 bytes) = <strong>8</strong> doubles. (Or 16 floats, or 64 int8 values.)</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. What's the difference between <code class="inline">addps</code> and <code class="inline">addss</code>?</p>
-    <div class="fragment"><div class="a"><code class="inline">addps</code> is <strong>packed</strong> — it adds every lane; <code class="inline">addss</code> is <strong>scalar</strong> — it adds only the lowest 32-bit lane and leaves the rest untouched.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 3 — USING SIMD (AUTO-VEC / OMP SIMD)
@@ -348,17 +328,7 @@ void axpy(int n, float s,
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 3 — Review</h2>
-  <div class="qa">
-    <p class="q">1. What does <code class="inline">#pragma omp simd</code> guarantee, and what does it <em>not</em>?</p>
-    <div class="fragment"><div class="a">It asserts the loop is safe to vectorize so the compiler stops being conservative. It does <strong>not</strong> verify that — if real dependences exist, you get a fast wrong answer.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why does <code class="inline">restrict</code> help the auto-vectorizer?</p>
-    <div class="fragment"><div class="a">It promises the pointers don't alias, so the compiler can assume <code class="inline">a[i]</code> writes never touch <code class="inline">b[]</code>/<code class="inline">c[]</code> reads — removing a common reason it refuses to vectorize.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 4 — INTRINSICS
@@ -484,17 +454,7 @@ void saxpy_avx(int n, float a,
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 4 — Review</h2>
-  <div class="qa">
-    <p class="q">1. Decode <code class="inline">_mm256_fmadd_ps(va, vx, vy)</code>.</p>
-    <div class="fragment"><div class="a">256-bit (AVX), fused multiply-add, packed single — computes <code class="inline">va*vx + vy</code> across all <strong>8</strong> float lanes in one instruction with a single rounding.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why does the hand-written SAXPY need a second scalar loop?</p>
-    <div class="fragment"><div class="a">The vector loop advances 8 at a time and only covers <code class="inline">⌊n/8⌋·8</code> elements; the <strong>tail</strong> of <code class="inline">n mod 8</code> leftover elements must be handled scalarly (or with a masked step).</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 5 — PITFALLS
@@ -562,17 +522,7 @@ _mm256_storeu_ps(&amp;r[i], vr);
   <div class="callout"><span class="lbl">Also blocks vectorization</span><span class="small">Function calls in the body (unless inlined/vector-cloned), early <code class="inline">break</code>/exits, <code class="inline">printf</code>/I-O, and unknown trip counts. Keep inner loops small, flat, and contiguous.</span></div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 5 — Review</h2>
-  <div class="qa">
-    <p class="q">1. Why can't <code class="inline">a[i] = a[i-1] + b[i]</code> be vectorized directly?</p>
-    <div class="fragment"><div class="a">It's a <strong>loop-carried dependence</strong>: each iteration needs the result of the previous one, so the lanes aren't independent and a packed op would use stale values.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. How does SIMD handle an <code class="inline">if</code> inside the loop body?</p>
-    <div class="fragment"><div class="a">With <strong>masking</strong>: evaluate both branches across all lanes, build a comparison mask, then blend/select the correct value per lane (AVX-512 uses dedicated mask registers).</div></div>
-  </div>
-</section>
+
 
 <!-- ===== BIG PICTURE ===== -->
 <section data-background-color="#ffffff">
@@ -600,7 +550,6 @@ _mm256_storeu_ps(&amp;r[i], vr);
     <li>Intel® 64 and IA-32 Architectures Software Developer's Manuals (SSE / AVX / AVX-512).</li>
     <li>OpenMP API Specification — <code class="inline">simd</code> directive, <a href="https://www.openmp.org">openmp.org</a>.</li>
     <li>J. Hennessy &amp; D. Patterson, <em>Computer Architecture: A Quantitative Approach</em> (DLP &amp; vector chapters).</li>
-    <li><strong>CSC 548</strong>, J. Li.</li>
   </ul>
 </section>
 

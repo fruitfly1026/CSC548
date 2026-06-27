@@ -209,17 +209,7 @@ AMAT = 1 + 0.05 * 200
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Modules 1–2 — Review</h2>
-  <div class="qa">
-    <p class="q">1. You stride through a big array column-by-column in a row-major (C) layout and it's slow. Which "C" is biting you, and why?</p>
-    <div class="fragment"><div class="a">Mostly <strong>capacity / poor spatial locality</strong>: each step jumps a full row, so every access touches a new cache line and reuses almost none of it before eviction. Traverse in row-major (contiguous) order instead.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. With <code class="inline">t_hit=1</code>, penalty 100 cycles, why does cutting miss rate from 4% to 1% matter so much?</p>
-    <div class="fragment"><div class="a">AMAT goes 1+0.04·100 = <strong>5</strong> → 1+0.01·100 = <strong>2</strong> cycles — a 2.5x speedup on memory, because the penalty multiplies the rate.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 3 — MULTICORE CONCERNS
@@ -351,17 +341,7 @@ for (i = 0; i &lt; N; i++)
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 3 — Review</h2>
-  <div class="qa">
-    <p class="q">1. Your OpenMP loop scales poorly; <code class="inline">perf</code> shows huge coherence traffic on a small per-thread array. What is it, and the cleanest fix?</p>
-    <div class="fragment"><div class="a"><strong>False sharing</strong> — the per-thread entries share a cache line. Cleanest fix: accumulate in a private scalar / <code class="inline">reduction</code>; alternatively pad each entry to its own 64-byte line.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why can a serial <code class="inline">for(i) a[i]=0</code> init hurt NUMA performance?</p>
-    <div class="fragment"><div class="a">First-touch places every page on the <strong>one</strong> socket that ran the init. Later parallel work then makes remote accesses. Initialize in parallel so pages land near the threads that use them.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 4 — PROGRAMMER TAKEAWAYS
@@ -477,7 +457,6 @@ float b[DIM];
     <li>T. Rauber &amp; G. Rünger, <em>Parallel Programming: For Multicore and Cluster Systems</em>, 2nd ed., Springer, 2013.</li>
     <li>Hennessy &amp; Patterson, <em>Computer Architecture: A Quantitative Approach</em> — memory hierarchy &amp; the 3 C's.</li>
     <li>ATLAS — Automatically Tuned Linear Algebra Software, <a href="https://www.netlib.org/atlas/">netlib.org/atlas</a>; BLAS/LAPACK, <a href="https://www.netlib.org/blas/">netlib.org/blas</a>.</li>
-    <li><strong>CSC 548</strong>, J. Li.</li>
   </ul>
 </section>
 

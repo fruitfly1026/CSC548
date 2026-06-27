@@ -244,17 +244,7 @@ unlock(&amp;m);
     Re-check the condition after waking — another thread may have changed it (spurious wakeups, multiple consumers).</div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 2 — Review</h2>
-  <div class="qa">
-    <p class="q">1. What makes a race condition possible?</p>
-    <div class="fragment"><div class="a">Two or more threads execute a <strong>critical section</strong> (read/write of shared data) with <strong>interleaved</strong> timing and no mutual exclusion.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why must <code class="inline">cond_wait</code> sit inside a <code class="inline">while</code> loop?</p>
-    <div class="fragment"><div class="a">On wake-up the awaited condition may no longer hold (other waiters, spurious wakeups) — re-test before proceeding.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 3 — OpenMP BASICS
@@ -507,17 +497,7 @@ for (i=0; i&lt;n; i++)
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 5 — Review</h2>
-  <div class="qa">
-    <p class="q">1. In <code class="inline">#pragma omp parallel private(B) firstprivate(C)</code> with globals A,B,C — what is each?</p>
-    <div class="fragment"><div class="a"><strong>A</strong> shared; <strong>B</strong> private (uninitialized); <strong>C</strong> private initialized to its pre-region value. A and B are undefined <em>after</em> the region.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why is <code class="inline">reduction(+:sum)</code> better than a lock around <code class="inline">sum += a[i]</code>?</p>
-    <div class="fragment"><div class="a">The lock serializes every iteration; the reduction keeps per-thread partials and synchronizes <strong>once</strong> at the end → real parallel speedup.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 6 — SYNCHRONIZATION CONSTRUCTS
@@ -680,7 +660,6 @@ for (k=0; k&lt;N; k++)
     <li>T. Rauber &amp; G. Rünger, <em>Parallel Programming: For Multicore and Cluster Systems</em>, 2nd ed., Springer, 2013.</li>
     <li>OpenMP Application Programming Interface, <a href="https://www.openmp.org">openmp.org</a>.</li>
     <li>LLNL OpenMP tutorial — <a href="https://hpc-tutorials.llnl.gov/openmp/">hpc-tutorials.llnl.gov/openmp</a>.</li>
-    <li><strong>CSC 548</strong>, J. Li.</li>
   </ul>
 </section>
 

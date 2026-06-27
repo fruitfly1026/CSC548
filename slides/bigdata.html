@@ -311,17 +311,7 @@ output: 2-way replicated (GFS redundancy)
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 2 — Review</h2>
-  <div class="qa">
-    <p class="q">1. In word-count, why must <code class="inline">map</code> emit the <em>word</em> as the key rather than the line number?</p>
-    <div class="fragment"><div class="a"><code class="inline">reduce</code> only sees values that share a key. To total each word's count, every <code class="inline">(word,1)</code> for the same word must land at the same reducer — so the word is the intermediate key.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why can MapReduce safely re-run a task that may have already completed?</p>
-    <div class="fragment"><div class="a">Tasks are <strong>idempotent</strong> and side-effect-free (all output via <code class="inline">emit</code>, committed through the master), so recomputation yields the same result — enabling recovery from worker failures and stragglers.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 3 — HADOOP
@@ -605,17 +595,7 @@ lines.flatMap(lambda l: l.split())
   <div class="callout takeaway"><span class="lbl">Why these exist</span>RDD closures are shipped to every task, so a large lookup would be copied per task. Broadcast sends it <strong>once per node</strong>; accumulators give a safe way to gather a global count/sum back at the driver without a full reduce.</div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 4 — Review</h2>
-  <div class="qa">
-    <p class="q">1. You chain ten <code class="inline">map</code>/<code class="inline">filter</code> calls and nothing runs. Why — and what triggers execution?</p>
-    <div class="fragment"><div class="a">Transformations are <strong>lazy</strong>: they only extend the lineage DAG. Computation starts when an <strong>action</strong> (<code class="inline">count</code>, <code class="inline">collect</code>, <code class="inline">reduce</code>…) forces a result, letting Spark optimize the whole chain first.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. A cached partition is lost to a node crash. How does Spark recover without replication?</p>
-    <div class="fragment"><div class="a">Each RDD records its <strong>lineage</strong> — the transformations that built it from its parents. Spark recomputes only the lost partition by replaying that lineage.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 5 — WHICH & WHEN
@@ -675,7 +655,6 @@ lines.flatMap(lambda l: l.split())
     <li>S. Ghemawat, H. Gobioff &amp; S-T. Leung, "The Google File System," <em>SOSP</em> 2003.</li>
     <li>M. Zaharia et al., "Resilient Distributed Datasets: A Fault-Tolerant Abstraction for In-Memory Cluster Computing," <em>NSDI</em> 2012.</li>
     <li>Apache Hadoop — <a href="https://hadoop.apache.org">hadoop.apache.org</a>; Apache Spark — <a href="https://spark.apache.org">spark.apache.org</a>.</li>
-    <li><strong>CSC 548</strong>, J. Li.</li>
   </ul>
 </section>
 

@@ -153,17 +153,7 @@ SUs = #processors
   <p class="tiny muted center">If speedup is 14 on 16 PEs but only 20 on 32 PEs, doubling the PEs barely helped — cost nearly doubled for ~40% more speedup. <strong>Efficiency = cost-efficiency.</strong></p>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 1 — Review</h2>
-  <div class="qa">
-    <p class="q">1. Why must <code class="inline">T<sub>S</sub></code> in the speedup formula be the <em>best</em> serial algorithm?</p>
-    <div class="fragment"><div class="a">Otherwise a slow baseline inflates speedup — you'd credit parallelism for fixing a bad serial algorithm. Honest speedup compares against the best known sequential time.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. How can speedup ever exceed <code class="inline">p</code> (super-linear)?</p>
-    <div class="fragment"><div class="a">Extra aggregate fast storage: more PEs bring more total cache/memory, so the working set fits and per-PE work speeds up. Also exploratory decomposition (early-exit searches).</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 2 — AMDAHL'S LAW
@@ -355,17 +345,7 @@ SUs = #processors
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 3 — Review</h2>
-  <div class="qa">
-    <p class="q">1. Amdahl says my 5%-serial code caps at 20×, yet a colleague reports 200× on 256 PEs. Lying?</p>
-    <div class="fragment"><div class="a">Not necessarily — they're doing <strong>weak scaling</strong>. They grew the problem with p (Gustafson), so the serial fraction shrank. Amdahl bounds <em>fixed-size</em> (strong) scaling only.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. A system has isoefficiency <code class="inline">W(p) = O(p²)</code>. Scalable?</p>
-    <div class="fragment"><div class="a">Poorly. To keep efficiency constant you must grow the work <em>quadratically</em> in p — memory and runtime blow up fast. Linear or near-linear isoefficiency is what you want.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 4 — SOURCES OF OVERHEAD
@@ -457,17 +437,7 @@ for (i=0; i&lt;n; i++)
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 4 — Review</h2>
-  <div class="qa">
-    <p class="q">1. In <code class="inline">t = α + mβ</code>, why combine many small messages into one big one?</p>
-    <div class="fragment"><div class="a">The per-message <code class="inline">α</code> (latency) dwarfs the per-byte <code class="inline">β</code> by thousands. One big message pays <code class="inline">α</code> once instead of N times, amortizing the startup cost.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Blocking matrix multiply didn't change the FLOP count. Why is it faster in parallel?</p>
-    <div class="fragment"><div class="a">It raises the computation-to-communication ratio: a <code class="inline">g×g</code> tile does <code class="inline">g²n</code> work for the same two messages, so communication overhead per useful operation collapses.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 5 — PROFILING & TRACING
@@ -534,17 +504,7 @@ PAPI_stop_counters(val, 2);
     <span class="small">Instrumentation (Valgrind, <code class="inline">-pg</code>) can slow code 10–100×; sampling profilers (VTune) stay near native speed. Profile a <em>representative</em> run, not a toy input.</span></div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 5 — Review</h2>
-  <div class="qa">
-    <p class="q">1. You see good per-function time but poor speedup. Profiler or tracer next?</p>
-    <div class="fragment"><div class="a"><strong>Tracer.</strong> A flat profile hides idle &amp; communication time between PEs. A timeline (Score-P/Vampir) exposes load imbalance, barrier waits and serialization that a per-function profile averages away.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why prefer sampling over full instrumentation for a long HPC run?</p>
-    <div class="fragment"><div class="a">Sampling adds near-zero overhead and won't distort timing, so the measured run behaves like the real one. Instrumentation can perturb the very bottlenecks (cache, sync) you're trying to measure.</div></div>
-  </div>
-</section>
+
 
 <!-- ===== BIG PICTURE ===== -->
 <section data-background-color="#ffffff">
@@ -572,7 +532,6 @@ PAPI_stop_counters(val, 2);
     <li>T. Rauber &amp; G. Rünger, <em>Parallel Programming: For Multicore and Cluster Systems</em>, 2nd ed., Springer, 2013.</li>
     <li>G. Amdahl (1967) &amp; J. Gustafson (1988), the scaling laws.</li>
     <li>PAPI — <a href="https://icl.utk.edu/papi/">icl.utk.edu/papi</a>; Score-P — <a href="https://score-p.org">score-p.org</a>.</li>
-    <li><strong>CSC 548</strong>, J. Li.</li>
   </ul>
 </section>
 

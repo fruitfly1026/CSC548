@@ -180,17 +180,7 @@ lfs df          # per-OST capacity / usage
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 1 — Review</h2>
-  <div class="qa">
-    <p class="q">1. Where does a parallel file system's bandwidth come from?</p>
-    <div class="fragment"><div class="a">From <strong>striping</strong> one file across many OSTs so several storage servers transfer data <strong>simultaneously</strong> — not from a single faster disk.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. You have 10,000 ranks each writing its own small file. Stripe count?</p>
-    <div class="fragment"><div class="a"><strong>1</strong> (no striping). With far more files than OSTs, keep each file on a single OST to avoid directory and metadata contention.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 2 — I/O STRATEGIES
@@ -356,17 +346,7 @@ MPI_Wait(&amp;request, &amp;status);
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 3 — Review</h2>
-  <div class="qa">
-    <p class="q">1. What does <code class="inline">MPI_File_read_at</code> do that <code class="inline">MPI_File_read</code> needs a second call for?</p>
-    <div class="fragment"><div class="a">It takes the <strong>offset</strong> as an argument, so no separate <code class="inline">MPI_File_seek</code> is needed — and it is safe under concurrency since no shared pointer is mutated.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why does <code class="inline">MPI_File_write_all</code> usually beat <code class="inline">MPI_File_write</code> on a shared file?</p>
-    <div class="fragment"><div class="a">It is <strong>collective</strong>: the library aggregates all ranks' requests (2-phase I/O) into a few large, aligned transfers instead of many small scattered ones.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 4 — FILE VIEWS & DERIVED DATATYPES
@@ -526,17 +506,7 @@ MPI_File_close(&amp;fh);
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 4 — Review</h2>
-  <div class="qa">
-    <p class="q">1. What three things define a file view, and what does each do?</p>
-    <div class="fragment"><div class="a"><strong>displacement</strong> (bytes skipped at the start), <strong>etype</strong> (basic access unit), <strong>filetype</strong> (which slices of the file this process can see). Together they let each rank "see" only its scattered regions.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why resize a contiguous type when building a strided filetype?</p>
-    <div class="fragment"><div class="a">Resizing the <strong>extent</strong> larger than the data leaves a gap after each block — so the type repeats with a stride, producing the noncontiguous pattern without writing the gap.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 5 — HIGH-LEVEL LIBRARIES
@@ -662,7 +632,6 @@ MPI_File_close(&amp;fh);
     <li>S. Weil et al., "Ceph: A Scalable, High-Performance Distributed File System," OSDI 2006.</li>
     <li>S. Ghemawat et al., "The Google File System," SOSP 2003.</li>
     <li>The HDF Group (HDF5), Unidata (NetCDF), ADIOS — project documentation.</li>
-    <li><strong>CSC 548</strong>, J. Li.</li>
   </ul>
 </section>
 

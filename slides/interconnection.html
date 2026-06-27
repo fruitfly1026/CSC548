@@ -497,25 +497,7 @@
 </section>
 
 <!-- Module 11.1 review -->
-<section data-background-color="#f6f8fb">
-  <h2>Module 11.1 — Review</h2>
-  <div class="qa">
-    <p class="q">1. Describe stop/go flow control.</p>
-    <div class="fragment"><div class="a">A <strong>link-level</strong> scheme: the destination router sends a <em>stop</em> or <em>go</em> signal to the source router depending on the destination's buffer level; the source pauses or resumes flits accordingly.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. What metrics characterize a network topology?</p>
-    <div class="fragment"><div class="a">Diameter, average distance, bisection bandwidth, number of links, and degree of connection.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">3. Packet vs. circuit switching — better and worse?</p>
-    <div class="fragment"><div class="a"><strong>Better:</strong> easier to maximize link utilization, no connection setup. <strong>Worse:</strong> larger buffers, higher and less predictable latency, higher per-packet overheads.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">4. Sort by routing-table area: adaptive source, dimension-ordered, adaptive per-hop.</p>
-    <div class="fragment"><div class="a">Adaptive source (largest) &gt; adaptive per-hop (smaller) &gt; dimension-ordered (zero).</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 11.2 — DEADLOCK & ROUTERS
@@ -798,17 +780,7 @@
 </section>
 
 <!-- Module 11.2 review -->
-<section data-background-color="#f6f8fb">
-  <h2>Module 11.2 — Review</h2>
-  <div class="qa">
-    <p class="q">1. What principle underlies deadlock-free routing? Name a few schemes.</p>
-    <div class="fragment"><div class="a"><strong>Cyclic channel acquisition</strong> creates the possibility of deadlock — break the cycles. Examples: dimension-ordered routing, turn restriction (west-first / north-last), and up*/down* routing.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. How can a virtual channel be used to escape a deadlock?</p>
-    <div class="fragment"><div class="a">A <strong>regular VC</strong> (deadlock possible) is used first; an <strong>escape VC</strong> (provably deadlock-free) is used upon congestion, guaranteeing forward progress.</div></div>
-  </div>
-</section>
+
 
 <!-- Chapter summary -->
 <section data-background-color="#ffffff">

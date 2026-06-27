@@ -237,17 +237,7 @@
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 1 — Review</h2>
-  <div class="qa">
-    <p class="q">1. What single quantity does SGD split across GPUs in data parallelism?</p>
-    <div class="fragment"><div class="a">The <strong>mini-batch</strong>: each device processes a slice of the batch and computes partial gradients, which are then summed across devices.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why are GNNs harder to run efficiently on GPUs than CNNs?</p>
-    <div class="fragment"><div class="a">Their neighbor <strong>aggregation is sparse and irregular</strong> — poor memory locality and load imbalance — whereas CNN/Transformer work is dense GEMM that maps cleanly onto accelerators.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 2 — DATA PARALLELISM
@@ -407,17 +397,7 @@ model = optimizer.step(model, g)  # identical update
   <div class="callout takeaway"><span class="lbl">Rule of thumb</span>Data parallelism when the model <em>fits</em> and you want speed; tensor parallelism when a single layer is too big for one device.</div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 3 — Review</h2>
-  <div class="qa">
-    <p class="q">1. What does tensor model parallelism split that ordinary model parallelism does not?</p>
-    <div class="fragment"><div class="a">It partitions the <strong>weight tensors inside a single layer</strong> (e.g. a matmul split by columns), so multiple devices cooperate on one layer — rather than assigning whole layers/subgraphs to devices.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why keep tensor parallelism within a single node?</p>
-    <div class="fragment"><div class="a">It requires frequent collective communication of activations <strong>every layer</strong>; a fast intra-node interconnect (NVLink) keeps that overhead tolerable.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 4 — PIPELINE PARALLELISM
@@ -555,17 +535,7 @@ model = optimizer.step(model, g)  # identical update
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Modules 4–5 — Review</h2>
-  <div class="qa">
-    <p class="q">1. Why does 1F1B use less memory than GPipe?</p>
-    <div class="fragment"><div class="a">It interleaves a backward right after each forward once the pipe is full, so activations are <strong>freed early</strong> and peak memory stays bounded instead of growing with the micro-batch count.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. In 3D parallelism, why put tensor parallelism inside a node and pipeline across nodes?</p>
-    <div class="fragment"><div class="a">Tensor parallelism communicates <strong>every layer</strong> and needs the fast intra-node link (NVLink); pipeline only passes activations at stage <strong>boundaries</strong>, so it tolerates slower inter-node bandwidth.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 6 — MODEL COMPRESSION
@@ -672,17 +642,7 @@ model = optimizer.step(model, g)  # identical update
   <div class="callout takeaway"><span class="lbl">Combine</span>Pruning, quantization, and low-rank are <strong>complementary</strong> — production models often apply all three.</div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 6 — Review</h2>
-  <div class="qa">
-    <p class="q">1. Why is structured pruning often preferred over unstructured despite lower compression?</p>
-    <div class="fragment"><div class="a">Removing whole neurons / filters / heads keeps the remaining computation <strong>dense and regular</strong>, so it maps onto efficient hardware kernels — whereas unstructured sparsity is irregular and hard to accelerate.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. When would you choose CSR over COO?</p>
-    <div class="fragment"><div class="a">CSR has less index overhead and supports fast <strong>row traversal</strong> (e.g. SpMV); COO is simpler to <strong>construct</strong>. Build in COO, compute in CSR.</div></div>
-  </div>
-</section>
+
 
 <!-- ===== BIG PICTURE ===== -->
 <section data-background-color="#ffffff">
@@ -712,7 +672,6 @@ model = optimizer.step(model, g)  # identical update
     <li>Mirhoseini et al., "Device Placement Optimization with Reinforcement Learning," ICML 2017.</li>
     <li>Hoefler et al., "Sparsity in Deep Learning," <em>JMLR</em>, 2021.</li>
     <li>Microsoft Research, "DeepSpeed: Extreme-scale model training for everyone."</li>
-    <li><strong>CSC 548</strong>, J. Li.</li>
   </ul>
 </section>
 

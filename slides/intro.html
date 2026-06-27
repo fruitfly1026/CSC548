@@ -110,7 +110,6 @@
         <text x="150" y="88" class="note">slow path</text>
         <rect x="30" y="120" width="180" height="40" rx="5" fill="#CC0000"/>
         <text x="120" y="145" text-anchor="middle" fill="#fff" class="lbl">Memory</text>
-        <text x="120" y="185" text-anchor="middle" class="note">one CPU, one memory, one path</text>
       </svg>
     </div>
   </div>
@@ -367,17 +366,7 @@ for (i=s; i&lt;e; i++)
     Auto-parallelizing compilers can't extract the parallelism in large applications on their own. This is a <strong>programming course</strong>: you'll write the explicit parallelism &mdash; OpenMP, MPI, and accelerators &mdash; yourself.</div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 3 &mdash; Review</h2>
-  <div class="qa">
-    <p class="q">1. Concurrency and parallelism &mdash; what's the difference?</p>
-    <div class="fragment"><div class="a"><strong>Concurrency</strong> is expressed in the language (operations that <em>could</em> overlap); <strong>parallelism</strong> is the hardware actually executing them at the same time.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. You're on a cluster of separate nodes &mdash; shared memory or message passing?</p>
-    <div class="fragment"><div class="a"><strong>Message passing (MPI)</strong>: nodes have separate address spaces, so they communicate by sending messages, typically in an <strong>SPMD</strong> style keyed on <code class="inline">rank</code>.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 4 — HOW FAR CAN WE GO? (SCALING)
@@ -474,12 +463,12 @@ for (i=s; i&lt;e; i++)
 <section data-background-color="#ffffff">
   <h2>What You'll Build This Semester</h2>
   <div class="cols c3">
-    <div class="callout"><span class="lbl">Shared memory</span><span class="small"><strong>pthreads &amp; OpenMP</strong> &mdash; parallel regions, work-sharing, reductions, synchronization on a multicore node.</span></div>
     <div class="callout"><span class="lbl">Message passing</span><span class="small"><strong>MPI</strong> &mdash; point-to-point &amp; collective communication, SPMD across a cluster.</span></div>
+    <div class="callout"><span class="lbl">Shared memory</span><span class="small"><strong>pthreads &amp; OpenMP</strong> &mdash; parallel regions, work-sharing, reductions, synchronization on a multicore node.</span></div>
     <div class="callout"><span class="lbl">Accelerators</span><span class="small"><strong>GPU / data-parallel</strong> programming for the SIMD lanes underneath modern HPC.</span></div>
   </div>
   <div class="callout takeaway"><span class="lbl">The hybrid reality</span>
-    Real codes combine them: <strong>MPI across nodes + OpenMP within a node (+ GPU offload)</strong>. You'll practice each piece, then see how they fit.</div>
+    Real codes combine them: <strong>MPI across nodes + OpenMP within a node + GPU offload</strong>. You'll practice each piece, then see how they fit.</div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -548,7 +537,6 @@ for (i=s; i&lt;e; i++)
     <li>T. Rauber &amp; G. R&uuml;nger, <em>Parallel Programming: For Multicore and Cluster Systems</em>, 2nd ed., Springer, 2013.</li>
     <li>I. Foster, <em>Designing and Building Parallel Programs</em>, Addison-Wesley, 1995.</li>
     <li>K. Rupp, <em>42 Years of Microprocessor Trend Data</em> &mdash; <a href="https://www.karlrupp.net/2018/02/42-years-of-microprocessor-trend-data/">karlrupp.net</a>.</li>
-    <li><strong>CSC 548</strong>, J. Li.</li>
   </ul>
 </section>
 

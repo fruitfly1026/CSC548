@@ -118,17 +118,7 @@
   <div class="callout"><span class="lbl">Through the deck</span>Modules 2 is rollback; Module 3 is mostly forward; Module 4 shows both philosophies in real systems.</div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 1 — Review</h2>
-  <div class="qa">
-    <p class="q">1. A node fails on average once every 5 years. Why does a 50,000-node job still fail several times a day?</p>
-    <div class="fragment"><div class="a">Failures are roughly independent, so <code class="inline">MTBF<sub>sys</sub> ≈ MTBF<sub>node</sub>/N</code>. Dividing 5 years by 50,000 gives a few hours — and a long job spans many such intervals.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why is a silent error (SDC) more dangerous than a fail-stop crash?</p>
-    <div class="fragment"><div class="a">A crash is <strong>detected</strong> — you restart. SDC is <strong>undetected</strong>: the job completes and returns a <strong>wrong answer</strong> you may trust. You must add detection (checksums, replication) to catch it.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 2 — CHECKPOINT / RESTART
@@ -275,21 +265,7 @@
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 2 — Review</h2>
-  <div class="qa">
-    <p class="q">1. With <code class="inline">C</code> = 2 min and <code class="inline">M</code> = 1 h, roughly how often should you checkpoint?</p>
-    <div class="fragment"><div class="a"><code class="inline">τ ≈ √(2·C·M) = √(2·2·60) = √240 ≈ 15.5 min</code>. Checkpoint about every 15 minutes.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why does coordinated checkpointing dominate HPC I/O bandwidth planning?</p>
-    <div class="fragment"><div class="a">Every rank dumps its memory to the PFS at the <strong>same instant</strong> — a huge synchronized write burst. Sizing the PFS / burst buffers for that burst is a primary design constraint (see the <code class="inline">io</code> deck).</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">3. What is an orphan message?</p>
-    <div class="fragment"><div class="a">A message whose <strong>receive</strong> is recorded in a checkpoint but whose <strong>send</strong> is not — so after rollback the receiver "remembers" a message that was never sent. It arises from uncoordinated checkpoints across an inconsistent cut.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 3 — BEYOND ROLLBACK
@@ -403,17 +379,7 @@
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 3 — Review</h2>
-  <div class="qa">
-    <p class="q">1. In matrix-multiply ABFT, you find a checksum mismatch in row 2 and column 4. What do you conclude, and can you fix it?</p>
-    <div class="fragment"><div class="a">The corrupted entry is <code class="inline">C<sub>2,4</sub></code> (the row/column intersection). You <strong>correct it in place</strong> using the difference between the recomputed and stored checksum — no rollback needed.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Why can't plain checkpoint/restart handle SDC, and what do you add?</p>
-    <div class="fragment"><div class="a">SDC is <strong>undetected</strong> — there's no crash to trigger a restart, and you might checkpoint the corrupted state. You add a <strong>detector</strong> (replication/voting or an algorithmic/ABFT check); once detected, you can correct in place or roll back to a known-good checkpoint.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 4 — RESILIENCE ACROSS THE STACK
@@ -518,17 +484,7 @@ if (rc != MPI_SUCCESS) {
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 4 — Review</h2>
-  <div class="qa">
-    <p class="q">1. By default, what happens to an MPI job when one rank dies, and what three ULFM calls let it continue?</p>
-    <div class="fragment"><div class="a">By default the job <strong>aborts</strong> (<code class="inline">MPI_ERRORS_ARE_FATAL</code>). ULFM adds <code class="inline">MPIX_Comm_revoke</code> (invalidate the broken comm), <code class="inline">MPIX_Comm_shrink</code> (rebuild without dead ranks), and <code class="inline">MPIX_Comm_agree</code> (consistent decision) — then reload from a checkpoint and continue.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. How is Spark's recovery fundamentally different from HPC coordinated checkpoint/restart?</p>
-    <div class="fragment"><div class="a">Spark uses <strong>lineage</strong>: it recomputes only the lost partition from its parents — uncoordinated, local, no global snapshot or rollback of healthy work. HPC restart rolls <strong>all</strong> ranks back to a global checkpoint.</div></div>
-  </div>
-</section>
+
 
 <!-- ===== BIG PICTURE ===== -->
 <section data-background-color="#ffffff">
@@ -556,7 +512,6 @@ if (rc != MPI_SUCCESS) {
     <li>W. Bland et al., "Post-failure recovery of MPI communication capability (ULFM)," <em>IJHPCA</em>, 2013 — ICL / Univ. of Tennessee, Knoxville.</li>
     <li>K.-H. Huang &amp; J. Abraham, "Algorithm-based fault tolerance for matrix operations," <em>IEEE TC</em>, 1984.</li>
     <li>M. Zaharia et al., "Resilient Distributed Datasets," <em>NSDI</em>, 2012 (Spark lineage).</li>
-    <li><strong>CSC 548</strong>, J. Li.</li>
   </ul>
 </section>
 

@@ -195,17 +195,7 @@ int main(int argc, char *argv[]) {
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 1 — Review</h2>
-  <div class="qa">
-    <p class="q">1. What does it mean that MPI processes have "separate address spaces"?</p>
-    <div class="fragment"><div class="a">No process can read or write another's memory directly. The <strong>only</strong> way to share data is to send a message that the other process explicitly receives.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. In SPMD, how do two processes running the same program do different work?</p>
-    <div class="fragment"><div class="a">They branch on their <strong>rank</strong> (from <code class="inline">MPI_Comm_rank</code>) — e.g. <code class="inline">if (rank == 0) …</code>. One program, multiple data, different control paths.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 2 — POINT-TO-POINT COMMUNICATION
@@ -362,17 +352,7 @@ MPI_Wait(&amp;req, MPI_STATUS_IGNORE);
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 2 — Review</h2>
-  <div class="qa">
-    <p class="q">1. Why can two processes that both <code class="inline">Send</code> before they <code class="inline">Recv</code> deadlock?</p>
-    <div class="fragment"><div class="a">If system buffers are too small, each blocking <code class="inline">Send</code> waits for the matching <code class="inline">Recv</code> to drain it — but neither process reaches its <code class="inline">Recv</code>. Reorder, or use nonblocking / <code class="inline">Sendrecv</code>.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. After <code class="inline">MPI_Irecv</code> returns, when is it safe to read the buffer?</p>
-    <div class="fragment"><div class="a">Only after a matching <code class="inline">MPI_Wait</code> (or a successful <code class="inline">MPI_Test</code>) reports the request complete — the receive merely <em>started</em> when <code class="inline">Irecv</code> returned.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 3 — COLLECTIVE OPERATIONS
@@ -497,17 +477,7 @@ MPI_Reduce(&amp;mypart, &amp;total, 1,
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 3 — Review</h2>
-  <div class="qa">
-    <p class="q">1. How does a collective differ from point-to-point?</p>
-    <div class="fragment"><div class="a">Every process in the communicator must call it; there are <strong>no tags</strong>; and it is blocking (in MPI-1). One call replaces a hand-written tree of sends/recvs.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. When would you choose <code class="inline">MPI_Allreduce</code> over <code class="inline">MPI_Reduce</code>?</p>
-    <div class="fragment"><div class="a">When <strong>all</strong> processes need the combined result (e.g. a global residual norm each rank must test) — it fuses the reduce and the broadcast into one efficient call.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 4 — COMMUNICATORS, GROUPS & DATATYPES
@@ -594,17 +564,7 @@ MPI_Type_free(&amp;col);
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 4 — Review</h2>
-  <div class="qa">
-    <p class="q">1. Why are contexts safer than tags for library code?</p>
-    <div class="fragment"><div class="a">A context is allocated by the system and admits <strong>no wildcards</strong>, so a library's messages cannot be accidentally matched (or hijacked) by application code using the same tag values.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. What problem does a derived datatype solve?</p>
-    <div class="fragment"><div class="a">It lets you send <strong>non-contiguous</strong> data (a matrix column, a struct) in one call, letting MPI handle the gather/scatter and avoid manual packing and extra copies.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 5 — WORKED EXAMPLE: PARALLEL PI
@@ -747,7 +707,6 @@ int main(int argc, char *argv[]) {
     <li>W. Gropp, E. Lusk &amp; A. Skjellum, <em>Using MPI</em>, MIT Press.</li>
     <li>I. Foster, <em>Designing and Building Parallel Programs</em>, Addison-Wesley, 1995.</li>
     <li>MPI Forum standard — <a href="https://www.mpi-forum.org">mpi-forum.org</a>; MPICH — <a href="https://www.mcs.anl.gov/mpi">mcs.anl.gov/mpi</a>.</li>
-    <li><strong>CSC 548</strong>, J. Li.</li>
   </ul>
 </section>
 

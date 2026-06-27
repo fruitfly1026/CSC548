@@ -171,17 +171,7 @@ rsync -avz hw0/ &lt;unityID&gt;@arc.csc.ncsu.edu:~/hw0/
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 2 — Review</h2>
-  <div class="qa">
-    <p class="q">1. Which key do you register with ARC, and which never leaves your machine?</p>
-    <div class="fragment"><div class="a">Register the <strong>public</strong> key (<code class="inline">id_rsa.pub</code>). The <strong>private</strong> key (<code class="inline">id_rsa</code>) stays on your laptop and is never shared.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. You built a binary in <code class="inline">~/hw0</code> on the login node. Will your compute-node job see it?</p>
-    <div class="fragment"><div class="a">Yes — your home directory is shared across login and compute nodes, so the job sees the same files.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 3 — SOFTWARE
@@ -324,17 +314,7 @@ cat result.txt           # your program output
   </div>
 </section>
 
-<section data-background-color="#f6f8fb">
-  <h2>Module 4 — Review</h2>
-  <div class="qa">
-    <p class="q">1. When would you use <code class="inline">salloc</code> instead of <code class="inline">sbatch</code>?</p>
-    <div class="fragment"><div class="a"><code class="inline">salloc</code> for interactive debugging and quick tests (you type commands on the node); <code class="inline">sbatch</code> for unattended, repeatable, possibly long-running jobs that queue and write output to files.</div></div>
-  </div>
-  <div class="qa">
-    <p class="q">2. Your job ran but produced no output. Where do you look first?</p>
-    <div class="fragment"><div class="a">The <code class="inline">#SBATCH -o</code> / <code class="inline">-e</code> files (e.g. <code class="inline">hw0.&lt;jobID&gt;.out</code> / <code class="inline">.err</code>) — errors like a missing <code class="inline">module load</code> show up there.</div></div>
-  </div>
-</section>
+
 
 <!-- ==================================================================
      MODULE 5 — VS CODE REMOTE
@@ -460,7 +440,6 @@ cat hw0.&lt;jobID&gt;.out
     <li>ARC cluster documentation — <a href="http://moss.csc.ncsu.edu/~mueller/cluster/arc">moss.csc.ncsu.edu/~mueller/cluster/arc</a>.</li>
     <li>Slurm Workload Manager — <a href="https://slurm.schedmd.com">slurm.schedmd.com</a>.</li>
     <li>VS Code Remote - SSH — <a href="https://code.visualstudio.com/docs/remote/ssh">code.visualstudio.com/docs/remote/ssh</a>.</li>
-    <li><strong>CSC 548</strong>, J. Li.</li>
   </ul>
 </section>
 
