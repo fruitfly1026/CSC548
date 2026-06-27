@@ -45,6 +45,48 @@
 </section>
 
 <!-- ==================================================================
+     FRAMING — WHAT IS A PARALLEL SYSTEM?
+     ================================================================== -->
+<section data-background-color="#ffffff">
+  <h2>What Is a Parallel System?</h2>
+  <div class="callout takeaway"><span class="lbl">Working definition</span>
+    Many <strong>processing elements</strong> + a <strong>memory system</strong> + an <strong>interconnect</strong> + a <strong>software stack</strong> that <strong>cooperate</strong> on <em>one</em> problem &mdash; to finish <strong>faster</strong>, or to solve something <strong>bigger</strong>.</div>
+  <p class="small center muted">It's not just the hardware, and not just the algorithm &mdash; it's the whole stack working together.</p>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">1 &middot; Express parallelism</span><span class="small">Programming models &mdash; MPI, OpenMP, SIMD, CUDA.</span></div>
+    <div class="callout"><span class="lbl">2 &middot; The underlying system</span><span class="small">Memory hierarchy, caches, interconnect, architecture &mdash; <em>why</em> code runs fast or slow.</span></div>
+    <div class="callout"><span class="lbl">3 &middot; Evaluate &amp; scale</span><span class="small">Performance, communication, I/O, fault tolerance &mdash; making it actually scale.</span></div>
+  </div>
+  <p class="center small muted">These three pillars are exactly the arc of this course.</p>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Parallel &middot; Concurrent &middot; Distributed</h2>
+  <table style="font-size:.84em">
+    <tr><th>Term</th><th>Key idea</th><th>Needs</th><th>Driven by</th></tr>
+    <tr><td class="hi"><strong>Concurrency</strong></td><td>deal with many things at once (<em>structure</em>)</td><td>can run on a <strong>single</strong> core (interleaving)</td><td>program organization</td></tr>
+    <tr><td class="hi"><strong>Parallelism</strong></td><td>do many things at once (<em>simultaneously</em>)</td><td><strong>multiple</strong> processing elements</td><td>speed / throughput</td></tr>
+    <tr><td><strong>Distributed</strong></td><td>independent machines cooperating</td><td>a network; often geo-distributed</td><td>failure &amp; heterogeneity</td></tr>
+  </table>
+  <div class="cols">
+    <div class="callout takeaway"><span class="lbl">Parallel computing</span>A large collection of PEs that <strong>communicate</strong> &amp; <strong>cooperate</strong> to solve a big problem quickly. Three independent ops at once &rarr; up to <strong>3&times;</strong> faster &mdash; realizing that speedup is the whole game.</div>
+    <div class="callout"><span class="lbl">Parallel vs. distributed</span>Parallel = <strong>tightly</strong> coupled, low-latency interconnect, one shared goal. Distributed = <strong>loosely</strong> coupled, where fault &amp; heterogeneity are central. They overlap.</div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>CSC 548 vs. CSC/ECE 506</h2>
+  <div class="cols">
+    <div class="callout"><span class="lbl">CSC/ECE 506 &mdash; Parallel <em>Architecture</em></span>
+      <span class="small"><strong>Design the machine.</strong> Cache coherence, memory consistency, interconnects, multiprocessor design &mdash; the <strong>architect's</strong> view.</span></div>
+    <div class="callout takeaway"><span class="lbl">CSC 548 &mdash; Parallel <em>Systems</em></span>
+      <span class="small"><strong>Program the machine &amp; analyze performance.</strong> Programming models, performance, the memory/interconnect systems your code runs on &mdash; plus big data, I/O, fault tolerance &amp; parallel DL. The <strong>programmer / systems</strong> view.</span></div>
+  </div>
+  <div class="callout"><span class="lbl">Complementary</span>
+    548 <strong>borrows</strong> architecture as background (kept light) and focuses on <strong>writing parallel programs and making them fast</strong>. 506 designs the hardware; 548 uses it.</div>
+</section>
+
+<!-- ==================================================================
      MODULE 1 — WHY PARALLELISM
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
@@ -259,23 +301,6 @@
       <li>Place a machine in Flynn's taxonomy (SISD/SIMD/MISD/MIMD) and explain SPMD</li>
       <li>Choose between the shared-memory and message-passing programming models</li>
     </ul>
-  </div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>Concurrency vs. Parallelism</h2>
-  <div class="cols">
-    <div>
-      <div class="callout"><span class="lbl">Sequential</span>Operations ordered in time, one after another.</div>
-      <div class="callout"><span class="lbl">Concurrent</span>Operations that <em>could</em> run at the same time &mdash; whether or not the hardware actually does so.</div>
-      <p class="small">Two independent ideas:<br>
-      1. <strong>Concurrency</strong> &mdash; expressed in the <em>language</em>.<br>
-      2. <strong>Parallelism</strong> &mdash; provided by the <em>hardware</em>.</p>
-    </div>
-    <div>
-      <div class="callout takeaway"><span class="lbl">Parallel computing (working definition)</span>A large collection of processing elements that <strong>communicate</strong> and <strong>cooperate</strong> to solve a big problem quickly &mdash; using concurrent events during execution.</div>
-      <p class="small">If three independent operations run at once, the computation can finish up to <strong>3&times; faster</strong>. Realizing that speedup is the whole game.</p>
-    </div>
   </div>
 </section>
 
