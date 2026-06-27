@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSC 548 · Final Project Topics</title>
+
+<!-- reveal.js core (CDN) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/theme.css?v=11">
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================ TITLE ============================ -->
+<section class="title-slide" data-background-color="#ffffff">
+  <div class="eyebrow">CSC 548 · Parallel Systems</div>
+  <h1>Final Project</h1>
+  <div class="sub">Topics &amp; Guidelines — <strong>parallelize</strong> a real problem, <strong>benchmark</strong> it, and <strong>analyze</strong> the speedup &amp; scaling</div>
+  <aside class="notes">
+    This deck lays out the final project: what is expected, the suggested topic areas, the deliverables and
+    timeline (proposal, in-class presentation, final report in ACM format plus code), and practical tips for
+    a project that actually shows a measurable result. The emphasis is on taking a real application, making it
+    parallel with MPI / OpenMP / CUDA, and analyzing performance honestly.
+  </aside>
+</section>
+
+<!-- Agenda -->
+<section data-background-color="#ffffff">
+  <h2>Agenda</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">1 · Overview</span><span class="small">What the project is, solo or pairs, what to deliver.</span></div>
+    <div class="callout"><span class="lbl">2 · Topics</span><span class="small">Suggested themes — accelerate, reproduce, or model.</span></div>
+    <div class="callout"><span class="lbl">3 · Deliverables &amp; Timeline</span><span class="small">Proposal, presentation, report + code, due dates.</span></div>
+    <div class="callout takeaway"><span class="lbl">4 · Tips</span><span class="small">Pick something measurable, baseline first, profile, show scaling.</span></div>
+  </div>
+  <div class="callout"><span class="lbl">One theme</span>
+    A good project takes a <strong>real workload</strong>, parallelizes it in C/C++ with OpenMP / Pthreads / MPI / CUDA, and <strong>quantifies</strong> the win.</div>
+</section>
+
+<!-- ==================================================================
+     MODULE 1 — PROJECT OVERVIEW
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 1</div>
+  <div class="mod-title">Project Overview</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>State the goal: parallelize &amp; optimize a real problem, then analyze it</li>
+      <li>Decide between a single-person or a two-person team</li>
+      <li>Know the allowed languages, programming models, and machines</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>What Is the Final Project?</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">The core ask</span>Take a real problem, make it run in <strong>parallel</strong>, optimize it, and <strong>analyze</strong> the performance you obtained.</div>
+      <p class="small">It is open-ended on purpose: you choose the application and the parallel programming model. What stays fixed is the engineering discipline — a baseline, a parallel version, and an honest measurement of the difference.</p>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Three valid shapes</span>
+        <span class="small">
+        <strong>Accelerate</strong> — speed up a problem with parallel programming.<br>
+        <strong>Reproduce</strong> — re-implement a parallel algorithm / high-performance result from a research paper.<br>
+        <strong>Survey</strong> — review a parallelism / performance topic. <em>Not recommended.</em></span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Team Size &amp; Expectations</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Single-person</span>You scope, build, and analyze the whole project yourself.</div>
+      <div class="callout"><span class="lbl">Two-person team</span>Allowed — at most <strong>two</strong> students. <strong>More work is expected</strong> from a team.</div>
+    </div>
+    <div>
+      <div class="callout warn"><span class="lbl">Plan for the team factor</span>If you pair up, the scope should be visibly larger — e.g. more optimizations, more platforms compared, or a deeper analysis. Split the work so each person owns a clear part.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Implementation Rules</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Language</span><span class="small">Restricted to <strong>C</strong> or <strong>C++</strong>.</span></div>
+    <div class="callout"><span class="lbl">Parallel model</span><span class="small">No restriction — multithreading (OpenMP, Pthreads), GPU (CUDA, OpenCL), or distributed (MPI, Hadoop, Spark).</span></div>
+    <div class="callout"><span class="lbl">Machines</span><span class="small">Use <strong>ARC</strong> or <strong>Hazel</strong>. Mind the available resources.</span></div>
+  </div>
+  <div class="callout warn"><span class="lbl">Pick the model that fits the problem</span>
+    Shared-memory loops → OpenMP / Pthreads. Massively data-parallel kernels → CUDA. Problem too big for one node → MPI. Match the tool to where the parallelism actually lives.</div>
+</section>
+
+<!-- ==================================================================
+     MODULE 2 — TOPICS
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 2</div>
+  <div class="mod-title">Suggested Topics</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Browse the instructor's suggested topic areas</li>
+      <li>See how a topic turns into a measurable parallel project</li>
+      <li>Recognize the "other" topics that are also acceptable</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>General Directions</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Accelerate</span><span class="small">Use parallel programming to speed up a problem you care about.</span></div>
+    <div class="callout"><span class="lbl">Reproduce</span><span class="small">Re-implement a parallel algorithm / high-performance result from a published paper.</span></div>
+    <div class="callout warn"><span class="lbl">Survey</span><span class="small">A literature survey on a parallelism / performance topic. <strong>Not recommended.</strong></span></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Best bet</span>
+    The "accelerate" and "reproduce" tracks give you real code to benchmark — which is what the report and grade reward. Choose one of those unless you have a strong reason not to.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Potential Topics</h2>
+  <table style="font-size:.82em">
+    <tr><th>Theme</th><th>What you might do</th></tr>
+    <tr><td class="hi">Accelerating DL / ML models</td><td>Speed up <strong>training</strong> or <strong>inference</strong>; combine with pruning, sparsification, or quantization.</td></tr>
+    <tr><td class="hi">Accelerating data analytics</td><td>Analyze healthcare / social-media data with a method, then parallelize that method; or speed up data reorganizing, rearranging, cleaning.</td></tr>
+    <tr><td class="hi">Improving fundamental operations</td><td>Linear algebra, tensor algebra, matrix solvers — exploit data features like <strong>sparsity</strong>, <strong>symmetry</strong>, or <strong>non-negativity</strong>.</td></tr>
+  </table>
+  <div class="callout"><span class="lbl">Pattern</span>
+    Each theme is "a real workload + a method to parallelize." Pick a workload, find the hot computation, and make <em>that</em> parallel.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Other Acceptable Topics</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Performance modeling</span><span class="small">Modeling a parallel algorithm's performance is fine on its own.</span></div>
+    <div class="callout"><span class="lbl">Profiling / analysis</span><span class="small">OK — but must come with <strong>at least one optimization</strong> driven by what you found.</span></div>
+    <div class="callout"><span class="lbl">Benchmarking</span><span class="small">Acceptable — must compare <strong>multiple</strong> cases, scenarios, or platforms.</span></div>
+    <div class="callout"><span class="lbl">I/O optimization</span><span class="small">I/O-focused optimization work is acceptable.</span></div>
+  </div>
+  <div class="callout warn"><span class="lbl">Common thread</span>
+    Even the "analysis-flavored" topics must end in something concrete — an optimization, a comparison, or a model — not just observations.</div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 2 — Review</h2>
+  <div class="qa">
+    <p class="q">1. Which topic track is discouraged, and why?</p>
+    <div class="fragment"><div class="a">A pure <strong>survey</strong> — it produces no code to benchmark, so there is nothing measurable to analyze or grade.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. If you choose a profiling project, what extra requirement applies?</p>
+    <div class="fragment"><div class="a">You must deliver <strong>at least one optimization</strong> driven by the profiling — profiling alone is not enough.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 3 — DELIVERABLES & TIMELINE
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 3</div>
+  <div class="mod-title">Deliverables &amp; Timeline</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>List the three graded deliverables and their weights</li>
+      <li>Map each deliverable to its due date</li>
+      <li>Format the final report in the ACM 2-column style</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The Three Deliverables</h2>
+  <table style="font-size:.8em">
+    <tr><th>Deliverable</th><th>What it is</th><th>Weight</th></tr>
+    <tr><td class="hi">Proposal</td><td>1 page — problem, plan, method, machine</td><td>no grade</td></tr>
+    <tr><td class="hi">Presentation</td><td>5 min talk + 1 min Q&amp;A, in class</td><td>10%</td></tr>
+    <tr><td class="hi">Final Report + Code</td><td>4 pages (excl. references) + your code</td><td>20%</td></tr>
+  </table>
+  <div class="callout"><span class="lbl">Where to submit</span>
+    All artifacts — <strong>proposal, slides, final report + code</strong> — go through <strong>Moodle</strong>.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Timeline (Spring 2025 reference)</h2>
+  <div class="cols">
+    <div>
+      <table style="font-size:.82em">
+        <tr><th>Date</th><th>Milestone</th></tr>
+        <tr><td>02/23, 11:59pm ET</td><td>Proposal due (no grade)</td></tr>
+        <tr><td>04/11 &amp; 04/18, in class</td><td>Presentations</td></tr>
+        <tr><td>04/30, 11:59pm ET</td><td>Final report + code due</td></tr>
+      </table>
+      <p class="tiny muted">Dates shown are from the Sp2025 offering — confirm the Fall 2026 dates on the course page / Moodle.</p>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Read the timeline backwards</span>The report needs results; results need a working parallel version; that needs a baseline. Start the baseline right after the proposal, not in April.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Writing the Final Report</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Format</span>4 pages excluding references, <strong>ACM 2-column</strong> template. Submit the <strong>code</strong> alongside it.</div>
+      <p class="small">A typical structure: problem &amp; motivation → baseline &amp; method → parallel design → experimental setup → results (speedup / scaling) → analysis &amp; conclusion.</p>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Show, don't claim</span>
+        <span class="small">Include the things a reader needs to believe you:</span>
+        <span class="small">• machine &amp; thread/GPU/node counts<br>
+        • baseline timing &amp; how you measured<br>
+        • speedup and a scaling plot<br>
+        • what the profiler said you fixed</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 3 — Review</h2>
+  <div class="qa">
+    <p class="q">1. Which deliverable carries no grade, and why bother with it?</p>
+    <div class="fragment"><div class="a">The <strong>1-page proposal</strong>. It is ungraded but locks in a feasible, well-scoped plan early — the cheapest place to fix a bad idea.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. What format and length is the final report?</p>
+    <div class="fragment"><div class="a"><strong>ACM 2-column</strong>, <strong>4 pages</strong> excluding references, submitted with the code (worth 20%).</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 4 — TIPS FOR A GOOD PROJECT
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 4</div>
+  <div class="mod-title">Tips for a Good Project</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Scope a project that produces a <strong>measurable</strong> result</li>
+      <li>Build the right workflow: baseline → profile → optimize → scale</li>
+      <li>Report speedup and scaling honestly</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Pick Something Measurable</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Define the metric first</span>Decide up front what "better" means — runtime, throughput, speedup, or scaling efficiency — and how you will measure it.</div>
+      <p class="small">A project you can put a number on is a project you can defend. Avoid scopes where success is fuzzy ("it feels faster").</p>
+    </div>
+    <div>
+      <div class="callout warn"><span class="lbl">Scope realistically</span>One application, one clear hot spot, on ARC or Hazel. A small problem done thoroughly beats an ambitious one with no results.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Baseline First, Then Profile</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout takeaway"><span class="lbl">Workflow</span>
+        <span class="small"><strong>1.</strong> Correct serial baseline + timing.<br>
+        <strong>2.</strong> Profile to find the hot spot.<br>
+        <strong>3.</strong> Parallelize / optimize <em>that</em> spot.<br>
+        <strong>4.</strong> Re-measure; verify results still correct.<br>
+        <strong>5.</strong> Sweep threads / cores / problem size.</span></div>
+      <p class="small">Never optimize before you have measured. The profiler, not intuition, tells you where the time goes.</p>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 220 230" class="chart" style="max-width:240px">
+        <g font-size="11">
+          <rect x="30" y="10" width="160" height="30" rx="5" fill="#3b82f6"/><text x="110" y="29" text-anchor="middle" fill="#fff" class="lbl">Baseline + time</text>
+          <rect x="30" y="55" width="160" height="30" rx="5" fill="#3b82f6"/><text x="110" y="74" text-anchor="middle" fill="#fff" class="lbl">Profile</text>
+          <rect x="30" y="100" width="160" height="30" rx="5" fill="#CC0000"/><text x="110" y="119" text-anchor="middle" fill="#fff" class="lbl">Parallelize hot spot</text>
+          <rect x="30" y="145" width="160" height="30" rx="5" fill="#3b82f6"/><text x="110" y="164" text-anchor="middle" fill="#fff" class="lbl">Re-measure + verify</text>
+          <rect x="30" y="190" width="160" height="30" rx="5" fill="#16a34a"/><text x="110" y="209" text-anchor="middle" fill="#fff" class="lbl">Scaling study</text>
+        </g>
+        <g stroke="#16181d" stroke-width="1.5">
+          <line x1="110" y1="40" x2="110" y2="55"/><line x1="110" y1="85" x2="110" y2="100"/>
+          <line x1="110" y1="130" x2="110" y2="145"/><line x1="110" y1="175" x2="110" y2="190"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Show Speedup &amp; Scaling</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Speedup</span>
+        <span class="eq small">\( S_p = T_1 / T_p \)</span> — serial time over parallel time on <em>p</em> workers.</div>
+      <div class="callout"><span class="lbl">Strong vs. weak scaling</span><span class="small"><strong>Strong</strong>: fixed problem, more workers. <strong>Weak</strong>: grow the problem with the workers.</span></div>
+      <p class="tiny muted">Amdahl's law caps strong scaling by the serial fraction — expect curves to bend, and say why.</p>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 240 180" class="chart" style="max-width:280px">
+        <line x1="35" y1="150" x2="220" y2="150" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="35" y1="150" x2="35" y2="20" stroke="#16181d" stroke-width="1.5"/>
+        <text x="127" y="172" text-anchor="middle" class="note">threads / cores (p)</text>
+        <text x="14" y="90" text-anchor="middle" class="note" transform="rotate(-90 14 90)">speedup</text>
+        <line x1="35" y1="150" x2="210" y2="30" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <text x="185" y="38" class="note" fill="#94a3b8">ideal</text>
+        <path d="M35,150 L80,110 L125,82 L170,68 L210,62" fill="none" stroke="#CC0000" stroke-width="2.5"/>
+        <g fill="#CC0000"><circle cx="80" cy="110" r="3"/><circle cx="125" cy="82" r="3"/><circle cx="170" cy="68" r="3"/><circle cx="210" cy="62" r="3"/></g>
+        <text x="150" y="110" class="note" fill="#CC0000">measured</text>
+      </svg>
+      <div class="src">Plot measured vs. ideal; explain the gap.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Common Pitfalls to Avoid</h2>
+  <div class="cols c3">
+    <div class="callout warn"><span class="lbl">No baseline</span><span class="small">Speedup is meaningless without a correct, timed serial reference.</span></div>
+    <div class="callout warn"><span class="lbl">Wrong answers, fast</span><span class="small">Always verify the parallel output matches the baseline.</span></div>
+    <div class="callout warn"><span class="lbl">Single data point</span><span class="small">One thread count tells you nothing — sweep <em>p</em> and problem size.</span></div>
+    <div class="callout warn"><span class="lbl">Over-scoping</span><span class="small">Too ambitious → no results. Narrow it so you can finish and measure.</span></div>
+    <div class="callout warn"><span class="lbl">Optimizing blind</span><span class="small">Tuning before profiling wastes effort on cold code.</span></div>
+    <div class="callout warn"><span class="lbl">Late start</span><span class="small">Leaving experiments to the last week leaves no room to debug.</span></div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 4 — Review</h2>
+  <div class="qa">
+    <p class="q">1. Why measure a serial baseline before parallelizing?</p>
+    <div class="fragment"><div class="a">Speedup is <span class="eq small">\( S_p = T_1 / T_p \)</span> — without a correct, timed <strong>T<sub>1</sub></strong> you have nothing to compare against and no way to show a win.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. What turns a "profiling project" into an acceptable one?</p>
+    <div class="fragment"><div class="a">Following the profile with <strong>at least one real optimization</strong> and re-measuring — analysis must lead to a concrete change.</div></div>
+  </div>
+</section>
+
+<!-- ===== BIG PICTURE ===== -->
+<section data-background-color="#ffffff">
+  <h2>Final Project — Big Picture</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Choose</span>A real C/C++ workload to <strong>accelerate</strong> or a paper to <strong>reproduce</strong>.</div>
+    <div class="callout"><span class="lbl">Build</span>Baseline → profile → parallelize with OpenMP / CUDA / MPI on ARC or Hazel.</div>
+    <div class="callout"><span class="lbl">Measure</span>Speedup &amp; scaling; verify correctness at every step.</div>
+  </div>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Deliver</span>1-pg proposal → 5-min talk (10%) → 4-pg ACM report + code (20%), all on Moodle.</div>
+    <div class="callout takeaway"><span class="lbl">One sentence</span><strong>Pick something measurable, baseline it, profile it, parallelize the hot spot, and report honest speedup &amp; scaling.</strong></div>
+  </div>
+</section>
+
+<!-- ===== REFERENCES ===== -->
+<section data-background-color="#f6f8fb">
+  <h2>References</h2>
+  <div class="callout"><span class="lbl">Course material</span>
+    Adapted from the CSC 548 <em>T3 — Final Project Topics</em> handout (Spring 2025). Topic areas, format, and timeline are the instructor's; Fall 2026 due dates should be confirmed on the course page / Moodle.</div>
+  <ul class="small">
+    <li>ACM Primary Article Template (2-column) — <a href="https://www.acm.org/publications/proceedings-template">acm.org publications template</a>.</li>
+    <li>NCSU HPC — ARC &amp; Hazel cluster documentation (OIT / HPC).</li>
+    <li><strong>CSC 548</strong>, J. Li.</li>
+  </ul>
+</section>
+
+</div>
+
+<!-- deck-level fixed footer -->
+<div class="deck-footer"><span class="tag">CSC 548</span><span class="sep">·</span>Final Project</div>
+</div>
+
+<!-- reveal.js core + plugins -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/math/math.js"></script>
+<script>
+  Reveal.initialize({
+    width: 1280, height: 720, margin: 0.04,
+    minScale: 0.2, maxScale: 1.6,
+    center: false,
+    hash: true, slideNumber: 'c/t', history: true,
+    transition: 'slide', transitionSpeed: 'fast',
+    plugins: [ RevealNotes, RevealHighlight, RevealMath.KaTeX ],
+    katex: { delimiters: [
+      {left:'\\(', right:'\\)', display:false},
+      {left:'$$', right:'$$', display:true}
+    ]},
+  });
+</script>
+<script>
+/* Auto-fit: shrink any slide whose content would exceed 720px. */
+(function(){
+  function fit(s){ if(!s) return;
+    s.style.setProperty('--nc-fit','1');
+    var h=s.scrollHeight;
+    if(h>724){ var k=Math.max(0.6, Math.min(1, 720/h));
+      s.style.setProperty('--nc-fit', k.toFixed(3)); }
+  }
+  if(window.Reveal){
+    Reveal.on('ready', function(e){ fit(e.currentSlide); });
+    Reveal.on('slidechanged', function(e){ fit(e.currentSlide); });
+    try{ if(Reveal.isReady && Reveal.isReady()) fit(Reveal.getCurrentSlide()); }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>

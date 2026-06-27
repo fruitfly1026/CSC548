@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSC 548 · ARC Cluster Demo</title>
+
+<!-- reveal.js core (CDN) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/theme.css?v=11">
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================ TITLE ============================ -->
+<section class="title-slide" data-background-color="#ffffff">
+  <div class="eyebrow">CSC 548 · Parallel Systems</div>
+  <h1>ARC Cluster Demo</h1>
+  <div class="sub">HW0 — getting onto the <strong>ARC GPU cluster</strong>: SSH access, environment modules, compiling MPI/OpenMP/CUDA, and submitting your first batch job</div>
+  <aside class="notes">
+    This is the practical "day zero" deck. By the end of HW0 you should be able to log in to ARC,
+    move files in and out, load the right modules, compile a parallel program, and run it on a
+    compute node through the scheduler. Everything else in the course assumes you can do this.
+  </aside>
+</section>
+
+<!-- Agenda -->
+<section data-background-color="#ffffff">
+  <h2>Agenda</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">1 · What ARC Is</span><span class="small">Login vs. compute nodes, partitions, the Slurm scheduler.</span></div>
+    <div class="callout"><span class="lbl">2 · Getting On</span><span class="small">SSH keys, the config file, file transfer, storage.</span></div>
+    <div class="callout"><span class="lbl">3 · Software</span><span class="small">Environment modules &amp; the MPI / CUDA toolchains.</span></div>
+    <div class="callout"><span class="lbl">4 · Running Jobs</span><span class="small">Interactive (<code class="inline">salloc</code>) &amp; batch (<code class="inline">sbatch</code>) jobs.</span></div>
+    <div class="callout"><span class="lbl">5 · VS Code Remote</span><span class="small">Edit and run on the cluster from your laptop.</span></div>
+    <div class="callout"><span class="lbl">6 · HW0 Checklist</span><span class="small">Log in &amp; run the provided test.</span></div>
+    <div class="callout takeaway"><span class="lbl">Goal</span><span class="small">Be able to log in, compile, and run a parallel job on a compute node — today.</span></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 1 — WHAT ARC IS
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 1</div>
+  <div class="mod-title">What ARC Is</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Describe ARC's login node vs. compute nodes</li>
+      <li>Explain why you never run real work on the login node</li>
+      <li>Name the Slurm commands you will use all semester</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The ARC Cluster</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">ARC</span>An NCSU research cluster of GPU-equipped compute nodes, shared by many users and managed by the <strong>Slurm</strong> scheduler.</div>
+      <p class="small">You connect to a single <strong>login node</strong> (<code class="inline">arc.csc.ncsu.edu</code>). From there you <em>request</em> compute nodes (<code class="inline">c1</code>, <code class="inline">c39</code>, …) from the scheduler — you do not <code class="inline">ssh</code> straight onto them.</p>
+      <div class="callout warn"><span class="lbl">Never compute on the login node</span>It is shared by everyone. Compile small things there; run jobs on compute nodes.</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 210" class="chart" style="max-width:330px">
+        <rect x="20" y="10" width="90" height="34" rx="5" fill="#3b82f6"/><text x="65" y="31" text-anchor="middle" fill="#fff" class="lbl">your laptop</text>
+        <line x1="110" y1="27" x2="150" y2="27" stroke="#16181d" stroke-width="2"/>
+        <text x="130" y="20" text-anchor="middle" class="note">ssh</text>
+        <rect x="150" y="10" width="130" height="34" rx="5" fill="#CC0000"/><text x="215" y="31" text-anchor="middle" fill="#fff" class="lbl">login node (arc)</text>
+        <line x1="215" y1="44" x2="215" y2="78" stroke="#16181d" stroke-width="2"/>
+        <text x="215" y="64" text-anchor="middle" class="note">Slurm</text>
+        <rect x="40" y="80" width="230" height="22" rx="4" fill="#e5e7eb"/><text x="155" y="95" text-anchor="middle" class="lbl">scheduler / queue</text>
+        <g>
+          <rect x="40" y="120" width="64" height="60" rx="5" fill="#cbd5e1"/><text x="72" y="145" text-anchor="middle" class="lbl">c1</text><text x="72" y="163" text-anchor="middle" class="note">GPU</text>
+          <rect x="118" y="120" width="64" height="60" rx="5" fill="#cbd5e1"/><text x="150" y="145" text-anchor="middle" class="lbl">c2</text><text x="150" y="163" text-anchor="middle" class="note">GPU</text>
+          <rect x="196" y="120" width="64" height="60" rx="5" fill="#cbd5e1"/><text x="228" y="145" text-anchor="middle" class="lbl">c39</text><text x="228" y="163" text-anchor="middle" class="note">GPU</text>
+        </g>
+        <text x="155" y="200" text-anchor="middle" class="note">compute nodes</text>
+      </svg>
+      <div class="src">Login node is the front door; jobs run on compute nodes.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Slurm — the Commands to Memorize</h2>
+  <table style="font-size:.82em">
+    <tr><th>Command</th><th>What it does</th></tr>
+    <tr><td class="hi"><code class="inline">sinfo</code></td><td>Show partitions / devices and their availability</td></tr>
+    <tr><td class="hi"><code class="inline">salloc -N&lt;#nodes&gt; -n&lt;#procs&gt; -p &lt;partition&gt;</code></td><td>Allocate nodes for an interactive session</td></tr>
+    <tr><td><code class="inline">squeue</code></td><td>List jobs and their states</td></tr>
+    <tr><td><code class="inline">sbatch &lt;script&gt;</code></td><td>Submit a batch job script to the queue</td></tr>
+    <tr><td><code class="inline">scancel &lt;jobID&gt;</code></td><td>Cancel the job with that ID</td></tr>
+    <tr><td><code class="inline">exit</code></td><td>Release the node promptly when done</td></tr>
+  </table>
+  <div class="callout takeaway"><span class="lbl">Don't forget these</span>You will type <code class="inline">salloc</code>, <code class="inline">squeue</code>, <code class="inline">sbatch</code>, and <code class="inline">scancel</code> for the next couple of months.</div>
+</section>
+
+<!-- ==================================================================
+     MODULE 2 — GETTING ON
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 2</div>
+  <div class="mod-title">Getting On — SSH &amp; Files</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Generate an SSH keypair on Windows or macOS/Linux</li>
+      <li>Log in to ARC with your Unity ID</li>
+      <li>Move files in and out with <code class="inline">scp</code> / <code class="inline">rsync</code></li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Generate an SSH Keypair</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Windows</span>Enable <strong>OpenSSH Client</strong>: Start → "Apps &amp; Features" → "Optional Features" → add <em>OpenSSH Client</em>. Then use Command Prompt.</div>
+      <div class="callout"><span class="lbl">macOS / Linux</span>SSH is already installed — just open a terminal.</div>
+      <p class="tiny muted">Keys are saved to <code class="inline">~/.ssh/id_rsa</code> (private) and <code class="inline">~/.ssh/id_rsa.pub</code> (public). Press Enter at every prompt to take the defaults.</p>
+    </div>
+    <div>
+      <div class="code-label">Create the keypair</div>
+      <pre><code class="language-bash" data-trim>
+ssh-keygen -t rsa -b 4096
+# Enter, Enter, Enter (accept defaults)
+
+# show your PUBLIC key
+cat ~/.ssh/id_rsa.pub
+</code></pre>
+      <div class="callout warn"><span class="lbl">Public vs. private</span>Share the <code class="inline">.pub</code> file only. <strong>Never</strong> share or copy <code class="inline">id_rsa</code> (the private key).</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Activation &amp; First Login</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Activation email</span>Once your account is registered you receive an activation email. After that, your public key gets you in — no password.</div>
+      <div class="code-label">Log in</div>
+      <pre><code class="language-bash" data-trim>
+ssh &lt;unityID&gt;@arc.csc.ncsu.edu
+</code></pre>
+      <p class="tiny muted">Replace <code class="inline">&lt;unityID&gt;</code> with your NCSU Unity ID (e.g. <code class="inline">smanthe</code>).</p>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">If it rejects your key</span><span class="small">Make sure the matching public key was registered, and that permissions are tight: <code class="inline">chmod 600 ~/.ssh/id_rsa</code>.</span></div>
+      <div class="code-label">Verbose debugging</div>
+      <pre><code class="language-bash" data-trim>
+ssh -v &lt;unityID&gt;@arc.csc.ncsu.edu 2&gt;&amp;1 \
+  | grep -i "offering\|accepted"
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Moving Files &amp; Storage</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">Copy a single file up / down</div>
+      <pre><code class="language-bash" data-trim>
+# laptop  -&gt;  ARC
+scp hw0.c &lt;unityID&gt;@arc.csc.ncsu.edu:~/hw0/
+
+# ARC  -&gt;  laptop
+scp &lt;unityID&gt;@arc.csc.ncsu.edu:~/hw0/out.txt .
+</code></pre>
+      <div class="code-label">Sync a whole directory</div>
+      <pre><code class="language-bash" data-trim>
+rsync -avz hw0/ &lt;unityID&gt;@arc.csc.ncsu.edu:~/hw0/
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Home directory</span>Your <code class="inline">~</code> is shared across the login and compute nodes — a file you build on <code class="inline">arc</code> is visible to your job.</div>
+      <div class="callout warn"><span class="lbl">Quotas &amp; scratch</span>Home space is limited. Put big or temporary data on scratch storage, not in <code class="inline">~</code>, and clean up after a run.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 2 — Review</h2>
+  <div class="qa">
+    <p class="q">1. Which key do you register with ARC, and which never leaves your machine?</p>
+    <div class="fragment"><div class="a">Register the <strong>public</strong> key (<code class="inline">id_rsa.pub</code>). The <strong>private</strong> key (<code class="inline">id_rsa</code>) stays on your laptop and is never shared.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. You built a binary in <code class="inline">~/hw0</code> on the login node. Will your compute-node job see it?</p>
+    <div class="fragment"><div class="a">Yes — your home directory is shared across login and compute nodes, so the job sees the same files.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 3 — SOFTWARE
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 3</div>
+  <div class="mod-title">Software — Modules &amp; Compilers</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Find and load software with environment modules</li>
+      <li>Compile an MPI, OpenMP, or CUDA program</li>
+      <li>Keep your toolchain reproducible across logins</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Environment Modules</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Why modules</span>The cluster has many compiler / library versions. <code class="inline">module load</code> edits your <code class="inline">PATH</code> so the right tools appear — without conflicts.</div>
+      <div class="code-label">Everyday module commands</div>
+      <pre><code class="language-bash" data-trim>
+module avail              # what's installed
+module load cuda          # add CUDA toolchain
+module load mpich         # add an MPI
+module list               # what's loaded now
+module unload cuda        # remove one
+module purge              # start clean
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Search</span><span class="small"><code class="inline">module avail 2&gt;&amp;1 | grep -i cuda</code> finds a specific package (module writes to stderr).</span></div>
+      <div class="callout takeaway"><span class="lbl">Reproducibility</span>Put your <code class="inline">module load</code> lines <strong>in your job script</strong>, not just in your shell — so the job loads the same toolchain every time.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Compiling Parallel Programs</h2>
+  <div class="cols c3">
+    <div>
+      <div class="code-label">OpenMP (shared memory)</div>
+      <pre><code class="language-bash" data-trim>
+gcc -fopenmp \
+    hello_omp.c -o hello_omp
+</code></pre>
+      <p class="tiny muted">Threads set by <code class="inline">OMP_NUM_THREADS</code>.</p>
+    </div>
+    <div>
+      <div class="code-label">MPI (distributed)</div>
+      <pre><code class="language-bash" data-trim>
+module load mpich
+mpicc hello_mpi.c -o hello_mpi
+</code></pre>
+      <p class="tiny muted">Launch with <code class="inline">mpirun</code> / <code class="inline">srun</code>.</p>
+    </div>
+    <div>
+      <div class="code-label">CUDA (GPU)</div>
+      <pre><code class="language-bash" data-trim>
+module load cuda
+nvcc hello.cu -o hello_cuda
+</code></pre>
+      <p class="tiny muted">Runs on a GPU compute node.</p>
+    </div>
+  </div>
+  <div class="callout warn"><span class="lbl">Load before you build</span><code class="inline">mpicc</code> and <code class="inline">nvcc</code> only exist after the matching <code class="inline">module load</code>. "command not found" almost always means a missing module.</div>
+</section>
+
+<!-- ==================================================================
+     MODULE 4 — RUNNING JOBS
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 4</div>
+  <div class="mod-title">Running Jobs</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Grab a node interactively with <code class="inline">salloc</code></li>
+      <li>Write and submit a batch script with <code class="inline">sbatch</code></li>
+      <li>Monitor a job and collect its output</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Interactive Jobs — <code class="inline">salloc</code></h2>
+  <div class="cols">
+    <div>
+      <p class="small">Best for debugging and quick tests: you get a shell on a real compute node and run commands by hand.</p>
+      <div class="code-label">Allocate, run, release</div>
+      <pre><code class="language-bash" data-trim>
+salloc -N1 -n4 -p &lt;partition&gt;
+# ... now you're on a compute node ...
+module load cuda
+./hello_cuda
+squeue -u $USER          # see your job
+exit                     # RELEASE the node
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Flags</span><span class="small"><code class="inline">-N</code> = number of nodes, <code class="inline">-n</code> = number of processes/tasks, <code class="inline">-p</code> = partition / device.</span></div>
+      <div class="callout warn"><span class="lbl">Always <code class="inline">exit</code></span>An allocation you forget to release keeps the node tied up and counts against you and your classmates.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Batch Jobs — a Job Script</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="code-label">job.sh</div>
+      <pre><code class="language-bash" data-trim>
+#!/bin/bash
+#SBATCH -J hw0           # job name
+#SBATCH -N 1             # nodes
+#SBATCH -n 4             # tasks
+#SBATCH -p &lt;partition&gt;   # partition
+#SBATCH -t 00:10:00      # time limit
+#SBATCH -o hw0.%j.out    # stdout (%j = jobID)
+#SBATCH -e hw0.%j.err    # stderr
+
+module load mpich
+mpirun ./hello_mpi &gt; result.txt 2&gt;&amp;1
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Submit it</span><code class="inline">sbatch job.sh</code> → prints a <strong>jobID</strong> and returns immediately. The job runs when the scheduler finds room.</div>
+      <p class="tiny muted">The <code class="inline">#SBATCH</code> lines are directives the scheduler reads; the rest is an ordinary shell script that runs <em>on the compute node</em>.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Monitor &amp; Collect Output</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">Submit &amp; watch</div>
+      <pre><code class="language-bash" data-trim>
+sbatch job.sh            # -&gt; "Submitted batch job 12345"
+squeue -u $USER          # PD pending, R running
+scancel 12345            # kill it if needed
+</code></pre>
+      <p class="tiny muted">State <code class="inline">PD</code> = pending in queue, <code class="inline">R</code> = running. When it disappears from <code class="inline">squeue</code>, it finished.</p>
+    </div>
+    <div>
+      <div class="code-label">Read the results</div>
+      <pre><code class="language-bash" data-trim>
+cat hw0.12345.out        # stdout
+cat hw0.12345.err        # stderr
+cat result.txt           # your program output
+</code></pre>
+      <div class="callout takeaway"><span class="lbl">Cycle</span>edit → compile → <code class="inline">sbatch</code> → <code class="inline">squeue</code> → read output → repeat.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 4 — Review</h2>
+  <div class="qa">
+    <p class="q">1. When would you use <code class="inline">salloc</code> instead of <code class="inline">sbatch</code>?</p>
+    <div class="fragment"><div class="a"><code class="inline">salloc</code> for interactive debugging and quick tests (you type commands on the node); <code class="inline">sbatch</code> for unattended, repeatable, possibly long-running jobs that queue and write output to files.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. Your job ran but produced no output. Where do you look first?</p>
+    <div class="fragment"><div class="a">The <code class="inline">#SBATCH -o</code> / <code class="inline">-e</code> files (e.g. <code class="inline">hw0.&lt;jobID&gt;.out</code> / <code class="inline">.err</code>) — errors like a missing <code class="inline">module load</code> show up there.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 5 — VS CODE REMOTE
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 5</div>
+  <div class="mod-title">VS Code Remote (optional, recommended)</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Configure an SSH <code class="inline">config</code> file for ARC</li>
+      <li>Open the cluster's files directly in VS Code</li>
+      <li>Jump onto an allocated compute node from the editor</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>SSH <code class="inline">config</code> for ARC</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Put this in <code class="inline">~/.ssh/config</code>. It names the host, points to your key, and sets your Unity ID so you can just type <code class="inline">ssh arc</code>.</p>
+      <div class="code-label">~/.ssh/config</div>
+      <pre><code class="language-text" data-trim>
+Host arc
+    HostName arc.csc.ncsu.edu
+    IdentityFile ~/.ssh/id_rsa
+    User &lt;unityID&gt;
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Reach a compute node</span>Hop through the login node automatically with <code class="inline">ProxyJump</code>.</div>
+      <div class="code-label">…also in ~/.ssh/config</div>
+      <pre><code class="language-text" data-trim>
+Host c*
+    HostName %h
+    User &lt;unityID&gt;
+    ProxyJump arc.csc.ncsu.edu
+    IdentityFile ~/.ssh/id_rsa
+</code></pre>
+      <p class="tiny muted"><code class="inline">%h</code> = the host you typed (e.g. <code class="inline">c39</code>).</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Connecting from VS Code</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">Install the extension</span><span class="small"><strong>Remote - SSH</strong> (or the <em>Remote Development</em> pack, which adds WSL &amp; tunnels). Either works.</span></div>
+      <ol class="small">
+        <li>Set up <code class="inline">~/.ssh/config</code> (previous slide).</li>
+        <li>Allocate a node with <code class="inline">salloc</code> and note its name (e.g. <code class="inline">c39</code>).</li>
+        <li>In VS Code press <code class="inline">Ctrl/Cmd + Shift + P</code> → "Remote-SSH: Connect to Host".</li>
+        <li>Enter the node name (e.g. <code class="inline">c39</code>) — VS Code proxies through <code class="inline">arc</code>.</li>
+      </ol>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Why bother</span>Edit, browse files, and use an integrated terminal <em>on the compute node</em> — no copying back and forth. Makes the edit/run loop much faster.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 6 — HW0 CHECKLIST
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 6</div>
+  <div class="mod-title">HW0 Checklist</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>To finish HW0 you will…</h4>
+    <ul>
+      <li>Get onto ARC and run the provided test</li>
+      <li>Submit its output as proof</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>HW0 — End-to-End</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">The whole loop, once</div>
+      <pre><code class="language-bash" data-trim>
+# 1. log in
+ssh arc
+
+# 2. get the provided test &amp; build
+cd ~/hw0
+module load mpich
+mpicc hello_mpi.c -o hello_mpi
+
+# 3. submit
+sbatch job.sh           # note the jobID
+
+# 4. watch &amp; collect
+squeue -u $USER
+cat hw0.&lt;jobID&gt;.out
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Checklist</span>
+        <ul class="small" style="margin:.2em 0 0 0;">
+          <li>SSH keypair generated</li>
+          <li>Logged in to <code class="inline">arc.csc.ncsu.edu</code></li>
+          <li>Transferred files (<code class="inline">scp</code>/<code class="inline">rsync</code>)</li>
+          <li>Loaded modules &amp; compiled cleanly</li>
+          <li>Ran the test via <code class="inline">sbatch</code></li>
+          <li>Collected the output file</li>
+        </ul></div>
+      <div class="callout warn"><span class="lbl">When you're done</span><code class="inline">exit</code> any interactive allocation and <code class="inline">scancel</code> stray jobs.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== BIG PICTURE ===== -->
+<section data-background-color="#ffffff">
+  <h2>ARC — Big Picture</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Get on</span><code class="inline">ssh</code> with a key to the login node; <code class="inline">scp</code>/<code class="inline">rsync</code> your files.</div>
+    <div class="callout"><span class="lbl">Set up</span><code class="inline">module load</code> the compiler/libs; build with <code class="inline">mpicc</code> / <code class="inline">nvcc</code> / <code class="inline">-fopenmp</code>.</div>
+    <div class="callout"><span class="lbl">Run</span><code class="inline">salloc</code> for interactive, <code class="inline">sbatch</code> for batch — on compute nodes.</div>
+  </div>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Watch</span><code class="inline">squeue</code> to monitor, <code class="inline">scancel</code> to kill, read the <code class="inline">-o</code>/<code class="inline">-e</code> files for output.</div>
+    <div class="callout"><span class="lbl">Clean up</span><code class="inline">exit</code> allocations promptly; keep big data off your home quota.</div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">One sentence</span>
+    <strong>SSH to the login node, load your modules and compile, then let Slurm run your job on a compute node — and always release what you allocate.</strong></div>
+</section>
+
+<!-- ===== REFERENCES ===== -->
+<section data-background-color="#f6f8fb">
+  <h2>References</h2>
+  <div class="callout"><span class="lbl">Course material</span>
+    Adapted from the CSC 548 <em>ARC Demo</em> (TA walkthrough, Spring 2025) and the ARC cluster documentation.</div>
+  <ul class="small">
+    <li>ARC cluster documentation — <a href="http://moss.csc.ncsu.edu/~mueller/cluster/arc">moss.csc.ncsu.edu/~mueller/cluster/arc</a>.</li>
+    <li>Slurm Workload Manager — <a href="https://slurm.schedmd.com">slurm.schedmd.com</a>.</li>
+    <li>VS Code Remote - SSH — <a href="https://code.visualstudio.com/docs/remote/ssh">code.visualstudio.com/docs/remote/ssh</a>.</li>
+    <li><strong>CSC 548</strong>, J. Li.</li>
+  </ul>
+</section>
+
+</div>
+
+<!-- deck-level fixed footer -->
+<div class="deck-footer"><span class="tag">CSC 548</span><span class="sep">·</span>ARC Cluster Demo</div>
+</div>
+
+<!-- reveal.js core + plugins -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/math/math.js"></script>
+<script>
+  Reveal.initialize({
+    width: 1280, height: 720, margin: 0.04,
+    minScale: 0.2, maxScale: 1.6,
+    center: false,
+    hash: true, slideNumber: 'c/t', history: true,
+    transition: 'slide', transitionSpeed: 'fast',
+    plugins: [ RevealNotes, RevealHighlight, RevealMath.KaTeX ],
+    katex: { delimiters: [
+      {left:'\\(', right:'\\)', display:false},
+      {left:'$$', right:'$$', display:true}
+    ]},
+  });
+</script>
+<script>
+/* Auto-fit: shrink any slide whose content would exceed 720px. */
+(function(){
+  function fit(s){ if(!s) return;
+    s.style.setProperty('--nc-fit','1');
+    var h=s.scrollHeight;
+    if(h>724){ var k=Math.max(0.6, Math.min(1, 720/h));
+      s.style.setProperty('--nc-fit', k.toFixed(3)); }
+  }
+  if(window.Reveal){
+    Reveal.on('ready', function(e){ fit(e.currentSlide); });
+    Reveal.on('slidechanged', function(e){ fit(e.currentSlide); });
+    try{ if(Reveal.isReady && Reveal.isReady()) fit(Reveal.getCurrentSlide()); }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>
