@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSC 548 · Fault Tolerance &amp; Resilience</title>
+
+<!-- reveal.js core (CDN) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/theme.css?v=11">
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================ TITLE ============================ -->
+<section class="title-slide" data-background-color="#ffffff">
+  <div class="eyebrow">CSC 548 · Parallel Systems</div>
+  <h1>Fault Tolerance &amp; Resilience</h1>
+  <div class="sub">Why big machines fail, and how programs survive it</div>
+  <aside class="notes">
+    At leadership scale, failure stops being a rare event and becomes part of the steady-state operating
+    condition. This deck takes a programming/systems view: we start with why system MTBF collapses as you
+    add nodes, build up checkpoint/restart (the workhorse), then go beyond rollback (replication, ABFT),
+    and finish by looking at how resilience shows up across the stack you already know — MPI, Spark, and
+    deep-learning training.
+  </aside>
+</section>
+
+<!-- Agenda -->
+<section data-background-color="#ffffff">
+  <h2>Agenda</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">1 · Why Resilience?</span><span class="small">System MTBF at scale; faults vs errors vs failures; rollback vs forward recovery.</span></div>
+    <div class="callout"><span class="lbl">2 · Checkpoint / Restart</span><span class="small">Coordinated snapshots, the Young/Daly optimal interval, multi-level &amp; logging.</span></div>
+    <div class="callout"><span class="lbl">3 · Beyond Rollback</span><span class="small">Replication, proactive migration, ABFT, silent-error (SDC) detection.</span></div>
+    <div class="callout"><span class="lbl">4 · Across the Stack</span><span class="small">MPI/ULFM, Spark lineage, deep-learning checkpointing.</span></div>
+    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">At scale, failure is not an exception — it is part of the steady state. <em>Design for it.</em></span></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 1 — WHY RESILIENCE?
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 1</div>
+  <div class="mod-title">Why Resilience?</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Explain why <strong>system</strong> MTBF shrinks as you add nodes</li>
+      <li>Distinguish faults, errors, failures; transient vs permanent; fail-stop vs silent (SDC)</li>
+      <li>Contrast the two recovery philosophies: <strong>rollback</strong> vs <strong>forward</strong></li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The Scale Problem: System MTBF</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout warn"><span class="lbl">Key intuition</span>One node may run for <strong>years</strong> between failures, but a machine is only "up" when <em>all</em> its nodes are. With independent failures, the system MTBF <strong>shrinks linearly</strong> with node count.</div>
+      <div class="eq small">\( \mathrm{MTBF}_{sys} \approx \dfrac{\mathrm{MTBF}_{node}}{N} \)</div>
+      <p class="small">Node MTBF = 5 years; <code class="inline">N</code> = 100,000 nodes →
+      <strong>MTBF<sub>sys</sub> ≈ 26 minutes.</strong> Something is always broken.</p>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 200" class="chart" style="max-width:330px">
+        <line x1="40" y1="170" x2="285" y2="170" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="40" y1="170" x2="40" y2="20" stroke="#16181d" stroke-width="1.5"/>
+        <text x="160" y="195" text-anchor="middle" class="note">nodes N →</text>
+        <text x="14" y="95" text-anchor="middle" class="note" transform="rotate(-90 14 95)">MTBF<tspan dy="2" font-size="7">sys</tspan></text>
+        <path d="M48,30 C90,120 150,158 285,166" fill="none" stroke="#CC0000" stroke-width="2.5"/>
+        <circle cx="70" cy="70" r="3" fill="#CC0000"/><text x="78" y="66" class="lbl">1k</text>
+        <circle cx="120" cy="135" r="3" fill="#CC0000"/><text x="128" y="131" class="lbl">10k</text>
+        <circle cx="230" cy="164" r="3" fill="#CC0000"/><text x="200" y="158" class="lbl">100k</text>
+      </svg>
+      <div class="src">More nodes → far shorter time between failures.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Faults, Errors, Failures — and a Taxonomy</h2>
+  <div class="cols">
+    <div>
+      <div class="symkey"><span><strong>fault</strong> → <strong>error</strong> → <strong>failure</strong></span></div>
+      <p class="small"><strong>Fault</strong> — the root cause (a bit flips, a DIMM degrades).<br>
+      <strong>Error</strong> — the fault corrupts a value or state.<br>
+      <strong>Failure</strong> — the error becomes externally visible (wrong result, crash).</p>
+      <div class="callout"><span class="lbl">A fault is not always a failure</span>An error may be masked (ECC corrects it) and never surface. Resilience is about stopping the fault→error→failure chain.</div>
+    </div>
+    <div>
+      <table style="font-size:.8em">
+        <tr><th>Axis</th><th>Options</th></tr>
+        <tr><td class="hi">Duration</td><td><strong>transient</strong> (one-off bit flip) vs <strong>permanent</strong> (dead node/disk)</td></tr>
+        <tr><td class="hi">Symptom</td><td><strong>fail-stop</strong> (node halts, obvious) vs <strong>silent</strong> (SDC — bad data, no crash)</td></tr>
+        <tr><td>Detection</td><td><strong>detected</strong> (we know) vs <strong>undetected</strong> (we don't)</td></tr>
+      </table>
+      <div class="callout warn"><span class="lbl">The scary quadrant</span><strong>Silent + undetected</strong> = <strong>SDC</strong>: the job finishes and hands you a wrong answer. Fail-stop is easy by comparison.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Two Recovery Philosophies</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Rollback recovery</span>Periodically save state; on failure, <strong>restore the last good checkpoint</strong> and re-execute the lost work.</div>
+      <p class="small">+ General — works for almost any application.<br>
+      − Wastes the work since the last checkpoint; needs storage &amp; I/O bandwidth.</p>
+      <p class="tiny muted">Checkpoint/restart, message logging.</p>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Forward recovery</span>Carry enough redundancy that you can <strong>repair the error in place and keep going</strong> — never go back.</div>
+      <p class="small">+ No lost work, no rollback latency.<br>
+      − Application-specific or needs extra resources (replicas, checksums).</p>
+      <p class="tiny muted">Replication/voting, ABFT, Spark lineage recompute.</p>
+    </div>
+  </div>
+  <div class="callout"><span class="lbl">Through the deck</span>Modules 2 is rollback; Module 3 is mostly forward; Module 4 shows both philosophies in real systems.</div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 1 — Review</h2>
+  <div class="qa">
+    <p class="q">1. A node fails on average once every 5 years. Why does a 50,000-node job still fail several times a day?</p>
+    <div class="fragment"><div class="a">Failures are roughly independent, so <code class="inline">MTBF<sub>sys</sub> ≈ MTBF<sub>node</sub>/N</code>. Dividing 5 years by 50,000 gives a few hours — and a long job spans many such intervals.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. Why is a silent error (SDC) more dangerous than a fail-stop crash?</p>
+    <div class="fragment"><div class="a">A crash is <strong>detected</strong> — you restart. SDC is <strong>undetected</strong>: the job completes and returns a <strong>wrong answer</strong> you may trust. You must add detection (checksums, replication) to catch it.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 2 — CHECKPOINT / RESTART
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 2</div>
+  <div class="mod-title">Checkpoint / Restart — the Workhorse</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Describe coordinated checkpointing and why it is the #1 use of parallel I/O</li>
+      <li>State the orphan / in-flight message problem with uncoordinated checkpoints</li>
+      <li>Compute the <strong>optimal checkpoint interval</strong> (Young/Daly) and reason about overhead</li>
+      <li>Explain multi-level / burst-buffer checkpointing and message logging</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Coordinated Checkpointing</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">Idea</span>All ranks synchronize at a barrier and write a <strong>globally consistent snapshot</strong> to the parallel file system. On any failure, the whole job restarts from the last snapshot.</div>
+      <p class="small">Simple and recovery is easy — the saved state is consistent by construction. But every rank dumps memory to the PFS <em>at the same time</em>: this is the <strong>#1 driver of parallel I/O bandwidth</strong> on HPC systems.</p>
+      <div class="callout takeaway"><span class="lbl">Cross-link → <code class="inline">io</code> deck</span>Checkpoint writes are the canonical bursty, write-heavy collective I/O workload — see the Parallel I/O deck (MPI-IO, collective buffering, the PFS).</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 210" class="chart" style="max-width:330px">
+        <!-- rank lines -->
+        <g stroke="#3b82f6" stroke-width="2.5">
+          <line x1="30" y1="30" x2="270" y2="30"/>
+          <line x1="30" y1="60" x2="270" y2="60"/>
+          <line x1="30" y1="90" x2="270" y2="90"/>
+        </g>
+        <text x="8" y="33" class="lbl">R0</text><text x="8" y="63" class="lbl">R1</text><text x="8" y="93" class="lbl">R2</text>
+        <!-- checkpoint barrier 1 -->
+        <line x1="90" y1="20" x2="90" y2="100" stroke="#16181d" stroke-width="1.5" stroke-dasharray="3 2"/>
+        <text x="90" y="14" text-anchor="middle" class="note">ckpt</text>
+        <!-- crash on R1 -->
+        <line x1="200" y1="60" x2="208" y2="68" stroke="#CC0000" stroke-width="2.5"/>
+        <line x1="200" y1="68" x2="208" y2="60" stroke="#CC0000" stroke-width="2.5"/>
+        <text x="204" y="52" text-anchor="middle" class="note" fill="#CC0000">crash</text>
+        <!-- rollback arrows -->
+        <g stroke="#CC0000" stroke-width="1.5" fill="none" marker-end="url(#a)">
+          <path d="M200,38 C150,38 140,38 96,38"/>
+          <path d="M204,72 C160,80 130,80 96,72"/>
+          <path d="M200,98 C150,98 140,98 96,98"/>
+        </g>
+        <defs><marker id="a" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#CC0000"/></marker></defs>
+        <text x="150" y="135" text-anchor="middle" class="note">all ranks roll back to last global snapshot</text>
+        <rect x="30" y="150" width="240" height="22" rx="4" fill="#CC0000"/>
+        <text x="150" y="165" text-anchor="middle" fill="#fff" class="lbl">Parallel File System</text>
+        <line x1="90" y1="100" x2="90" y2="150" stroke="#16181d" stroke-width="1" stroke-dasharray="3 2"/>
+      </svg>
+      <div class="src">Synchronized write; on crash, everyone rolls back together.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Uncoordinated Checkpointing &amp; the Orphan Problem</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Idea</span>Each rank checkpoints <strong>independently</strong>, on its own schedule — no global barrier, less synchronization cost.</div>
+      <div class="callout warn"><span class="lbl">The catch: in-flight messages</span>If rank A's checkpoint is <em>after</em> sending a message but rank B's is <em>before</em> receiving it, the global state is <strong>inconsistent</strong>.</div>
+      <p class="small"><strong>Orphan message</strong> — received but the send was never recorded (a "received-from-nowhere" message after rollback). <strong>Lost message</strong> — sent but the receive is undone. Naïve rollback can cascade — the <strong>domino effect</strong> — undoing far more than intended.</p>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 280 180" class="chart" style="max-width:300px">
+        <line x1="30" y1="50" x2="250" y2="50" stroke="#3b82f6" stroke-width="2.5"/>
+        <line x1="30" y1="130" x2="250" y2="130" stroke="#3b82f6" stroke-width="2.5"/>
+        <text x="10" y="53" class="lbl">A</text><text x="10" y="133" class="lbl">B</text>
+        <!-- checkpoints -->
+        <circle cx="170" cy="50" r="5" fill="#16181d"/><text x="170" y="38" text-anchor="middle" class="note">ckpt A</text>
+        <circle cx="90" cy="130" r="5" fill="#16181d"/><text x="90" y="152" text-anchor="middle" class="note">ckpt B</text>
+        <!-- message m crossing -->
+        <line x1="120" y1="50" x2="200" y2="130" stroke="#CC0000" stroke-width="2" marker-end="url(#mr)"/>
+        <defs><marker id="mr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L7,4 L0,8 Z" fill="#CC0000"/></marker></defs>
+        <text x="150" y="98" class="note" fill="#CC0000">msg m</text>
+        <text x="140" y="172" text-anchor="middle" class="tiny muted">B recorded receiving m, but A's ckpt is after the send → orphan</text>
+      </svg>
+      <div class="src">Inconsistent cut: a message recorded on one side only.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>How Often to Checkpoint? — Young / Daly</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">The trade-off</span><strong>Too often</strong> → you burn I/O bandwidth writing checkpoints you never use. <strong>Too rarely</strong> → each failure throws away more recomputed work. There is a sweet spot.</div>
+      <div class="eq small">\( \tau_{opt} \approx \sqrt{2\,C\,M} \)</div>
+      <p class="small"><code class="inline">C</code> = cost (time) to write one checkpoint; <code class="inline">M</code> = system MTBF. (Young 1974; Daly 2006 adds higher-order &amp; restart terms.)</p>
+      <div class="callout warn"><span class="lbl">Note the dependence</span>As <code class="inline">M</code> shrinks with scale (Module 1), <code class="inline">τ<sub>opt</sub></code> shrinks too — big machines must checkpoint <em>more</em> often, which strains the very I/O system already under load.</div>
+    </div>
+    <div>
+      <div class="code-label">Worked example</div>
+      <table style="font-size:.84em">
+        <tr><th>Quantity</th><th>Value</th></tr>
+        <tr><td>Checkpoint cost <code class="inline">C</code></td><td>1 min</td></tr>
+        <tr><td>System MTBF <code class="inline">M</code></td><td>4 h = 240 min</td></tr>
+        <tr><td class="hi"><code class="inline">τ = √(2·C·M)</code></td><td class="hi">√(2·1·240) ≈ <strong>22 min</strong></td></tr>
+      </table>
+      <p class="small">So checkpoint roughly every <strong>22 minutes</strong>. Halve the MTBF (more nodes) and the interval drops to ≈ 15 min; make checkpoints 4× cheaper and it rises to ≈ 44 min.</p>
+      <p class="tiny muted">Wasted time per failure ≈ ½·τ (expected lost work) + C (the write). Minimizing total overhead yields the √ formula.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Multi-Level &amp; Asynchronous Checkpointing</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">Insight</span>Most failures are <strong>local</strong> (one node, one process). You don't need the slow global PFS for those — keep cheap checkpoints close, escalate only when you must.</div>
+      <p class="small"><strong>L1</strong> — node-local NVMe / RAM: fastest, survives a process crash.<br>
+      <strong>L2</strong> — partner / XOR-encoded across neighbors: survives a node loss.<br>
+      <strong>L3</strong> — parallel file system: survives a whole-system failure, but slowest.</p>
+      <div class="callout takeaway"><span class="lbl">Burst buffers</span>A node-local or near-node <strong>NVMe</strong> tier absorbs the checkpoint write at memory-like speed; data drains to the PFS <strong>asynchronously</strong>, overlapping the next compute phase. Libraries: SCR, FTI, VeloC.</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 230 210" class="chart" style="max-width:250px">
+        <rect x="40" y="20" width="150" height="34" rx="5" fill="#86efac"/>
+        <text x="115" y="36" text-anchor="middle" class="lbl">L1 · node NVMe/RAM</text>
+        <text x="115" y="49" text-anchor="middle" class="tiny">fastest · local crash</text>
+        <rect x="40" y="78" width="150" height="34" rx="5" fill="#fde68a"/>
+        <text x="115" y="94" text-anchor="middle" class="lbl">L2 · partner / XOR</text>
+        <text x="115" y="107" text-anchor="middle" class="tiny">node loss</text>
+        <rect x="40" y="136" width="150" height="34" rx="5" fill="#fca5a5"/>
+        <text x="115" y="152" text-anchor="middle" class="lbl">L3 · PFS</text>
+        <text x="115" y="165" text-anchor="middle" class="tiny">slowest · system loss</text>
+        <line x1="115" y1="54" x2="115" y2="78" stroke="#16181d" stroke-width="1.5" marker-end="url(#dn)"/>
+        <line x1="115" y1="112" x2="115" y2="136" stroke="#16181d" stroke-width="1.5" marker-end="url(#dn)"/>
+        <defs><marker id="dn" markerWidth="7" markerHeight="7" refX="3" refY="6" orient="auto"><path d="M0,0 L6,0 L3,6 Z" fill="#16181d"/></marker></defs>
+        <text x="200" y="100" class="note" transform="rotate(90 200 100)">rarer, more durable →</text>
+      </svg>
+      <div class="src">Cheap local checkpoints; escalate only as needed.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Message Logging &amp; Rollback-Recovery</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Idea</span>Combine occasional checkpoints with a <strong>log of messages</strong>. After a crash, restore the checkpoint and <strong>replay</strong> the logged messages to deterministically re-reach the failure point — only the <em>failed</em> process re-executes.</div>
+      <p class="small">Rests on the <strong>piecewise-deterministic</strong> assumption: between received messages, a process behaves deterministically, so replaying the same message sequence reproduces the same state.</p>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Pessimistic logging</span><span class="small">Log (and acknowledge) each message <strong>before</strong> delivering it. Clean recovery, no orphans — but higher per-message latency.</span></div>
+      <div class="callout"><span class="lbl">Optimistic logging</span><span class="small">Log <strong>asynchronously</strong> (lower overhead), accepting that a few un-logged messages may be lost on failure, requiring some rollback.</span></div>
+      <div class="callout takeaway"><span class="lbl">Why bother</span>Avoids forcing <em>all</em> ranks to roll back — only the crashed rank replays, which matters at very large scale.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 2 — Review</h2>
+  <div class="qa">
+    <p class="q">1. With <code class="inline">C</code> = 2 min and <code class="inline">M</code> = 1 h, roughly how often should you checkpoint?</p>
+    <div class="fragment"><div class="a"><code class="inline">τ ≈ √(2·C·M) = √(2·2·60) = √240 ≈ 15.5 min</code>. Checkpoint about every 15 minutes.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. Why does coordinated checkpointing dominate HPC I/O bandwidth planning?</p>
+    <div class="fragment"><div class="a">Every rank dumps its memory to the PFS at the <strong>same instant</strong> — a huge synchronized write burst. Sizing the PFS / burst buffers for that burst is a primary design constraint (see the <code class="inline">io</code> deck).</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">3. What is an orphan message?</p>
+    <div class="fragment"><div class="a">A message whose <strong>receive</strong> is recorded in a checkpoint but whose <strong>send</strong> is not — so after rollback the receiver "remembers" a message that was never sent. It arises from uncoordinated checkpoints across an inconsistent cut.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 3 — BEYOND ROLLBACK
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 3</div>
+  <div class="mod-title">Beyond Rollback</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Say when replication beats checkpointing, and at what cost</li>
+      <li>Explain proactive / prediction-based migration</li>
+      <li>Apply the matrix-multiply checksum to detect, locate, and correct a corrupted entry (ABFT)</li>
+      <li>Choose a strategy for detecting silent data corruption (SDC)</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Replication</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Active replication</span>Run <strong>two (or three) copies</strong> of each process in lock-step. A failure is masked instantly — the survivor keeps going; with three copies you can <strong>vote</strong> to also catch SDC.</div>
+      <div class="callout"><span class="lbl">Passive replication</span>A standby copy receives state updates and takes over only on failure — lower steady-state cost, some failover latency.</div>
+    </div>
+    <div>
+      <div class="callout warn"><span class="lbl">The cost</span>Dual replication <strong>halves</strong> usable machine throughput (2× resources for 1× work). It only pays off when checkpoint/restart can't keep up.</div>
+      <div class="callout takeaway"><span class="lbl">When replication wins</span>At <strong>extreme scale</strong>, when MTBF drops so low that the machine spends more than ~50% of its time checkpointing and recomputing — then paying 2× to almost never roll back is the better deal.</div>
+      <p class="tiny muted">Rule of thumb: checkpointing is cheaper until the failure rate gets high enough that rollback overhead exceeds the cost of a redundant copy.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Proactive / Prediction-Based Resilience</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">Idea</span>Don't wait for the crash — <strong>predict</strong> it. Health monitoring (temperatures, ECC-correctable-error rates, fan/PSU telemetry, SMART data) flags a node that is <em>about</em> to fail.</div>
+      <p class="small">On a prediction, <strong>migrate the process</strong> off the suspect node to a spare <em>before</em> it dies — no rollback, no lost work. This is forward recovery driven by anomaly detection / ML on telemetry.</p>
+      <div class="callout takeaway"><span class="lbl">Best as a complement</span>Predictors miss surprises, so proactive migration <em>reduces</em> the failure rate the checkpoint system must absorb — it doesn't replace checkpointing.</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 240 180" class="chart" style="max-width:260px">
+        <rect x="20" y="20" width="90" height="40" rx="5" fill="#fca5a5"/>
+        <text x="65" y="38" text-anchor="middle" class="lbl">suspect</text>
+        <text x="65" y="52" text-anchor="middle" class="tiny">rising ECC errs</text>
+        <rect x="150" y="20" width="70" height="40" rx="5" fill="#86efac"/>
+        <text x="185" y="44" text-anchor="middle" class="lbl">spare</text>
+        <line x1="110" y1="40" x2="150" y2="40" stroke="#16181d" stroke-width="2" marker-end="url(#mg)"/>
+        <defs><marker id="mg" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L7,4 L0,8 Z" fill="#16181d"/></marker></defs>
+        <text x="130" y="32" text-anchor="middle" class="note">migrate</text>
+        <rect x="20" y="100" width="200" height="30" rx="5" fill="#cbd5e1"/>
+        <text x="120" y="119" text-anchor="middle" class="lbl">health monitor → predictor</text>
+        <line x1="65" y1="100" x2="65" y2="60" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#mg)"/>
+        <text x="120" y="150" text-anchor="middle" class="tiny muted">move work before the node dies</text>
+      </svg>
+      <div class="src">Predict, then pre-emptively migrate.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>ABFT — Algorithm-Based Fault Tolerance</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout takeaway"><span class="lbl">Idea</span>Encode redundancy <strong>in the data itself</strong>, so the algorithm can detect — and often locate and correct — a corrupted value <strong>without any rollback</strong>. The classic case is dense linear algebra.</div>
+      <p class="small"><strong>Matrix-multiply checksums.</strong> Augment <code class="inline">A</code> with a <em>row-checksum</em> column (each row's element sum) and <code class="inline">B</code> with a <em>column-checksum</em> row. Then in <code class="inline">C = A·B</code>, the checksum row/column are <strong>preserved</strong> by the multiply:</p>
+      <div class="eq small">\( \sum_j C_{ij} = C^{r}_i,\qquad \sum_i C_{ij} = C^{c}_j \)</div>
+      <p class="small">After the multiply, recompute each row/column sum and compare to the stored checksum. A <strong>mismatch in row <em>i</em> and column <em>j</em></strong> pinpoints the bad entry <code class="inline">C<sub>ij</sub></code>; the checksum difference gives the <strong>correction</strong> to add back.</p>
+      <div class="callout"><span class="lbl">Cross-link → Linear Algebra advanced topic</span>ABFT lives inside the matmul/factorization kernels covered there; it recovers <em>in place</em>, complementing checkpoint/restart.</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 230 210" class="chart" style="max-width:250px">
+        <!-- 3x3 grid of C -->
+        <g font-size="11" text-anchor="middle">
+          <!-- cells -->
+          <g stroke="#cbd5e1" fill="#fff">
+            <rect x="30" y="20" width="40" height="40"/><rect x="70" y="20" width="40" height="40"/><rect x="110" y="20" width="40" height="40"/>
+            <rect x="30" y="60" width="40" height="40"/>
+            <rect x="70" y="60" width="40" height="40" fill="#fca5a5"/>
+            <rect x="110" y="60" width="40" height="40"/>
+            <rect x="30" y="100" width="40" height="40"/><rect x="70" y="100" width="40" height="40"/><rect x="110" y="100" width="40" height="40"/>
+          </g>
+          <!-- checksum column -->
+          <g stroke="#cbd5e1" fill="#fde68a">
+            <rect x="160" y="20" width="40" height="40"/>
+            <rect x="160" y="60" width="40" height="40"/>
+            <rect x="160" y="100" width="40" height="40"/>
+          </g>
+          <text x="180" y="14" class="note">col-sum</text>
+          <!-- checksum row -->
+          <g stroke="#cbd5e1" fill="#fde68a">
+            <rect x="30" y="150" width="40" height="30"/><rect x="70" y="150" width="40" height="30"/><rect x="110" y="150" width="40" height="30"/>
+          </g>
+          <text x="14" y="168" class="note" transform="rotate(-90 14 168)">row-sum</text>
+          <!-- highlight bad row/col -->
+          <rect x="30" y="60" width="170" height="40" fill="none" stroke="#CC0000" stroke-width="2"/>
+          <rect x="70" y="20" width="40" height="160" fill="none" stroke="#CC0000" stroke-width="2"/>
+          <text x="90" y="84" fill="#CC0000" font-weight="700">✗</text>
+        </g>
+        <text x="120" y="200" text-anchor="middle" class="tiny muted">row i ✗ &amp; col j ✗ → corrupt C<tspan font-size="7" dy="2">ij</tspan></text>
+      </svg>
+      <div class="src">Checksum row + column locate the bad entry.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Detecting Silent Errors (SDC)</h2>
+  <div class="cols">
+    <div>
+      <div class="callout warn"><span class="lbl">The hard part</span>SDC produces <strong>no crash</strong>, so checkpoint/restart alone can't help — you can't restart what you don't know is wrong. You must add explicit <strong>detection</strong>.</div>
+      <div class="callout"><span class="lbl">Replication / voting</span>Run 2 copies and <strong>compare</strong> (detect) or 3 copies and <strong>vote</strong> (detect + mask). General, but 2–3× cost.</div>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Algorithmic checks</span><span class="small">Cheap, problem-specific invariants: ABFT checksums; residual checks (does <code class="inline">‖Ax − b‖</code> stay small?); energy/mass conservation in a simulation; monotonicity bounds.</span></div>
+      <div class="callout takeaway"><span class="lbl">Layered detection</span>ECC/parity catches most hardware bit flips in memory; algorithmic checks catch the rest cheaply; replication is the expensive backstop for the highest-assurance work.</div>
+      <p class="tiny muted">A flagged but uncorrectable error can fall back to <strong>rollback</strong> — detection turns a silent error into a recoverable fail-stop.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 3 — Review</h2>
+  <div class="qa">
+    <p class="q">1. In matrix-multiply ABFT, you find a checksum mismatch in row 2 and column 4. What do you conclude, and can you fix it?</p>
+    <div class="fragment"><div class="a">The corrupted entry is <code class="inline">C<sub>2,4</sub></code> (the row/column intersection). You <strong>correct it in place</strong> using the difference between the recomputed and stored checksum — no rollback needed.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. Why can't plain checkpoint/restart handle SDC, and what do you add?</p>
+    <div class="fragment"><div class="a">SDC is <strong>undetected</strong> — there's no crash to trigger a restart, and you might checkpoint the corrupted state. You add a <strong>detector</strong> (replication/voting or an algorithmic/ABFT check); once detected, you can correct in place or roll back to a known-good checkpoint.</div></div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 4 — RESILIENCE ACROSS THE STACK
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 4</div>
+  <div class="mod-title">Resilience Across the Stack</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Explain MPI's default abort-on-failure and what <strong>ULFM</strong> adds</li>
+      <li>Describe Spark <strong>RDD lineage</strong> as recompute-based, uncoordinated recovery</li>
+      <li>Say why large-scale deep-learning training depends on checkpointing model + optimizer state</li>
+    </ul>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>MPI Fault Tolerance &amp; ULFM</h2>
+  <div class="cols">
+    <div>
+      <div class="callout warn"><span class="lbl">Default MPI</span>The standard error handler is <code class="inline">MPI_ERRORS_ARE_FATAL</code>: a process failure <strong>aborts the whole job</strong>. The communicator state after a failure is undefined — you cannot safely keep using it.</div>
+      <div class="callout takeaway"><span class="lbl">ULFM — User-Level Failure Mitigation</span>An MPI extension that lets the application <strong>survive</strong> a process loss and decide what to do:</div>
+      <ul class="small">
+        <li><code class="inline">MPIX_Comm_revoke</code> — invalidate a broken communicator everywhere so no rank hangs in a collective.</li>
+        <li><code class="inline">MPIX_Comm_shrink</code> — build a new communicator with the dead ranks removed.</li>
+        <li><code class="inline">MPIX_Comm_agree</code> — fault-tolerant agreement so survivors reach a consistent decision.</li>
+      </ul>
+      <div class="callout"><span class="lbl">Cross-link → <code class="inline">mpi</code> deck</span>This builds directly on communicators &amp; collectives — ULFM repairs the communicator, then you re-load from a checkpoint and continue.</div>
+    </div>
+    <div>
+      <div class="code-label">ULFM-style recovery sketch (C)</div>
+      <pre><code class="language-c" data-trim>
+/* install a non-fatal error handler */
+MPI_Comm_set_errhandler(comm,
+    MPI_ERRORS_RETURN);
+
+rc = MPI_Allreduce(&amp;local, &amp;sum, 1,
+        MPI_DOUBLE, MPI_SUM, comm);
+
+if (rc != MPI_SUCCESS) {
+  /* a rank died: stop the bleeding... */
+  MPIX_Comm_revoke(comm);
+
+  /* ...rebuild without the dead ranks */
+  MPIX_Comm_shrink(comm, &amp;newcomm);
+
+  /* agree we are all recovering */
+  int flag = 1;
+  MPIX_Comm_agree(newcomm, &amp;flag);
+
+  comm = newcomm;             /* continue */
+  reload_from_checkpoint(comm);
+}
+</code></pre>
+      <p class="tiny muted">Handler returns instead of aborting → revoke → shrink → agree → keep going on the smaller communicator.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Spark Lineage — Recompute, Don't Restart</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">A different model</span>Spark records each RDD's <strong>lineage</strong>: the deterministic sequence of transformations (the DAG) that built it from its parents. It does <em>not</em> take global checkpoints.</div>
+      <p class="small">When a partition is lost (an executor dies), Spark <strong>recomputes just that partition</strong> from its parent partitions, following the lineage. Recovery is <strong>uncoordinated</strong> and local — no rollback of healthy partitions, no synchronized snapshot.</p>
+      <div class="callout takeaway"><span class="lbl">Cross-link → <code class="inline">bigdata</code> deck</span>This is forward-style recovery enabled by <strong>deterministic, coarse-grained</strong> transformations on immutable RDDs — contrast with HPC coordinated checkpoint/restart. (Long lineages are pruned with explicit <code class="inline">checkpoint()</code>.)</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 240 200" class="chart" style="max-width:260px">
+        <!-- DAG -->
+        <g text-anchor="middle" font-size="10">
+          <rect x="20" y="20" width="50" height="28" rx="4" fill="#86efac" stroke="#cbd5e1"/><text x="45" y="38">file</text>
+          <rect x="95" y="20" width="50" height="28" rx="4" fill="#93c5fd" stroke="#cbd5e1"/><text x="120" y="38">map</text>
+          <rect x="95" y="80" width="50" height="28" rx="4" fill="#93c5fd" stroke="#cbd5e1"/><text x="120" y="98">filter</text>
+          <!-- lost partition -->
+          <rect x="170" y="50" width="55" height="28" rx="4" fill="#fff" stroke="#CC0000" stroke-width="2" stroke-dasharray="3 2"/><text x="197" y="68" fill="#CC0000">lost</text>
+          <rect x="170" y="120" width="55" height="28" rx="4" fill="#fde68a" stroke="#cbd5e1"/><text x="197" y="138">result</text>
+        </g>
+        <g stroke="#16181d" stroke-width="1.5" fill="none" marker-end="url(#dg)">
+          <line x1="70" y1="34" x2="95" y2="34"/>
+          <line x1="120" y1="48" x2="120" y2="80"/>
+          <line x1="145" y1="90" x2="170" y2="68"/>
+          <line x1="197" y1="78" x2="197" y2="120"/>
+        </g>
+        <!-- recompute arrow -->
+        <path d="M150,76 C175,70 180,66 196,64" stroke="#CC0000" stroke-width="1.5" fill="none" stroke-dasharray="4 2" marker-end="url(#dgr)"/>
+        <defs>
+          <marker id="dg" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L7,4 L0,8 Z" fill="#16181d"/></marker>
+          <marker id="dgr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L7,4 L0,8 Z" fill="#CC0000"/></marker>
+        </defs>
+        <text x="120" y="178" text-anchor="middle" class="tiny muted">recompute only the lost partition from its parents</text>
+      </svg>
+      <div class="src">Lineage DAG: one lost partition, recomputed.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Deep-Learning Checkpointing</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">What gets saved</span>A training checkpoint must capture <strong>model weights + optimizer state</strong> (e.g. Adam's moment estimates) + step count + RNG/data-loader position — enough to resume <em>bit-for-bit</em>.</div>
+      <p class="small"><strong>DDP / DeepSpeed</strong> checkpoint periodically; DeepSpeed/ZeRO <strong>shards</strong> optimizer state across ranks, so each rank writes only its shard. Frameworks now support <strong>asynchronous</strong> checkpointing: snapshot to host memory, then write to storage in the background, overlapping the next training step.</p>
+    </div>
+    <div>
+      <div class="callout warn"><span class="lbl">Why it is existential here</span>Training a frontier model runs for <strong>days to weeks on thousands of GPUs</strong>. By Module 1, the MTBF of that many GPUs is hours — a failure is guaranteed. Without frequent checkpoints you lose days of compute.</div>
+      <div class="callout takeaway"><span class="lbl">Cross-link → <code class="inline">nn</code> deck</span>Same checkpoint/restart and Young/Daly interval logic from Module 2 — but the "state" is the model + sharded optimizer, and the writes are huge. Checkpoint cadence is a first-class training hyperparameter.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 4 — Review</h2>
+  <div class="qa">
+    <p class="q">1. By default, what happens to an MPI job when one rank dies, and what three ULFM calls let it continue?</p>
+    <div class="fragment"><div class="a">By default the job <strong>aborts</strong> (<code class="inline">MPI_ERRORS_ARE_FATAL</code>). ULFM adds <code class="inline">MPIX_Comm_revoke</code> (invalidate the broken comm), <code class="inline">MPIX_Comm_shrink</code> (rebuild without dead ranks), and <code class="inline">MPIX_Comm_agree</code> (consistent decision) — then reload from a checkpoint and continue.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. How is Spark's recovery fundamentally different from HPC coordinated checkpoint/restart?</p>
+    <div class="fragment"><div class="a">Spark uses <strong>lineage</strong>: it recomputes only the lost partition from its parents — uncoordinated, local, no global snapshot or rollback of healthy work. HPC restart rolls <strong>all</strong> ranks back to a global checkpoint.</div></div>
+  </div>
+</section>
+
+<!-- ===== BIG PICTURE ===== -->
+<section data-background-color="#ffffff">
+  <h2>Fault Tolerance — Big Picture</h2>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Checkpoint / restart</span><span class="small">General-purpose, fail-stop. Default for HPC &amp; DL training. Tune the interval with <code class="inline">√(2CM)</code>; use burst buffers &amp; multi-level to cut <code class="inline">C</code>.</span></div>
+    <div class="callout"><span class="lbl">Replication</span><span class="small">When MTBF is so low that rollback overhead &gt; the cost of a redundant copy; also gives voting against SDC. Pays 2–3×.</span></div>
+  </div>
+  <div class="cols">
+    <div class="callout"><span class="lbl">ABFT / algorithmic</span><span class="small">When the kernel has structure (linear algebra). Detects, locates, corrects in place — forward recovery, low overhead.</span></div>
+    <div class="callout"><span class="lbl">Lineage / recompute</span><span class="small">When work is deterministic &amp; coarse-grained (Spark). Recompute the lost piece from its parents — no global checkpoint.</span></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">One sentence</span>
+    <strong>Match the mechanism to the failure model and the cost of lost work: roll back when state is opaque, go forward (ABFT, replication, lineage) when the data or the computation gives you the redundancy to repair in place.</strong></div>
+</section>
+
+<!-- ===== REFERENCES ===== -->
+<section data-background-color="#f6f8fb">
+  <h2>References</h2>
+  <div class="callout"><span class="lbl">Foundational survey</span>
+    T. Hérault &amp; Y. Robert (eds.), <em>Fault-Tolerance Techniques for High-Performance Computing</em>, Springer, 2015.</div>
+  <ul class="small">
+    <li>J. W. Young, "A first order approximation to the optimum checkpoint interval," <em>CACM</em>, 1974.</li>
+    <li>J. T. Daly, "A higher order estimate of the optimum checkpoint interval for restart dumps," <em>FGCS</em>, 2006.</li>
+    <li>W. Bland et al., "Post-failure recovery of MPI communication capability (ULFM)," <em>IJHPCA</em>, 2013 — ICL / Univ. of Tennessee, Knoxville.</li>
+    <li>K.-H. Huang &amp; J. Abraham, "Algorithm-based fault tolerance for matrix operations," <em>IEEE TC</em>, 1984.</li>
+    <li>M. Zaharia et al., "Resilient Distributed Datasets," <em>NSDI</em>, 2012 (Spark lineage).</li>
+    <li><strong>CSC 548</strong>, J. Li.</li>
+  </ul>
+</section>
+
+</div>
+
+<!-- deck-level fixed footer -->
+<div class="deck-footer"><span class="tag">CSC 548</span><span class="sep">·</span>Fault Tolerance &amp; Resilience</div>
+</div>
+
+<!-- reveal.js core + plugins -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/math/math.js"></script>
+<script>
+  Reveal.initialize({
+    width: 1280, height: 720, margin: 0.04,
+    minScale: 0.2, maxScale: 1.6,
+    center: false,
+    hash: true, slideNumber: 'c/t', history: true,
+    transition: 'slide', transitionSpeed: 'fast',
+    plugins: [ RevealNotes, RevealHighlight, RevealMath.KaTeX ],
+    katex: { delimiters: [
+      {left:'\\(', right:'\\)', display:false},
+      {left:'$$', right:'$$', display:true}
+    ]},
+  });
+</script>
+<script>
+/* Auto-fit: shrink any slide whose content would exceed 720px. */
+(function(){
+  function fit(s){ if(!s) return;
+    s.style.setProperty('--nc-fit','1');
+    var h=s.scrollHeight;
+    if(h>724){ var k=Math.max(0.6, Math.min(1, 720/h));
+      s.style.setProperty('--nc-fit', k.toFixed(3)); }
+  }
+  if(window.Reveal){
+    Reveal.on('ready', function(e){ fit(e.currentSlide); });
+    Reveal.on('slidechanged', function(e){ fit(e.currentSlide); });
+    try{ if(Reveal.isReady && Reveal.isReady()) fit(Reveal.getCurrentSlide()); }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>
