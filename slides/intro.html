@@ -386,6 +386,17 @@ for (i=s; i&lt;e; i++)
 </section>
 
 <section data-background-color="#ffffff">
+  <h2>Parallel Problem-Solving Styles</h2>
+  <p class="small">A complementary lens to Flynn: how <strong>tightly</strong> the processors stay in step.</p>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Synchronous &middot; SIMD</span><span class="small">The <strong>same</strong> operation on all data points <strong>at the same time</strong> (lockstep).<br><span class="tiny muted">e.g. vector units, GPU warps</span></span></div>
+    <div class="callout"><span class="lbl">Loosely synchronous &middot; SPMD</span><span class="small">The same program on all processors, but <strong>not</strong> at exactly the same time &mdash; they sync <em>every now and then</em>, not every clock cycle.<br><span class="tiny muted">e.g. nearly every cluster (MPI) job</span></span></div>
+    <div class="callout takeaway"><span class="lbl">Asynchronous &middot; MIMD</span><span class="small">Every processor runs <strong>its own</strong> instruction on <strong>its own</strong> data, on its own schedule.</span></div>
+  </div>
+  <div class="callout"><span class="lbl">In practice</span>Most code you'll write is <strong>loosely-synchronous SPMD</strong> (compute independently, sync at barriers/communication), with <strong>synchronous SIMD</strong> on the GPU/vector lanes underneath.</div>
+</section>
+
+<section data-background-color="#ffffff">
   <h2>Overt vs. Covert Parallelism</h2>
   <div class="cols">
     <div>
@@ -415,7 +426,8 @@ for (i=s; i&lt;e; i++)
     <div>
       <div class="callout"><span class="lbl">Fixed problem, more processors</span>If a fraction <code class="inline">s</code> of the work is <strong>serial</strong> and <code class="inline">p = 1 - s</code> parallel, then on <code class="inline">n</code> processors:</div>
       <p class="eq small">\( S(n) = \dfrac{1}{\,s + \dfrac{p}{n}\,} \le \dfrac{1}{s} \)</p>
-      <p class="small">The serial fraction is the ceiling: even with infinite processors, speedup tops out at <strong>1/s</strong>. A 5% serial part caps you at 20&times;.</p>
+      <p class="small">The serial fraction is the ceiling: even with infinite processors, speedup tops out at <strong>1/s</strong>.</p>
+      <p class="small muted"><em>e.g.</em> a <strong>5%</strong> serial part caps you at <strong>20&times;</strong>.</p>
     </div>
     <div class="center">
       <svg viewBox="0 0 280 190" class="chart" style="max-width:300px">
