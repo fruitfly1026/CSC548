@@ -185,7 +185,7 @@
   <div class="cols">
     <div>
       <div class="callout"><span class="lbl">Caches</span>Fast (expensive) SRAM holding recently/nearby-used data. The cache controller intercepts loads and serves hits locally &mdash; on a hit, the CPU never touches main memory.</div>
-      <p class="small">Modern CPUs stack several levels &mdash; <strong>L1</strong> (per-core, tiny &amp; fastest), <strong>L2</strong>, and a shared <strong>L3</strong> &mdash; each larger and slower than the last.</p>
+      <p class="small">Modern CPUs stack several levels &mdash; <strong>L1</strong> &amp; <strong>L2</strong> are usually <strong>private per-core</strong>, with a larger <strong>shared L3</strong> across all cores &mdash; each level larger and slower than the last.</p>
     </div>
     <div>
       <div class="callout takeaway"><span class="lbl">Principle of locality</span>What you access correlates with what you accessed before &mdash; <strong>spatial</strong> (nearby addresses) and <strong>temporal</strong> (same address soon). Caching exploits both.</div>
@@ -228,12 +228,12 @@
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>Scaling Shared Memory: UMA, NUMA, CC-NUMA</h2>
-  <p class="small">All three are <strong>shared memory</strong> &mdash; one global address space. NUMA's memory is physically distributed but <em>logically shared</em> (distributed <em>shared</em> memory) &mdash; <strong>not</strong> message-passing <em>distributed memory</em>, where each node has its own private address space.</p>
+  <h2>Memory Organization: UMA, NUMA, CC-NUMA</h2>
+  <p class="small"><strong>Two independent axes.</strong> &nbsp;<strong>Address space:</strong> all three present <strong>one shared address space</strong> (shared-memory machines) &mdash; unlike message-passing clusters. &nbsp;<strong>Physical memory:</strong> <strong>UMA</strong> is <em>centralized</em>; <strong>NUMA / CC-NUMA</strong> physically <em>distribute</em> memory across nodes &mdash; they are <strong>distributed-memory machines</strong> (specifically <em>distributed shared memory</em>).</p>
   <div class="cols c3">
-    <div class="callout fragment"><span class="lbl">UMA</span><span class="small"><strong>Uniform Memory Access.</strong> Every PE reaches memory through one interconnect &mdash; uniform, but uniformly <em>slow</em> at scale.</span></div>
-    <div class="callout fragment"><span class="lbl">NUMA</span><span class="small"><strong>Non-Uniform Memory Access.</strong> Each PE owns local memory (fast) and reaches others over the network (slower). The contemporary norm.</span></div>
-    <div class="callout takeaway fragment"><span class="lbl">CC-NUMA</span><span class="small"><strong>Cache-Coherent NUMA.</strong> Add per-PE caches and keep them consistent in hardware. What most servers are today.</span></div>
+    <div class="callout fragment"><span class="lbl">UMA</span><span class="small"><strong>Centralized shared memory.</strong> One memory pool reached over a shared bus/interconnect &mdash; uniform latency, but doesn't scale.</span></div>
+    <div class="callout fragment"><span class="lbl">NUMA</span><span class="small"><strong>Distributed shared memory.</strong> Memory is <strong>physically distributed</strong> across nodes; local is fast, remote slower &mdash; still one address space. Scales; today's norm.</span></div>
+    <div class="callout takeaway fragment"><span class="lbl">CC-NUMA</span><span class="small"><strong>Cache-Coherent NUMA.</strong> NUMA + hardware cache coherence &mdash; what most multi-socket servers are.</span></div>
   </div>
   <div class="cols">
     <div>
