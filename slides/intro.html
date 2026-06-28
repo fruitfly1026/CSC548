@@ -103,27 +103,23 @@
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>Moore's Law vs. Clock Frequency</h2>
-  <div class="cols w-64">
-    <div>
-      <div class="callout"><span class="lbl">Moore's Law (still alive)</span>Transistor count doubles roughly every <strong>2 years</strong>.</div>
-      <div class="callout warn"><span class="lbl">Frequency (dead since ~2002)</span>Clock speed grew ~30%/yr until it stalled near <strong>~3&nbsp;GHz</strong>. More transistors no longer buy more clock.</div>
-      <p class="small">Those transistors now go into <strong>core count</strong> and <strong>cache</strong> &mdash; first on multicore CPUs, now on GPUs and AI accelerators. The chip keeps growing; the single thread does not.</p>
-    </div>
-    <div class="center">
-      <svg viewBox="0 0 300 200" class="chart" style="max-width:330px">
-        <line x1="40" y1="170" x2="285" y2="170" stroke="#16181d" stroke-width="1.5"/>
-        <line x1="40" y1="170" x2="40" y2="20" stroke="#16181d" stroke-width="1.5"/>
-        <text x="160" y="192" text-anchor="middle" class="note">year &rarr;</text>
-        <path d="M45,160 C120,150 200,70 280,30" fill="none" stroke="#3b82f6" stroke-width="3"/>
-        <text x="210" y="55" class="note" fill="#3b82f6">transistors</text>
-        <path d="M45,160 C110,150 150,120 175,118 C210,116 250,118 280,118" fill="none" stroke="#CC0000" stroke-width="3"/>
-        <text x="225" y="135" class="note" fill="#CC0000">clock freq</text>
-        <line x1="175" y1="30" x2="175" y2="170" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4 3"/>
-        <text x="175" y="28" text-anchor="middle" class="note">~2002</text>
-      </svg>
-      <div class="src">Karl Rupp, 42 years of microprocessor trend data.</div>
-    </div>
+  <h2>Moore's Law: Transistors Keep Doubling</h2>
+  <p class="center small">Transistor count per chip doubles roughly every <strong>2 years</strong> &mdash; and has for 50+ years. The chip keeps getting bigger; the real question is what those transistors <em>buy</em> you.</p>
+  <div class="center">
+    <img src="assets/moore-transistors.png" alt="Moore's Law: transistor counts of microchips, 1970–2020" style="max-height:500px;max-width:100%;border-radius:6px">
+    <div class="src">Source: Wikipedia &mdash; <em>Transistor count</em> (CC&nbsp;BY).</div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>&hellip;But the Free Lunch Ended (~2005)</h2>
+  <div class="center">
+    <img src="assets/microprocessor-trend.png" alt="42 years of microprocessor trend data — transistors, performance, frequency, power, cores" style="max-height:420px;max-width:100%;border-radius:6px">
+    <div class="src">Source: K. Rupp, <em>42 Years of Microprocessor Trend Data</em> &mdash; <a href="https://www.karlrupp.net/2018/02/42-years-of-microprocessor-trend-data/">karlrupp.net</a> (CC&nbsp;BY).</div>
+  </div>
+  <div class="cols">
+    <div class="callout warn"><span class="lbl">Frequency stalled ~2005</span>Clock speed &amp; single-thread performance flattened &mdash; the <strong>power wall</strong> caps how fast a single core can go.</div>
+    <div class="callout takeaway"><span class="lbl">Transistors now buy cores</span><strong>More cores</strong> &amp; cache (and GPUs / accelerators), not more GHz. Performance is now <em>your</em> job &mdash; you must parallelize.</div>
   </div>
 </section>
 
@@ -523,7 +519,8 @@ for (i=s; i&lt;e; i++)
   <ul class="small">
     <li>T. Rauber &amp; G. R&uuml;nger, <em>Parallel Programming: For Multicore and Cluster Systems</em>, 2nd ed., Springer, 2013.</li>
     <li>I. Foster, <em>Designing and Building Parallel Programs</em>, Addison-Wesley, 1995.</li>
-    <li>K. Rupp, <em>42 Years of Microprocessor Trend Data</em> &mdash; <a href="https://www.karlrupp.net/2018/02/42-years-of-microprocessor-trend-data/">karlrupp.net</a>.</li>
+    <li>K. Rupp, <em>42 Years of Microprocessor Trend Data</em> &mdash; <a href="https://www.karlrupp.net/2018/02/42-years-of-microprocessor-trend-data/">karlrupp.net</a> (CC&nbsp;BY).</li>
+    <li>Moore's-Law transistor-count chart &mdash; <a href="https://en.wikipedia.org/wiki/Transistor_count">Wikipedia / Our World in Data</a> (CC&nbsp;BY).</li>
   </ul>
 </section>
 
