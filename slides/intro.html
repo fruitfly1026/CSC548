@@ -152,12 +152,16 @@
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>The Memory Hierarchy: Registers &amp; Caches</h2>
+  <h2>The Memory Hierarchy: Registers</h2>
   <div class="cols w-64">
     <div>
-      <p class="small"><strong>Registers</strong> &mdash; a few locations <em>inside</em> the processor; computation reads operands here. Load/store instructions move data between registers and memory.</p>
-      <div class="callout"><span class="lbl">Caches</span>Fast (expensive) SRAM holding recently/nearby-used data. The cache controller intercepts loads and serves hits locally &mdash; the CPU never sees main memory.</div>
-      <div class="callout takeaway"><span class="lbl">Principle of locality</span>What you access correlates with what you accessed before &mdash; <strong>spatial</strong> (nearby addresses) and <strong>temporal</strong> (same address soon). Caching exploits both.</div>
+      <p class="small">The memory hierarchy trades <strong>speed for size</strong>: registers (fastest, smallest) &rarr; cache &rarr; main memory &rarr; disk (slowest, largest). All computation happens at the very top.</p>
+      <ul class="small">
+        <li><strong>Registers</strong> &mdash; a few storage locations <em>inside</em> the processor; the fastest, smallest tier, right next to the ALU.</li>
+        <li><strong>Computation instructions:</strong> arithmetic &amp; logic read their operands from registers and write the results back.</li>
+        <li><strong>Load/store instructions:</strong> the <em>only</em> instructions that move data between registers and memory.</li>
+        <li>There are only a handful (&asymp;&nbsp;16&ndash;32 general-purpose), so the compiler &amp; programmer must use them carefully.</li>
+      </ul>
     </div>
     <div class="center">
       <svg viewBox="0 0 275 200" class="chart" style="max-width:290px">
@@ -172,6 +176,20 @@
         <text x="210" y="44" class="note" text-anchor="start">fast, small</text>
         <text x="210" y="163" class="note" text-anchor="start">slow, large</text>
       </svg>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The Memory Hierarchy: Caches</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Caches</span>Fast (expensive) SRAM holding recently/nearby-used data. The cache controller intercepts loads and serves hits locally &mdash; on a hit, the CPU never touches main memory.</div>
+      <p class="small">Modern CPUs stack several levels &mdash; <strong>L1</strong> (per-core, tiny &amp; fastest), <strong>L2</strong>, and a shared <strong>L3</strong> &mdash; each larger and slower than the last.</p>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Principle of locality</span>What you access correlates with what you accessed before &mdash; <strong>spatial</strong> (nearby addresses) and <strong>temporal</strong> (same address soon). Caching exploits both.</div>
+      <p class="small">Fast parallel code is written to <strong>maximize locality</strong> &mdash; keep each thread working on data that stays in its own cache.</p>
     </div>
   </div>
 </section>
