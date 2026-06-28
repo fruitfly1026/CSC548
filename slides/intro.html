@@ -54,9 +54,9 @@
     Many <strong>processing elements</strong> + a <strong>memory system</strong> + an <strong>interconnect</strong> + a <strong>software stack</strong> that <strong>cooperate</strong> on <em>one</em> problem &mdash; to finish <strong>faster</strong>, or to solve something <strong>bigger</strong>.</div>
   <p class="small center muted">It's not just the hardware, and not just the algorithm &mdash; it's the whole stack working together.</p>
   <div class="cols c3">
-    <div class="callout"><span class="lbl">1 &middot; Express parallelism</span><span class="small">Programming models &mdash; MPI, OpenMP, SIMD, CUDA.</span></div>
-    <div class="callout"><span class="lbl">2 &middot; The underlying system</span><span class="small">Memory hierarchy, caches, interconnect, architecture &mdash; <em>why</em> code runs fast or slow.</span></div>
-    <div class="callout"><span class="lbl">3 &middot; Evaluate &amp; scale</span><span class="small">Performance, communication, I/O, fault tolerance &mdash; making it actually scale.</span></div>
+    <div class="callout fragment"><span class="lbl">1 &middot; Express parallelism</span><span class="small">Programming models &mdash; MPI, OpenMP, SIMD, CUDA.</span></div>
+    <div class="callout fragment"><span class="lbl">2 &middot; The underlying system</span><span class="small">Memory hierarchy, caches, interconnect, architecture &mdash; <em>why</em> code runs fast or slow.</span></div>
+    <div class="callout fragment"><span class="lbl">3 &middot; Evaluate &amp; scale</span><span class="small">Performance, communication, I/O, fault tolerance &mdash; making it actually scale.</span></div>
   </div>
   <p class="center small muted">These three pillars are exactly the arc of this course.</p>
 </section>
@@ -231,9 +231,9 @@
   <h2>Scaling Shared Memory: UMA, NUMA, CC-NUMA</h2>
   <p class="small">All three are <strong>shared memory</strong> &mdash; one global address space. NUMA's memory is physically distributed but <em>logically shared</em> (distributed <em>shared</em> memory) &mdash; <strong>not</strong> message-passing <em>distributed memory</em>, where each node has its own private address space.</p>
   <div class="cols c3">
-    <div class="callout"><span class="lbl">UMA</span><span class="small"><strong>Uniform Memory Access.</strong> Every PE reaches memory through one interconnect &mdash; uniform, but uniformly <em>slow</em> at scale.</span></div>
-    <div class="callout"><span class="lbl">NUMA</span><span class="small"><strong>Non-Uniform Memory Access.</strong> Each PE owns local memory (fast) and reaches others over the network (slower). The contemporary norm.</span></div>
-    <div class="callout takeaway"><span class="lbl">CC-NUMA</span><span class="small"><strong>Cache-Coherent NUMA.</strong> Add per-PE caches and keep them consistent in hardware. What most servers are today.</span></div>
+    <div class="callout fragment"><span class="lbl">UMA</span><span class="small"><strong>Uniform Memory Access.</strong> Every PE reaches memory through one interconnect &mdash; uniform, but uniformly <em>slow</em> at scale.</span></div>
+    <div class="callout fragment"><span class="lbl">NUMA</span><span class="small"><strong>Non-Uniform Memory Access.</strong> Each PE owns local memory (fast) and reaches others over the network (slower). The contemporary norm.</span></div>
+    <div class="callout takeaway fragment"><span class="lbl">CC-NUMA</span><span class="small"><strong>Cache-Coherent NUMA.</strong> Add per-PE caches and keep them consistent in hardware. What most servers are today.</span></div>
   </div>
   <div class="cols">
     <div>
@@ -465,9 +465,9 @@ for (i=s; i&lt;e; i++)
 <section data-background-color="#ffffff">
   <h2>What You'll Build This Semester</h2>
   <div class="cols c3">
-    <div class="callout"><span class="lbl">Message passing</span><span class="small"><strong>MPI</strong> &mdash; point-to-point &amp; collective communication, SPMD across a cluster.</span></div>
-    <div class="callout"><span class="lbl">Shared memory</span><span class="small"><strong>pthreads &amp; OpenMP</strong> &mdash; parallel regions, work-sharing, reductions, synchronization on a multicore node.</span></div>
-    <div class="callout"><span class="lbl">Accelerators</span><span class="small"><strong>GPU / data-parallel</strong> programming for the SIMD lanes underneath modern HPC.</span></div>
+    <div class="callout fragment"><span class="lbl">Message passing</span><span class="small"><strong>MPI</strong> &mdash; point-to-point &amp; collective communication, SPMD across a cluster.</span></div>
+    <div class="callout fragment"><span class="lbl">Shared memory</span><span class="small"><strong>pthreads &amp; OpenMP</strong> &mdash; parallel regions, work-sharing, reductions, synchronization on a multicore node.</span></div>
+    <div class="callout fragment"><span class="lbl">Accelerators</span><span class="small"><strong>GPU / data-parallel</strong> programming for the SIMD lanes underneath modern HPC.</span></div>
   </div>
   <div class="callout takeaway"><span class="lbl">The hybrid reality</span>
     Real codes combine them: <strong>MPI across nodes + OpenMP within a node + GPU offload</strong>. You'll practice each piece, then see how they fit.</div>
