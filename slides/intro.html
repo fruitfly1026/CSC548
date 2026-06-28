@@ -54,9 +54,9 @@
     Many <strong>processing elements</strong> + a <strong>memory system</strong> + an <strong>interconnect</strong> + a <strong>software stack</strong> that <strong>cooperate</strong> on <em>one</em> problem &mdash; to finish <strong>faster</strong>, or to solve something <strong>bigger</strong>.</div>
   <p class="small center muted">It's not just the hardware, and not just the algorithm &mdash; it's the whole stack working together.</p>
   <div class="cols c3">
-    <div class="callout fragment"><span class="lbl">1 &middot; Express parallelism</span><span class="small">Programming models &mdash; MPI, OpenMP, SIMD, CUDA.</span></div>
-    <div class="callout fragment"><span class="lbl">2 &middot; The underlying system</span><span class="small">Memory hierarchy, caches, interconnect, architecture &mdash; <em>why</em> code runs fast or slow.</span></div>
-    <div class="callout fragment"><span class="lbl">3 &middot; Evaluate &amp; scale</span><span class="small">Performance, communication, I/O, fault tolerance &mdash; making it actually scale.</span></div>
+    <div class="callout"><span class="lbl">1 &middot; Express parallelism</span><span class="small">Programming models &mdash; MPI, OpenMP, SIMD, CUDA.</span></div>
+    <div class="callout"><span class="lbl">2 &middot; The underlying system</span><span class="small">Memory hierarchy, caches, interconnect, architecture &mdash; <em>why</em> code runs fast or slow.</span></div>
+    <div class="callout"><span class="lbl">3 &middot; Evaluate &amp; scale</span><span class="small">Performance, communication, I/O, fault tolerance &mdash; making it actually scale.</span></div>
   </div>
   <p class="center small muted">These three pillars are exactly the arc of this course.</p>
 </section>
@@ -229,15 +229,20 @@
 
 <section data-background-color="#ffffff">
   <h2>Memory Organization: UMA, NUMA, CC-NUMA</h2>
-  <p class="small"><strong>Two independent axes.</strong> &nbsp;<strong>Address space:</strong> all three present <strong>one shared address space</strong> (shared-memory machines) &mdash; unlike message-passing clusters. &nbsp;<strong>Physical memory:</strong> <strong>UMA</strong> is <em>centralized</em>; <strong>NUMA / CC-NUMA</strong> physically <em>distribute</em> memory across nodes &mdash; they are <strong>distributed-memory machines</strong> (specifically <em>distributed shared memory</em>).</p>
+  <p class="small">Two axes: <strong>address space</strong> (shared vs. message-passing) and <strong>physical memory</strong> (centralized vs. distributed). NUMA / CC-NUMA are <strong>distributed <em>shared</em> memory</strong>.</p>
+  <table style="font-size:.82em;margin:.2em auto .6em">
+    <tr><th>Axis</th><th>UMA</th><th>NUMA / CC-NUMA</th><th>Message-passing cluster</th></tr>
+    <tr><td><strong>Address space</strong></td><td class="hi">shared</td><td class="hi">shared</td><td>separate (private)</td></tr>
+    <tr><td><strong>Physical memory</strong></td><td>centralized</td><td class="hi">distributed</td><td>distributed</td></tr>
+  </table>
   <div class="cols c3">
-    <div class="callout fragment"><span class="lbl">UMA</span><span class="small"><strong>Centralized shared memory.</strong> One memory pool reached over a shared bus/interconnect &mdash; uniform latency, but doesn't scale.</span></div>
-    <div class="callout fragment"><span class="lbl">NUMA</span><span class="small"><strong>Distributed shared memory.</strong> Memory is <strong>physically distributed</strong> across nodes; local is fast, remote slower &mdash; still one address space. Scales; today's norm.</span></div>
-    <div class="callout takeaway fragment"><span class="lbl">CC-NUMA</span><span class="small"><strong>Cache-Coherent NUMA.</strong> NUMA + hardware cache coherence &mdash; what most multi-socket servers are.</span></div>
+    <div class="callout fragment" data-fragment-index="1"><span class="lbl">UMA</span><span class="small"><strong>Centralized shared memory</strong> &mdash; one pool over a shared bus; uniform but doesn't scale.</span></div>
+    <div class="callout fragment" data-fragment-index="2"><span class="lbl">NUMA</span><span class="small"><strong>Distributed shared memory</strong> &mdash; memory across nodes (local fast, remote slower); one address space; scales.</span></div>
+    <div class="callout takeaway fragment" data-fragment-index="4"><span class="lbl">CC-NUMA</span><span class="small"><strong>NUMA + hardware cache coherence</strong> &mdash; most multi-socket servers.</span></div>
   </div>
   <div class="cols">
     <div>
-      <div class="callout warn"><span class="lbl">The new problem: coherence</span>The same variable cached in two PEs may hold <strong>different values</strong>. Locks alone can't fix it &mdash; the cache controller must enforce coherence.</div>
+      <div class="callout warn fragment" data-fragment-index="3"><span class="lbl">The new problem: coherence</span>The same variable cached in two PEs may hold <strong>different values</strong> &mdash; the cache controller must enforce coherence. <strong>CC-NUMA</strong> solves it in hardware.</div>
     </div>
     <div class="center">
       <svg viewBox="0 0 300 150" class="chart" style="max-width:320px">
