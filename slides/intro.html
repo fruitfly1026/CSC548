@@ -391,7 +391,7 @@ MPI_Recv(&amp;y, 1, MPI_DOUBLE,
     <div>
       <div class="callout"><span class="lbl">SPMD</span><strong>Single Program, Multiple Data.</strong> Run the <em>same</em> program on every PE of a MIMD machine; each works on its own slice and branches as needed.</div>
       <p class="small">Processors occasionally synchronize, but otherwise proceed independently (<em>loosely synchronous</em>). It is the software equivalent of SIMD &mdash; and how nearly every cluster job is written.</p>
-      <div class="callout warn"><span class="lbl">MPMD &mdash; the general case</span><span class="small"><strong>Multiple Program, Multiple Data.</strong> Different ranks run <em>different</em> executables &mdash; a master/worker pool, or coupled multi-physics (ocean + atmosphere). SPMD is the common special case; you launch MPMD with <code class="inline">mpirun -np 1 ./master : -np 8 ./worker</code>.</span></div>
+      <div class="callout warn"><span class="lbl">MPMD &mdash; the general case</span><span class="small"><strong>Multiple Program, Multiple Data.</strong> Different ranks run <em>different</em> executables &mdash; a master/worker pool, or coupled multi-physics (ocean + atmosphere). SPMD is the common special case.</span></div>
     </div>
     <div>
       <div class="code-label">The SPMD idiom (MPI)</div>
