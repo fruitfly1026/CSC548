@@ -535,19 +535,28 @@ for (i=s; i&lt;e; i++)
     <div>
       <div class="callout"><span class="lbl">Different premise</span>With <code class="inline">n</code> processors you don't keep the <em>same</em> problem &mdash; you <strong>scale the problem up</strong> at the same rate. Bigger machines run bigger problems.</div>
       <p class="eq small">\( S_{\text{scaled}} = n + (1 - n)\,s' \)</p>
-      <p class="small">Here <code class="inline">s'</code> is the serial fraction measured on the <em>large</em> problem. As the parallel part grows with size, the serial fraction shrinks &mdash; so speedup grows nearly linearly with <code class="inline">n</code>.</p>
+      <div class="callout"><span class="lbl">Where it comes from</span><span class="small">Measure on the <em>n</em>-processor run: serial <code class="inline">s'</code>, parallel <code class="inline">1&minus;s'</code> (total time = 1). On <strong>one</strong> processor the parallel part takes <strong>n&times;</strong> as long; the serial part is unchanged:<br><code class="inline">T&#8321; = s' + n(1&minus;s') = n + (1&minus;n)s'</code>.</span></div>
+      <p class="small muted">As the problem grows, <code class="inline">s'</code> shrinks &rarr; speedup grows nearly <strong>linearly</strong> with <code class="inline">n</code>.</p>
     </div>
     <div class="center">
-      <svg viewBox="0 0 280 190" class="chart" style="max-width:300px">
-        <line x1="40" y1="160" x2="270" y2="160" stroke="#16181d" stroke-width="1.5"/>
-        <line x1="40" y1="160" x2="40" y2="20" stroke="#16181d" stroke-width="1.5"/>
-        <text x="155" y="182" text-anchor="middle" class="note">processors &rarr;</text>
-        <line x1="45" y1="155" x2="265" y2="35" stroke="#16181d" stroke-width="1" stroke-dasharray="4 3"/>
-        <text x="250" y="50" text-anchor="end" class="note">ideal</text>
-        <line x1="45" y1="155" x2="265" y2="55" stroke="#3b82f6" stroke-width="3"/>
-        <text x="200" y="92" class="note" fill="#3b82f6">Gustafson</text>
+      <svg viewBox="0 0 300 372" class="chart" style="max-width:288px">
+        <line x1="40" y1="108" x2="285" y2="108" stroke="#16181d" stroke-width="1.2"/>
+        <line x1="40" y1="108" x2="40" y2="12" stroke="#16181d" stroke-width="1.2"/>
+        <text x="16" y="62" text-anchor="middle" class="note" transform="rotate(-90 16 62)">speedup</text>
+        <line x1="46" y1="103" x2="175" y2="22" stroke="#3b82f6" stroke-width="3"/>
+        <text x="198" y="104" text-anchor="start" class="note">processors</text>
+        <line x1="40" y1="234" x2="285" y2="234" stroke="#16181d" stroke-width="1.2"/>
+        <line x1="40" y1="234" x2="40" y2="138" stroke="#16181d" stroke-width="1.2"/>
+        <text x="16" y="188" text-anchor="middle" class="note" transform="rotate(-90 16 188)">speedup</text>
+        <path d="M47,143 C85,196 132,222 195,228" fill="none" stroke="#3b82f6" stroke-width="3"/>
+        <text x="208" y="230" text-anchor="start" class="note">problem</text>
+        <line x1="40" y1="360" x2="285" y2="360" stroke="#16181d" stroke-width="1.2"/>
+        <line x1="40" y1="360" x2="40" y2="264" stroke="#16181d" stroke-width="1.2"/>
+        <text x="16" y="314" text-anchor="middle" class="note" transform="rotate(-90 16 314)">speedup</text>
+        <line x1="46" y1="292" x2="272" y2="292" stroke="#3b82f6" stroke-width="3"/>
+        <text x="118" y="356" text-anchor="start" class="note">processors + problem</text>
       </svg>
-      <div class="src">Speedup ~ linear when the problem scales with n.</div>
+      <div class="src">Scale processors <em>and</em> problem together &rarr; sustained (constant) speedup.</div>
     </div>
   </div>
 </section>
@@ -578,7 +587,7 @@ for (i=s; i&lt;e; i++)
     <div class="callout fragment"><span class="lbl">Shared memory</span><span class="small"><strong>pthreads &amp; OpenMP</strong> &mdash; parallel regions, work-sharing, reductions, synchronization on a multicore node.</span></div>
     <div class="callout fragment"><span class="lbl">Accelerators</span><span class="small"><strong>GPU / data-parallel</strong> programming for the SIMD lanes underneath modern HPC.</span></div>
   </div>
-  <div class="callout takeaway"><span class="lbl">The hybrid reality</span>
+  <div class="callout takeaway fragment"><span class="lbl">The hybrid reality</span>
     Real codes combine them: <strong>MPI across nodes + OpenMP within a node + GPU offload</strong>. You'll practice each piece, then see how they fit.</div>
 </section>
 
