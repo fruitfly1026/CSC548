@@ -228,7 +228,8 @@
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>Distributed Memory: UMA, NUMA, CC-NUMA</h2>
+  <h2>Scaling Shared Memory: UMA, NUMA, CC-NUMA</h2>
+  <p class="small">All three are <strong>shared memory</strong> &mdash; one global address space. NUMA's memory is physically distributed but <em>logically shared</em> (distributed <em>shared</em> memory) &mdash; <strong>not</strong> message-passing <em>distributed memory</em>, where each node has its own private address space.</p>
   <div class="cols c3">
     <div class="callout"><span class="lbl">UMA</span><span class="small"><strong>Uniform Memory Access.</strong> Every PE reaches memory through one interconnect &mdash; uniform, but uniformly <em>slow</em> at scale.</span></div>
     <div class="callout"><span class="lbl">NUMA</span><span class="small"><strong>Non-Uniform Memory Access.</strong> Each PE owns local memory (fast) and reaches others over the network (slower). The contemporary norm.</span></div>
