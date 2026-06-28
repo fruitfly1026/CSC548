@@ -39,8 +39,7 @@
     <div class="callout"><span class="lbl">1 · Why Parallelism</span><span class="small">End of frequency scaling, multicore, the physical wall.</span></div>
     <div class="callout"><span class="lbl">2 · Hardware Landscape</span><span class="small">Multicore, SMP vs. distributed memory, clusters, GPUs.</span></div>
     <div class="callout"><span class="lbl">3 · Programming Models</span><span class="small">Shared memory (OpenMP) vs. message passing (MPI); SIMD/SPMD.</span></div>
-    <div class="callout"><span class="lbl">4 · How Far Can We Go?</span><span class="small">Amdahl, Gustafson, strong vs. weak scaling.</span></div>
-    <div class="callout"><span class="lbl">5 · Course Roadmap</span><span class="small">The toolset &amp; what you'll be able to do.</span></div>
+    <div class="callout"><span class="lbl">4 · Course Roadmap</span><span class="small">The toolset &amp; what you'll be able to do.</span></div>
     <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Performance now comes from <em>more cores</em>, not faster ones &mdash; so you have to program them.</span></div>
   </div>
 </section>
@@ -437,170 +436,10 @@ for (i=s; i&lt;e; i++)
 </section>
 
 <!-- ==================================================================
-     MODULE 4 — HOW FAR CAN WE GO? (SCALING)
+     MODULE 4 — COURSE ROADMAP
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 4</div>
-  <div class="mod-title">How Far Can We Go? Scaling Laws</div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>Amdahl's Law (Strong Scaling)</h2>
-  <div class="center">
-    <svg viewBox="0 0 560 58" class="chart" style="max-width:560px">
-      <text x="2" y="42" text-anchor="start" class="note">work</text>
-      <rect x="40" y="28" width="340" height="22" fill="#eef2ff" stroke="#3b82f6" stroke-width="1.5"/>
-      <rect x="380" y="28" width="160" height="22" fill="#cbd5e1" stroke="#16181d" stroke-width="1"/>
-      <text x="210" y="19" text-anchor="middle" class="note" fill="#3b82f6"><tspan font-weight="800">p = 1&minus;s</tspan> &mdash; parallel part</text>
-      <text x="460" y="19" text-anchor="middle" class="note"><tspan font-weight="800">s</tspan> &mdash; serial part</text>
-    </svg>
-  </div>
-  <div class="cols w-64">
-    <div>
-      <div class="callout"><span class="lbl">Fixed problem, more processors</span>If a fraction <code class="inline">s</code> of the work is <strong>serial</strong> and <code class="inline">p = 1 - s</code> parallel, then on <code class="inline">n</code> processors:</div>
-      <p class="eq small">\( S(n) = \dfrac{1}{\,s + \dfrac{p}{n}\,} \le \dfrac{1}{s} \)</p>
-      <p class="small">The serial fraction is the ceiling: even with infinite processors, speedup tops out at <strong>1/s</strong>.</p>
-      <p class="small muted"><em>e.g.</em> a <strong>5%</strong> serial part caps you at <strong>20&times;</strong>.</p>
-    </div>
-    <div class="center fragment">
-      <svg viewBox="0 0 395 245" class="chart" style="max-width:420px">
-        <g stroke="#e3e6ec" stroke-width="1">
-          <line x1="45" y1="177" x2="320" y2="177"/><line x1="45" y1="139" x2="320" y2="139"/>
-          <line x1="45" y1="101" x2="320" y2="101"/><line x1="45" y1="63" x2="320" y2="63"/>
-          <line x1="45" y1="25" x2="320" y2="25"/>
-        </g>
-        <line x1="45" y1="215" x2="320" y2="215" stroke="#16181d" stroke-width="1.2"/>
-        <line x1="45" y1="215" x2="45" y2="20" stroke="#16181d" stroke-width="1.2"/>
-        <g class="note" text-anchor="end" fill="#6b7280">
-          <text x="40" y="219">0</text><text x="40" y="181">20</text><text x="40" y="143">40</text>
-          <text x="40" y="105">60</text><text x="40" y="67">80</text><text x="40" y="29">100</text>
-        </g>
-        <g class="note" text-anchor="middle" fill="#6b7280">
-          <text x="45" y="227">1</text><text x="181" y="227">50</text><text x="320" y="227">100</text>
-        </g>
-        <text x="182" y="242" text-anchor="middle" class="note">number of processors</text>
-        <text x="12" y="118" text-anchor="middle" class="note" transform="rotate(-90 12 118)">speedup</text>
-        <polyline points="45,213 98,177 153,139 209,101 264,63 320,25" fill="none" stroke="#1f3a93" stroke-width="2.5"/>
-        <polyline points="45,213 98,183 153,160 209,143 264,130 320,120" fill="none" stroke="#cc33cc" stroke-width="2.5"/>
-        <polyline points="45,213 98,189 153,176 209,169 264,164 320,160" fill="none" stroke="#c79a16" stroke-width="2.5"/>
-        <polyline points="45,213 98,195 153,189 209,186 264,184 320,183" fill="none" stroke="#17a2b8" stroke-width="2.5"/>
-        <polyline points="45,213 98,202 153,199 209,198 264,198 320,197" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
-        <polyline points="45,213 98,207 153,206 209,206 264,206 320,206" fill="none" stroke="#a52714" stroke-width="2.5"/>
-        <g class="note" text-anchor="start" font-weight="700">
-          <text x="324" y="28" fill="#1f3a93">s=0</text>
-          <text x="324" y="123" fill="#cc33cc">0.01</text>
-          <text x="324" y="161" fill="#c79a16">0.025</text>
-          <text x="324" y="181" fill="#17a2b8">0.05</text>
-          <text x="324" y="196" fill="#7c3aed">0.1</text>
-          <text x="324" y="209" fill="#a52714">0.2</text>
-        </g>
-      </svg>
-      <div class="src">Higher serial fraction <em>s</em> &rarr; lower speedup ceiling (1/s).</div>
-    </div>
-  </div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>Amdahl vs. Reality</h2>
-  <div class="center">
-    <svg viewBox="0 0 470 248" class="chart" style="max-width:470px">
-      <g stroke="#e3e6ec" stroke-width="1">
-        <line x1="50" y1="167" x2="420" y2="167"/><line x1="50" y1="120" x2="420" y2="120"/>
-        <line x1="50" y1="72" x2="420" y2="72"/><line x1="50" y1="25" x2="420" y2="25"/>
-      </g>
-      <line x1="50" y1="215" x2="420" y2="215" stroke="#16181d" stroke-width="1.2"/>
-      <line x1="50" y1="215" x2="50" y2="20" stroke="#16181d" stroke-width="1.2"/>
-      <g class="note" text-anchor="end" fill="#6b7280">
-        <text x="45" y="219">0</text><text x="45" y="171">20</text><text x="45" y="124">40</text>
-        <text x="45" y="76">60</text><text x="45" y="29">80</text>
-      </g>
-      <g class="note" text-anchor="middle" fill="#6b7280">
-        <text x="50" y="227">0</text><text x="122" y="227">50</text><text x="195" y="227">100</text>
-        <text x="267" y="227">150</text><text x="339" y="227">200</text><text x="411" y="227">250</text>
-      </g>
-      <text x="235" y="242" text-anchor="middle" class="note">number of processors</text>
-      <text x="12" y="118" text-anchor="middle" class="note" transform="rotate(-90 12 118)">speedup</text>
-      <text x="80" y="42" class="note" font-weight="700">s = 0.01</text>
-      <polyline points="51,213 86,167 122,135 158,113 195,96 267,72 339,56 420,44" fill="none" stroke="#CC0000" stroke-width="2.5"/>
-      <polyline points="51,213 86,172 122,160 158,156 195,156 267,165 339,177 420,191" fill="none" stroke="#1f3a93" stroke-width="2.5"/>
-      <g>
-        <rect x="246" y="92" width="128" height="42" fill="#fff" stroke="#cbd5e1"/>
-        <line x1="254" y1="106" x2="280" y2="106" stroke="#CC0000" stroke-width="2.5"/><text x="286" y="109" class="note">Amdahl's Law</text>
-        <line x1="254" y1="124" x2="280" y2="124" stroke="#1f3a93" stroke-width="2.5"/><text x="286" y="127" class="note">Reality</text>
-      </g>
-    </svg>
-  </div>
-  <div class="cols">
-    <div>
-      <div class="callout warn"><span class="lbl">Amdahl is optimistic</span>It assumes parallelism is <strong>free</strong>. Real overheads drag you <em>below</em> the curve.</div>
-      <p class="small">What eats your speedup in practice:</p>
-      <ul class="small">
-        <li><strong>Communication</strong> &amp; I/O</li>
-        <li><strong>Load imbalance</strong> (threads waiting)</li>
-        <li><strong>Scheduling</strong> &amp; contention for shared resources</li>
-        <li><strong>Redundant</strong> / excess computation</li>
-      </ul>
-    </div>
-    <div>
-      <div class="callout takeaway"><span class="lbl">Super-linear speedup</span>Occasionally speedup <em>exceeds</em> n. Why? Extra hardware you now exploit &mdash; mainly more aggregate <strong>cache</strong> so the working set fits in fast memory.</div>
-      <p class="small">Other sources of super-linear speedup:</p>
-      <ul class="small">
-        <li><strong>Replication</strong></li>
-        <li><strong>Exploratory decomposition</strong> (lucky early exit)</li>
-        <li><strong>Checkpoint/restart</strong> effects</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>Gustafson's Law (Weak Scaling)</h2>
-  <div class="cols w-64">
-    <div>
-      <div class="callout"><span class="lbl">Different premise</span>With <code class="inline">n</code> processors you don't keep the <em>same</em> problem &mdash; you <strong>scale the problem up</strong> at the same rate. Bigger machines run bigger problems.</div>
-      <p class="eq small">\( S_{\text{scaled}} = n + (1 - n)\,s' \)</p>
-      <div class="callout"><span class="lbl">Where it comes from</span><span class="small">Measure on the <em>n</em>-processor run: serial <code class="inline">s'</code>, parallel <code class="inline">1&minus;s'</code> (total time = 1). On <strong>one</strong> processor the parallel part takes <strong>n&times;</strong> as long; the serial part is unchanged:<br><code class="inline">T&#8321; = s' + n(1&minus;s') = n + (1&minus;n)s'</code>.</span></div>
-      <p class="small muted">As the problem grows, <code class="inline">s'</code> shrinks &rarr; speedup grows nearly <strong>linearly</strong> with <code class="inline">n</code>.</p>
-    </div>
-    <div class="center">
-      <svg viewBox="0 0 300 372" class="chart" style="max-width:288px">
-        <line x1="40" y1="108" x2="285" y2="108" stroke="#16181d" stroke-width="1.2"/>
-        <line x1="40" y1="108" x2="40" y2="12" stroke="#16181d" stroke-width="1.2"/>
-        <text x="16" y="62" text-anchor="middle" class="note" transform="rotate(-90 16 62)">speedup</text>
-        <line x1="46" y1="103" x2="175" y2="22" stroke="#3b82f6" stroke-width="3"/>
-        <text x="198" y="104" text-anchor="start" class="note">processors</text>
-        <line x1="40" y1="234" x2="285" y2="234" stroke="#16181d" stroke-width="1.2"/>
-        <line x1="40" y1="234" x2="40" y2="138" stroke="#16181d" stroke-width="1.2"/>
-        <text x="16" y="188" text-anchor="middle" class="note" transform="rotate(-90 16 188)">speedup</text>
-        <path d="M47,143 C85,196 132,222 195,228" fill="none" stroke="#3b82f6" stroke-width="3"/>
-        <text x="208" y="230" text-anchor="start" class="note">problem</text>
-        <line x1="40" y1="360" x2="285" y2="360" stroke="#16181d" stroke-width="1.2"/>
-        <line x1="40" y1="360" x2="40" y2="264" stroke="#16181d" stroke-width="1.2"/>
-        <text x="16" y="314" text-anchor="middle" class="note" transform="rotate(-90 16 314)">speedup</text>
-        <line x1="46" y1="292" x2="272" y2="292" stroke="#3b82f6" stroke-width="3"/>
-        <text x="118" y="356" text-anchor="start" class="note">processors + problem</text>
-      </svg>
-      <div class="src">Scale processors <em>and</em> problem together &rarr; sustained (constant) speedup.</div>
-    </div>
-  </div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>Three Kinds of Scaling</h2>
-  <div class="cols c3">
-    <div class="callout"><span class="lbl">Strong (task) scaling</span><span class="small"><strong>Fix problem size</strong>, add processors. Goal: finish the <em>same</em> work faster. Bounded by Amdahl.</span></div>
-    <div class="callout"><span class="lbl">Problem-only scaling</span><span class="small"><strong>Fix processors</strong>, grow the problem. How big a problem can these cores handle?</span></div>
-    <div class="callout takeaway"><span class="lbl">Weak (task+problem) scaling</span><span class="small"><strong>Grow both together</strong> at the same rate. The Gustafson regime; how HPC is usually run.</span></div>
-  </div>
-  <div class="callout warn"><span class="lbl">What limits problem scaling</span>
-    You can't grow forever: <strong>memory capacity</strong> per node and <strong>communication</strong> cost eventually cap how large the problem can get.</div>
-</section>
-
-<!-- ==================================================================
-     MODULE 5 — COURSE ROADMAP
-     ================================================================== -->
-<section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Module 5</div>
   <div class="mod-title">Course Roadmap &amp; Your Toolset</div>
 </section>
 
@@ -665,7 +504,7 @@ for (i=s; i&lt;e; i++)
     <div class="callout"><span class="lbl">How</span>Two models: <strong>shared memory</strong> (OpenMP) and <strong>message passing</strong> (MPI), often SPMD.</div>
   </div>
   <div class="cols">
-    <div class="callout"><span class="lbl">How far</span><strong>Amdahl</strong> bounds strong scaling; <strong>Gustafson</strong> rewards weak scaling &mdash; mind communication, load balance, and the serial part.</div>
+    <div class="callout"><span class="lbl">How far</span>Limits come from the <strong>serial fraction</strong>, communication, and load balance &mdash; quantified in <strong>Topic 2 (Performance)</strong> with Amdahl &amp; Gustafson.</div>
     <div class="callout"><span class="lbl">What you'll do</span>Write OpenMP, MPI, and accelerator code; reason about correctness and scaling.</div>
   </div>
   <div class="callout takeaway"><span class="lbl">One sentence</span>

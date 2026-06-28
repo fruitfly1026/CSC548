@@ -243,12 +243,39 @@ SUs = #processors
 <section data-background-color="#ffffff">
   <h2>Amdahl's Law in Reality</h2>
   <div class="cols">
-    <div>
-      <div class="callout warn"><span class="lbl">Even worse than the curve</span>Amdahl is an <strong>upper bound</strong>. Real programs fall <em>below</em> it because parallelization itself is not free.</div>
-      <p class="small">The model assumes the parallel fraction divides perfectly across PEs with zero coordination cost. It never does.</p>
+    <div class="center">
+      <svg viewBox="0 0 470 248" class="chart" style="max-width:460px">
+        <g stroke="#e3e6ec" stroke-width="1">
+          <line x1="50" y1="167" x2="420" y2="167"/><line x1="50" y1="120" x2="420" y2="120"/>
+          <line x1="50" y1="72" x2="420" y2="72"/><line x1="50" y1="25" x2="420" y2="25"/>
+        </g>
+        <line x1="50" y1="215" x2="420" y2="215" stroke="#16181d" stroke-width="1.2"/>
+        <line x1="50" y1="215" x2="50" y2="20" stroke="#16181d" stroke-width="1.2"/>
+        <g class="note" text-anchor="end" fill="#6b7280">
+          <text x="45" y="219">0</text><text x="45" y="171">20</text><text x="45" y="124">40</text>
+          <text x="45" y="76">60</text><text x="45" y="29">80</text>
+        </g>
+        <g class="note" text-anchor="middle" fill="#6b7280">
+          <text x="50" y="227">0</text><text x="122" y="227">50</text><text x="195" y="227">100</text>
+          <text x="267" y="227">150</text><text x="339" y="227">200</text><text x="411" y="227">250</text>
+        </g>
+        <text x="235" y="242" text-anchor="middle" class="note">number of processors p</text>
+        <text x="12" y="118" text-anchor="middle" class="note" transform="rotate(-90 12 118)">speedup</text>
+        <text x="80" y="42" class="note" font-weight="700">1&minus;f = 0.01</text>
+        <polyline points="51,213 86,167 122,135 158,113 195,96 267,72 339,56 420,44" fill="none" stroke="#CC0000" stroke-width="2.5"/>
+        <polyline points="51,213 86,172 122,160 158,156 195,156 267,165 339,177 420,191" fill="none" stroke="#1f3a93" stroke-width="2.5"/>
+        <g>
+          <rect x="246" y="92" width="128" height="42" fill="#fff" stroke="#cbd5e1"/>
+          <line x1="254" y1="106" x2="280" y2="106" stroke="#CC0000" stroke-width="2.5"/><text x="286" y="109" class="note">Amdahl bound</text>
+          <line x1="254" y1="124" x2="280" y2="124" stroke="#1f3a93" stroke-width="2.5"/><text x="286" y="127" class="note">Reality</text>
+        </g>
+      </svg>
+      <div class="src">Real speedup rises, <strong>peaks past the knee, then falls</strong> as overhead outgrows useful work.</div>
     </div>
     <div>
-      <div class="callout takeaway"><span class="lbl">Takeaway</span>Attack the <strong>serial fraction first</strong> — it sets the ceiling. Then attack the <strong>overhead</strong> (Module 4) — it pulls you below the ceiling.</div>
+      <div class="callout warn"><span class="lbl">Even worse than the curve</span>Amdahl is an <strong>upper bound</strong>. Real programs fall <em>below</em> it — the parallel part never divides perfectly at zero coordination cost.</div>
+      <div class="callout takeaway"><span class="lbl">Takeaway</span>Attack the <strong>serial fraction first</strong> — it sets the ceiling. Then attack the <strong>overhead</strong> (Module 4) — it pulls you below it.</div>
+      <div class="callout"><span class="lbl">Super-linear speedup</span><span class="small">Occasionally speedup <em>exceeds</em> p — usually more aggregate <strong>cache</strong> so the working set now fits in fast memory (also replication, or a lucky early exit in search).</span></div>
     </div>
   </div>
 </section>
