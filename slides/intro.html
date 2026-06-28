@@ -152,6 +152,78 @@
 </section>
 
 <section data-background-color="#ffffff">
+  <h2>Parallel Architectures</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">No single standard</span>Unlike the one <strong>von Neumann</strong> model for serial machines, there is <strong>no single standard</strong> for parallel machines &mdash; dozens of architectures have been built and are in use.</div>
+      <p class="small">The modern trend: fewer fully <em>custom</em> designs, more <strong>commodity</strong> CPUs &amp; GPUs wired together with <strong>specialized interconnects</strong>.</p>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">So we classify them</span><span class="small">Several classifications exist; we use two lenses:
+        <br>&bull; <strong>Flynn's taxonomy</strong> &mdash; by instruction &amp; data streams (next).
+        <br>&bull; <strong>Memory model</strong> &mdash; shared vs. distributed (after that).</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Flynn's Taxonomy</h2>
+  <div class="cols w-64">
+    <div>
+      <table style="font-size:.82em">
+        <tr><th></th><th>Single data</th><th>Multiple data</th></tr>
+        <tr><td><strong>Single instr.</strong></td><td class="hi">SISD<br><span class="tiny muted">plain serial CPU</span></td><td>SIMD<br><span class="tiny muted">vector / GPU lanes</span></td></tr>
+        <tr><td><strong>Multiple instr.</strong></td><td>MISD<br><span class="tiny muted">rare</span></td><td class="hi">MIMD<br><span class="tiny muted">multicore, clusters</span></td></tr>
+      </table>
+      <p class="small">Classify a machine by how many <strong>instruction streams</strong> and <strong>data streams</strong> it runs at once.</p>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">SIMD intuition</span>"Everyone flip a coin; if heads, raise your hand." One order, executed by all on their own datum.</div>
+      <div class="callout"><span class="lbl">MIMD intuition</span>Each processor runs its <em>own</em> program on its <em>own</em> data, on its own schedule.</div>
+      <div class="callout takeaway"><span class="lbl">Where the course lives</span>Most machines you'll program are <strong>MIMD</strong>; GPUs add <strong>SIMD</strong> lanes underneath.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Flynn's Four Classes in Detail</h2>
+  <div class="cols">
+    <div class="callout fragment"><span class="lbl">SISD</span><span class="small"><strong>Single Instruction, Single Data.</strong> One instruction stream on one data stream &mdash; a classic single-core CPU. <em>No parallelism.</em></span></div>
+    <div class="callout fragment"><span class="lbl">SIMD</span><span class="small"><strong>Single Instruction, Multiple Data.</strong> One instruction applied to many data elements in lockstep &mdash; <strong>vector units (AVX)</strong> and <strong>GPU warps</strong>. The engine of <em>data parallelism</em>.</span></div>
+  </div>
+  <div class="cols">
+    <div class="callout fragment"><span class="lbl">MISD</span><span class="small"><strong>Multiple Instruction, Single Data.</strong> Many instruction streams on one data stream &mdash; <strong>rare</strong>; occasionally cited for systolic arrays or fault-tolerant pipelines.</span></div>
+    <div class="callout takeaway fragment"><span class="lbl">MIMD</span><span class="small"><strong>Multiple Instruction, Multiple Data.</strong> Independent processors, each with its own program &amp; data &mdash; <strong>multicore CPUs &amp; clusters</strong>. The general parallel machine; in practice usually run as <strong>SPMD</strong>.</span></div>
+  </div>
+  <div class="callout"><span class="lbl">Real machines mix them</span>A <strong>MIMD</strong> cluster of multicore nodes, each core with <strong>SIMD</strong> vector units, each node with a <strong>SIMT</strong> GPU. You'll write mostly MIMD (MPI / OpenMP) with SIMD &amp; GPU underneath.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>SIMD &amp; MIMD, Up Close</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">SIMD &mdash; one controller, many lanes</span>
+        <span class="small">A single control unit broadcasts each instruction to many ALUs that run it in <strong>lockstep</strong> on different data.</span>
+        <ul class="tiny" style="margin:.35em 0 0 .9em">
+          <li><strong>Vector processors</strong> (Cray) and CPU <strong>SIMD units</strong> (SSE / AVX / AVX-512)</li>
+          <li><strong>Array processors</strong> (historic: CM-1, MasPar)</li>
+          <li><strong>GPUs</strong> &mdash; <strong>SIMT</strong>: a warp of 32 threads shares one instruction</li>
+          <li>Great for <strong>regular, data-parallel</strong> work; hurt by <strong>branch divergence</strong></li>
+        </ul></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">MIMD &mdash; independent processors</span>
+        <span class="small">Each processor has its <em>own</em> control &amp; data &mdash; the general parallel machine. Split by memory:</span>
+        <ul class="tiny" style="margin:.35em 0 0 .9em">
+          <li><strong>Multiprocessors</strong> &mdash; shared memory (SMP, NUMA) &rarr; program with <strong>OpenMP</strong></li>
+          <li><strong>Multicomputers</strong> &mdash; distributed memory / clusters &rarr; program with <strong>MPI</strong></li>
+          <li>Styles: <strong>SPMD</strong> (one program, many data) and MPMD</li>
+        </ul></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
   <h2>The Memory Hierarchy: Registers</h2>
   <div class="cols w-64">
     <div>
@@ -278,53 +350,6 @@
     A real supercomputer is a <strong>cluster of multicore nodes, each with GPUs</strong>. That's why you'll learn <strong>MPI across nodes</strong> + <strong>OpenMP within a node</strong> &mdash; and why no single API is enough.</div>
 </section>
 
-<section data-background-color="#ffffff">
-  <h2>Parallel Architectures</h2>
-  <div class="cols">
-    <div>
-      <div class="callout"><span class="lbl">No single standard</span>Unlike the one <strong>von Neumann</strong> model for serial machines, there is <strong>no single standard</strong> for parallel machines &mdash; dozens of architectures have been built and are in use.</div>
-      <p class="small">The modern trend: fewer fully <em>custom</em> designs, more <strong>commodity</strong> CPUs &amp; GPUs wired together with <strong>specialized interconnects</strong>.</p>
-    </div>
-    <div>
-      <div class="callout takeaway"><span class="lbl">So we classify them</span><span class="small">Several classifications exist; we use two lenses:
-        <br>&bull; <strong>Flynn's taxonomy</strong> &mdash; by instruction &amp; data streams (next).
-        <br>&bull; <strong>Memory model</strong> &mdash; shared vs. distributed (just covered).</span></div>
-    </div>
-  </div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>Flynn's Taxonomy</h2>
-  <div class="cols w-64">
-    <div>
-      <table style="font-size:.82em">
-        <tr><th></th><th>Single data</th><th>Multiple data</th></tr>
-        <tr><td><strong>Single instr.</strong></td><td class="hi">SISD<br><span class="tiny muted">plain serial CPU</span></td><td>SIMD<br><span class="tiny muted">vector / GPU lanes</span></td></tr>
-        <tr><td><strong>Multiple instr.</strong></td><td>MISD<br><span class="tiny muted">rare</span></td><td class="hi">MIMD<br><span class="tiny muted">multicore, clusters</span></td></tr>
-      </table>
-      <p class="small">Classify a machine by how many <strong>instruction streams</strong> and <strong>data streams</strong> it runs at once.</p>
-    </div>
-    <div>
-      <div class="callout"><span class="lbl">SIMD intuition</span>"Everyone flip a coin; if heads, raise your hand." One order, executed by all on their own datum.</div>
-      <div class="callout"><span class="lbl">MIMD intuition</span>Each processor runs its <em>own</em> program on its <em>own</em> data, on its own schedule.</div>
-      <div class="callout takeaway"><span class="lbl">Where the course lives</span>Most machines you'll program are <strong>MIMD</strong>; GPUs add <strong>SIMD</strong> lanes underneath.</div>
-    </div>
-  </div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>Flynn's Four Classes in Detail</h2>
-  <div class="cols">
-    <div class="callout fragment"><span class="lbl">SISD</span><span class="small"><strong>Single Instruction, Single Data.</strong> One instruction stream on one data stream &mdash; a classic single-core CPU. <em>No parallelism.</em></span></div>
-    <div class="callout fragment"><span class="lbl">SIMD</span><span class="small"><strong>Single Instruction, Multiple Data.</strong> One instruction applied to many data elements in lockstep &mdash; <strong>vector units (AVX)</strong> and <strong>GPU warps</strong>. The engine of <em>data parallelism</em>.</span></div>
-  </div>
-  <div class="cols">
-    <div class="callout fragment"><span class="lbl">MISD</span><span class="small"><strong>Multiple Instruction, Single Data.</strong> Many instruction streams on one data stream &mdash; <strong>rare</strong>; occasionally cited for systolic arrays or fault-tolerant pipelines.</span></div>
-    <div class="callout takeaway fragment"><span class="lbl">MIMD</span><span class="small"><strong>Multiple Instruction, Multiple Data.</strong> Independent processors, each with its own program &amp; data &mdash; <strong>multicore CPUs &amp; clusters</strong>. The general parallel machine; in practice usually run as <strong>SPMD</strong>.</span></div>
-  </div>
-  <div class="callout"><span class="lbl">Real machines mix them</span>A <strong>MIMD</strong> cluster of multicore nodes, each core with <strong>SIMD</strong> vector units, each node with a <strong>SIMT</strong> GPU. You'll write mostly MIMD (MPI / OpenMP) with SIMD &amp; GPU underneath.</div>
-</section>
-
 <!-- ==================================================================
      MODULE 3 — PROGRAMMING MODELS
      ================================================================== -->
@@ -410,8 +435,6 @@ for (i=s; i&lt;e; i++)
     Auto-parallelizing compilers can't extract the parallelism in large applications on their own. This is a <strong>programming course</strong>: you'll write the explicit parallelism &mdash; OpenMP, MPI, and accelerators &mdash; yourself.</div>
 </section>
 
-
-
 <!-- ==================================================================
      MODULE 4 — HOW FAR CAN WE GO? (SCALING)
      ================================================================== -->
@@ -438,7 +461,7 @@ for (i=s; i&lt;e; i++)
       <p class="small">The serial fraction is the ceiling: even with infinite processors, speedup tops out at <strong>1/s</strong>.</p>
       <p class="small muted"><em>e.g.</em> a <strong>5%</strong> serial part caps you at <strong>20&times;</strong>.</p>
     </div>
-    <div class="center">
+    <div class="center fragment">
       <svg viewBox="0 0 395 245" class="chart" style="max-width:420px">
         <g stroke="#e3e6ec" stroke-width="1">
           <line x1="45" y1="177" x2="320" y2="177"/><line x1="45" y1="139" x2="320" y2="139"/>
