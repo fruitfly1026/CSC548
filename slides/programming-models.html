@@ -319,6 +319,20 @@ void main() {
   <p class="tiny muted" style="margin-top:.35em"><sup>*</sup> Not entirely free: whether the <strong>sender</strong> blocks depends on the send mode (buffered vs. synchronous vs. ready) &mdash; we open up <strong>MPI's send modes</strong> in Topic&nbsp;3.</p>
 </section>
 
+<!-- Message passing is OS IPC, not just MPI -->
+<section data-background-color="#ffffff">
+  <h2>Message Passing Is OS IPC, Not Just MPI</h2>
+  <p class="small">The <code class="inline">sendMsg</code> / <code class="inline">recvMsg</code> above are pseudocode for real OS <strong>inter-process communication</strong> &mdash; you don't need MPI to message-pass:</p>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Pipes / FIFOs</span>
+      <span class="small">A <code class="inline">pipe()</code> with <code class="inline">fork()</code> is the classic case: one end <code class="inline">write()</code>s (= send), the other <code class="inline">read()</code>s (= recv). <code class="inline">read()</code> <strong>blocks until data arrives</strong> &mdash; exactly the "receiver blocks" we relied on. Named pipes (<strong>FIFOs</strong>) do the same between unrelated processes.</span></div>
+    <div class="callout"><span class="lbl">Sockets</span>
+      <span class="small">Unix-domain or network sockets call <code class="inline">send()</code> / <code class="inline">recv()</code> directly &mdash; the names line up. Same host <em>or</em> <strong>across machines</strong> &mdash; which is what scales out to a cluster.</span></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Where MPI fits</span>
+    <span class="small">MPI is <em>one library</em> built on these primitives &mdash; adding ranks, datatypes, collectives &amp; tuned transports. Same model, higher level (Topic&nbsp;3).</span></div>
+</section>
+
 <!-- ==================================================================
      MODULE 2 — THE TWO MODELS IN CODE
      ================================================================== -->
