@@ -43,7 +43,8 @@
     <div class="callout"><span class="lbl">5 · Data Environment</span><span class="small">Scope clauses &amp; reduction.</span></div>
     <div class="callout"><span class="lbl">6 · Sync Constructs</span><span class="small">critical, atomic, barrier, single…</span></div>
     <div class="callout"><span class="lbl">7 · Tasks &amp; Advanced</span><span class="small">tasks, collapse, SIMD, runtime.</span></div>
-    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">OpenMP lets a sequential program evolve <em>incrementally</em> into a parallel one.</span></div>
+    <div class="callout"><span class="lbl">8 · Worked Example</span><span class="small">Computing &pi; — three ways to parallelize.</span></div>
+    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">OpenMP lets a sequential program evolve <em>incrementally</em> into a parallel one. <span class="muted">(Two lectures.)</span></span></div>
   </div>
 </section>
 
@@ -327,6 +328,58 @@ omp_set_num_threads(4);
   <div class="callout takeaway"><span class="lbl">Mental model</span>Most real OpenMP programs are: a <code class="inline">parallel for</code> + the right variable scoping + a reduction. Everything else is refinement.</div>
 </section>
 
+<section data-background-color="#ffffff">
+  <h2>Structured Blocks &amp; the Software Stack</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">Constructs apply to a structured block</span><span class="small">One entry at the top, one exit at the bottom &mdash; no jumping in or out. (A hard <code class="inline">exit()</code> is the only allowed escape.)</span></div>
+      <pre><code class="language-c" data-trim>
+#pragma omp parallel
+{                        // one entry
+  int id = omp_get_thread_num();
+  res[id] = do_big_job(id);
+}                        // one exit
+// NOT structured: goto into / out of the region
+</code></pre>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Three layers cooperate</span>
+        <ul class="small" style="margin:.25em 0 0 .9em">
+          <li><strong>Directives</strong> (<code class="inline">#pragma omp &hellip;</code>) &mdash; <em>what</em> to parallelize</li>
+          <li><strong>Runtime library</strong> (<code class="inline">omp_*()</code>) &mdash; query / control at run time</li>
+          <li><strong>Environment variables</strong> (<code class="inline">OMP_NUM_THREADS</code>, <code class="inline">OMP_SCHEDULE</code>) &mdash; tune <em>without recompiling</em></li>
+        </ul></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Lexical vs. Dynamic Extent</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="code-label">An orphan directive &mdash; outside the lexical text</div>
+      <pre><code class="language-c" data-trim>
+// poo.c
+void whoami() {
+  int iam = omp_get_thread_num();
+  #pragma omp critical          // orphan!
+  printf("Hello from %d\n", iam);
+}
+// bar.c
+#pragma omp parallel
+{
+  whoami();                     // called here
+}
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Lexical extent</span><span class="small">The code <strong>textually inside</strong> the <code class="inline">parallel</code> braces.</span></div>
+      <div class="callout"><span class="lbl">Dynamic extent</span><span class="small">Lexical extent <strong>plus</strong> any functions <em>called</em> from it at run time.</span></div>
+      <div class="callout takeaway"><span class="lbl">Orphan directive</span><span class="small">A work-sharing / sync directive (e.g. <code class="inline">critical</code>) sitting in a function, firing only when reached <em>inside</em> a parallel region &mdash; lets you split parallel code across files.</span></div>
+    </div>
+  </div>
+</section>
+
 <!-- ==================================================================
      MODULE 4 — WORK-SHARING
      ================================================================== -->
@@ -500,6 +553,24 @@ for (i=0; i&lt;n; i++)
 
 
 
+<section data-background-color="#ffffff">
+  <h2>The <code class="inline">default</code> Clause</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">What's shared by default</span><span class="small">Globals, file-scope &amp; <code class="inline">static</code> vars are <strong>shared</strong>; locals in called routines and the loop index are <strong>private</strong>.</span></div>
+      <div class="callout"><span class="lbl">Override it</span><span class="small"><code class="inline">default(shared)</code> &middot; <code class="inline">default(none)</code> &middot; <code class="inline">default(private)</code> <span class="muted">(Fortran only)</span>.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Reach for <code class="inline">default(none)</code></span><span class="small">Forces you to declare the scope of <strong>every</strong> variable &mdash; the compiler errors on anything you forgot. The cheapest defense against accidental sharing &amp; data races.</span></div>
+      <pre><code class="language-c" data-trim>
+#pragma omp parallel for \
+        default(none) shared(a,n) private(i)
+for (i = 0; i &lt; n; i++) a[i] *= 2;
+</code></pre>
+    </div>
+  </div>
+</section>
+
 <!-- ==================================================================
      MODULE 6 — SYNCHRONIZATION CONSTRUCTS
      ================================================================== -->
@@ -555,6 +626,16 @@ sum[id] += 4.0/(1.0+x*x);
 </code></pre>
     </div>
   </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>single &middot; master &middot; ordered</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">single</span><span class="small"><strong>One</strong> thread (any) runs the block; the others <strong>wait</strong> (implicit barrier). For one-time setup / I/O inside a parallel region.</span></div>
+    <div class="callout"><span class="lbl">master</span><span class="small">Only the <strong>master</strong> thread runs it; the others <strong>skip</strong> it &mdash; <em>no</em> barrier.</span></div>
+    <div class="callout"><span class="lbl">ordered</span><span class="small">Inside an <code class="inline">ordered</code> loop, forces the block to run in <strong>iteration order</strong> &mdash; for deterministic output from a parallel loop.</span></div>
+  </div>
+  <div class="callout warn"><span class="lbl">single vs. master</span><span class="small">Both run a block <em>once</em> &mdash; but <code class="inline">single</code> <strong>synchronizes</strong> (barrier at end) while <code class="inline">master</code> does <strong>not</strong>. Pick by whether the other threads must wait.</span></div>
 </section>
 
 <!-- ==================================================================
@@ -634,6 +715,56 @@ for (k=0; k&lt;N; k++)
       <div class="callout"><span class="lbl">Environment</span><span class="small"><code class="inline">OMP_NUM_THREADS</code>, <code class="inline">OMP_SCHEDULE</code>, <code class="inline">OMP_STACKSIZE</code>.</span></div>
     </div>
   </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 8 — WORKED EXAMPLE: COMPUTING PI
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 8</div>
+  <div class="mod-title">Worked Example &mdash; Computing &pi;</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Computing &pi; by Integration</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="code-label">Sequential &mdash; midpoint rule for &pi; = &#8747; 4/(1+x&sup2;) dx</div>
+      <pre><code class="language-c" data-trim>
+long num_steps = 100000;
+double step = 1.0/num_steps, x, sum = 0.0;
+
+for (int i = 0; i &lt; num_steps; i++) {
+  x = (i + 0.5) * step;
+  sum += 4.0 / (1.0 + x*x);
+}
+double pi = step * sum;
+</code></pre>
+      <div class="code-label">Parallel &mdash; add two clauses</div>
+      <pre><code class="language-c" data-trim>
+#pragma omp parallel for \
+        reduction(+:sum) private(x)
+for (int i = 0; i &lt; num_steps; i++) {
+  x = (i + 0.5) * step;
+  sum += 4.0 / (1.0 + x*x);
+}
+</code></pre>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">~2 lines</span><span class="small"><code class="inline">reduction(+:sum)</code> gives each thread a <strong>private partial</strong>, then sums them safely; <code class="inline">private(x)</code> keeps the scratch variable unshared.</span></div>
+      <div class="callout"><span class="lbl">Why it's correct</span><span class="small">No lock, no shared-<code class="inline">sum</code> race &mdash; the reduction owns the combine step.</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Three Routes to the Same &pi;</h2>
+  <div class="cols c3">
+    <div class="callout warn"><span class="lbl">1 &middot; SPMD by hand</span><span class="small">Parallel region; each thread strides <code class="inline">i = id, id+T, &hellip;</code> into <code class="inline">sum[id]</code>. Works &mdash; but the partials share a cache line &rarr; <strong>false sharing</strong>.</span></div>
+    <div class="callout"><span class="lbl">2 &middot; Work-sharing</span><span class="small"><code class="inline">omp for</code> splits the loop, but accumulating into <code class="inline">sum[id]</code> or a <code class="inline">critical</code> still costs contention / serialization.</span></div>
+    <div class="callout takeaway"><span class="lbl">3 &middot; Reduction</span><span class="small"><code class="inline">reduction(+:sum)</code> &mdash; private partials, no false sharing, no lock. <strong>Fastest and simplest.</strong></span></div>
+  </div>
+  <div class="callout"><span class="lbl">The lesson</span><span class="small">Same answer three ways; the right <strong>data scoping</strong> (a reduction) beats hand-rolled arrays and locks. Compare <strong>MPI's</strong> &pi; (Topic 3): <code class="inline">Bcast</code> + <code class="inline">Reduce</code> &mdash; same shape, different model.</span></div>
 </section>
 
 <!-- ===== BIG PICTURE ===== -->
