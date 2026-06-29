@@ -308,8 +308,7 @@ void main() {
       <div class="callout warn"><span class="lbl">Explicit communication</span>
         <span class="small">Data crosses only via <code class="inline">sendMsg</code> / <code class="inline">recvMsg</code> &mdash;
         nothing is shared. The child's <code class="inline">x</code>, <code class="inline">y</code> are <strong>its own copies</strong>,
-        not the parent's <code class="inline">a</code>, <code class="inline">b</code>. These are any <strong>OS IPC</strong>
-        (pipes / FIFOs, sockets), not necessarily MPI.</span></div>
+        not the parent's <code class="inline">a</code>, <code class="inline">b</code>.</span></div>
       <div class="callout ok"><span class="lbl">Synchronization &mdash; (almost) for free<sup>*</sup></span>
         <span class="small">Send/receive <strong>synchronize on their own</strong>: the receiver blocks until the message
         arrives. No separate <code class="inline">ready</code> / <code class="inline">done</code> flags.</span></div>
@@ -318,6 +317,20 @@ void main() {
     </div>
   </div>
   <p class="tiny muted" style="margin-top:.35em"><sup>*</sup> Not entirely free: whether the <strong>sender</strong> blocks depends on the send mode (buffered vs. synchronous vs. ready) &mdash; we open up <strong>MPI's send modes</strong> in Topic&nbsp;3.</p>
+</section>
+
+<!-- Inter-process communication: message passing is OS IPC, not necessarily MPI -->
+<section data-background-color="#ffffff">
+  <h2>Inter-Process Communication</h2>
+  <p class="small">The <code class="inline">sendMsg</code> / <code class="inline">recvMsg</code> above are pseudocode for real OS <strong>inter-process communication (IPC)</strong> &mdash; pick any primitive:</p>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Pipes / FIFOs</span>
+      <span class="small">A <code class="inline">pipe()</code> with <code class="inline">fork()</code> is the classic case: one end <code class="inline">write()</code>s (= send), the other <code class="inline">read()</code>s (= recv). <code class="inline">read()</code> <strong>blocks until data arrives</strong> &mdash; exactly the "receiver blocks" we relied on. Named pipes (<strong>FIFOs</strong>) do the same between unrelated processes.</span></div>
+    <div class="callout"><span class="lbl">Sockets</span>
+      <span class="small">Unix-domain or network sockets call <code class="inline">send()</code> / <code class="inline">recv()</code> directly &mdash; the names line up. Same host <em>or</em> <strong>across machines</strong> &mdash; which is what scales out to a cluster.</span></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Where MPI fits</span>
+    <span class="small">MPI is the standard library layered on these primitives &mdash; adding ranks, datatypes &amp; collectives (Topic&nbsp;3). The model is OS-level, <strong>not necessarily MPI</strong>.</span></div>
 </section>
 
 <!-- ==================================================================
