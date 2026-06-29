@@ -41,7 +41,9 @@
     <div class="callout"><span class="lbl">3 · Collectives</span><span class="small">Bcast, Reduce, Allreduce, Scatter, Gather, Barrier.</span></div>
     <div class="callout"><span class="lbl">4 · Communicators &amp; Datatypes</span><span class="small">Groups, contexts, derived MPI types.</span></div>
     <div class="callout"><span class="lbl">5 · Worked Example</span><span class="small">Parallel PI integration end-to-end.</span></div>
-    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">No shared memory — processes cooperate by <em>explicitly</em> exchanging messages.</span></div>
+    <div class="callout"><span class="lbl">6 · One-Sided (RMA)</span><span class="small">Windows, <code class="inline">Put</code>/<code class="inline">Get</code>/<code class="inline">Accumulate</code>, two- vs. one-sided.</span></div>
+    <div class="callout"><span class="lbl">7 · Evolving Standard</span><span class="small">MPI-1&rarr;4, dynamic processes, sessions, PMPI profiling.</span></div>
+    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">No shared memory — processes cooperate by <em>explicitly</em> exchanging messages. <span class="muted">(Two lectures.)</span></span></div>
   </div>
 </section>
 
@@ -678,6 +680,152 @@ int main(int argc, char *argv[]) {
     <div>
       <div class="callout"><span class="lbl">Collective variant</span>Swap <code class="inline">Send</code>/<code class="inline">Recv</code> for <code class="inline">MPI_Bcast</code> + <code class="inline">MPI_Reduce</code> and you can write the PI program — and many others — with no point-to-point at all.</div>
       <p class="tiny muted">Everything beyond the core six — modes, derived types, communicators, one-sided RMA, sessions — is refinement for performance, structure, or irregular communication.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 6 — ONE-SIDED COMMUNICATION (RMA)
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 6</div>
+  <div class="mod-title">One-Sided Communication (RMA)</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Two-Sided vs. One-Sided</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Two-sided &middot; cooperative ("push")</span>
+        <span class="small">Both ranks act: a <code class="inline">Send</code> must meet a matching <code class="inline">Recv</code>. Communication <strong>and</strong> synchronization are bundled &mdash; the receiver's memory changes only with its explicit cooperation.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">One-sided &middot; RMA (MPI-2)</span>
+        <span class="small">Only the <strong>origin</strong> acts &mdash; it <code class="inline">Put</code>s into / <code class="inline">Get</code>s from the target's memory directly. The target posts <em>no</em> matching call. Communication is <strong>decoupled</strong> from synchronization.</span></div>
+    </div>
+  </div>
+  <div class="callout"><span class="lbl">Why it matters</span>
+    <span class="small">One-sided fits <strong>irregular / unpredictable</strong> access (graphs, hash tables, active messages) and maps onto hardware <strong>RDMA</strong> (InfiniBand) &mdash; the target's CPU need not be involved at all.</span></div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>RMA: Windows, Put / Get / Accumulate</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="code-label">Expose memory, then touch it remotely</div>
+      <pre><code class="language-c" data-trim>
+double buf[N];
+MPI_Win win;
+// expose buf as a window others can reach
+MPI_Win_create(buf, N*sizeof(double),
+    sizeof(double), MPI_INFO_NULL,
+    MPI_COMM_WORLD, &amp;win);
+
+MPI_Win_fence(0, win);          // open epoch
+MPI_Get(local, n, MPI_DOUBLE,
+        target, disp, n, MPI_DOUBLE, win);
+MPI_Put(local, n, MPI_DOUBLE,
+        target, disp, n, MPI_DOUBLE, win);
+MPI_Win_fence(0, win);          // close epoch
+MPI_Win_free(&amp;win);
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Window</span><span class="small">A region of a process's memory made <strong>remotely accessible</strong> to a communicator.</span></div>
+      <div class="callout"><span class="lbl">Three ops</span><span class="small"><code class="inline">Put</code> (write remote), <code class="inline">Get</code> (read remote), <code class="inline">Accumulate</code> (remote read-modify-write, e.g. <code class="inline">MPI_SUM</code>).</span></div>
+      <div class="callout warn"><span class="lbl">Sync is separate</span><span class="small">RMA ops are <strong>non-blocking</strong>; close the epoch (<code class="inline">MPI_Win_fence</code>, or lock/unlock) before the data is guaranteed in place.</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>One-Sided in the Wild</h2>
+  <p class="small">The same put/get idea powers whole programming systems &mdash; many built on RDMA or on MPI RMA:</p>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">PGAS languages</span><span class="small">UPC, Coarray Fortran, Chapel, X10, Global Arrays &mdash; a global address space with implicit remote access (<strong>Topic 1</strong>).</span></div>
+    <div class="callout"><span class="lbl">SHMEM libraries</span><span class="small"><strong>OpenSHMEM</strong> &mdash; explicit <code class="inline">shmem_put</code> / <code class="inline">shmem_get</code>; <strong>NVSHMEM</strong> extends it across GPU clusters.</span></div>
+    <div class="callout"><span class="lbl">MPI RMA</span><span class="small"><code class="inline">MPI_Put</code> / <code class="inline">Get</code> / <code class="inline">Accumulate</code> &mdash; the portable one-sided layer beneath many of them.</span></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">The link</span>
+    <span class="small">Two-sided (send/recv) vs. one-sided (put/get) is the very axis from <strong>Topic 1</strong>: message passing vs. PGAS. MPI gives you <em>both</em>.</span></div>
+</section>
+
+<!-- ==================================================================
+     MODULE 7 — THE EVOLVING MPI STANDARD
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 7</div>
+  <div class="mod-title">The Evolving MPI Standard</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>MPI-1 &rarr; MPI-4: A Timeline</h2>
+  <table style="font-size:.8em;margin-top:.2em">
+    <tr><th>Version</th><th>Year</th><th>What it added</th></tr>
+    <tr><td class="hi"><strong>MPI-1</strong></td><td>1994</td><td>Point-to-point, collectives, datatypes, communicators &mdash; the core you just learned</td></tr>
+    <tr><td class="hi"><strong>MPI-2</strong></td><td>1997</td><td><strong>One-sided</strong> RMA, <strong>parallel I/O</strong>, <strong>dynamic process management</strong>, C++ / Fortran-90 bindings</td></tr>
+    <tr><td class="hi"><strong>MPI-3</strong></td><td>2012</td><td><strong>Nonblocking collectives</strong>, improved RMA, neighborhood (topology) collectives, the <strong>MPI_T</strong> tools interface</td></tr>
+    <tr><td class="hi"><strong>MPI-4</strong></td><td>2021</td><td><strong>Sessions</strong>, persistent collectives, partitioned communication, better startup scalability</td></tr>
+  </table>
+  <p class="tiny muted">Ancestor: <strong>PVM</strong> (Parallel Virtual Machine, 1990). Implementations: <strong>MPICH</strong>, <strong>Open MPI</strong>, Intel MPI, IBM Spectrum MPI &mdash; all portable across clusters &amp; MPPs.</p>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Dynamic Process Management (MPI-2)</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Spawn at runtime</span><span class="small"><code class="inline">MPI_Comm_spawn</code> starts <em>n</em> new processes while the job runs &mdash; collective, returns an <strong>inter-communicator</strong>; <code class="inline">MPI_COMM_WORLD</code> is unchanged.</span></div>
+      <div class="callout"><span class="lbl">Connect separate jobs</span><span class="small"><code class="inline">MPI_Open_port</code> + <code class="inline">MPI_Comm_connect</code> / <code class="inline">MPI_Comm_accept</code> let two independently-launched MPI programs find each other and talk.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Why</span><span class="small">Master/worker pools that grow on demand; <strong>multi-scale / coupled</strong> simulations that join independently-built solvers (ocean + atmosphere) at run time.</span></div>
+      <p class="tiny muted">The classic SPMD job is static &mdash; one fixed set of ranks. Dynamic management relaxes that.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>MPI-4: Sessions</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Classic MPI assumes one global <code class="inline">MPI_Init</code> and an implicit <code class="inline">MPI_COMM_WORLD</code>. <strong>Sessions</strong> drop that:</p>
+      <ul class="small">
+        <li>Get a local <strong>session handle</strong> &mdash; no global init</li>
+        <li>Query the runtime for a <strong>process set</strong> (Pset)</li>
+        <li>Build a <strong>group</strong>, then a <strong>communicator</strong> from it</li>
+        <li>Then: ordinary MPI on that communicator</li>
+      </ul>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Why sessions</span><span class="small">Lets <strong>independent libraries</strong> each initialize MPI without colliding &mdash; no implicit world, better <strong>startup scalability</strong> and resource isolation at exascale.</span></div>
+      <div class="code-label">The flow</div>
+      <pre><code class="language-c" data-trim>
+MPI_Session_init(...);
+MPI_Group_from_session_pset(...);
+MPI_Comm_create_from_group(...);
+// ... normal MPI on newcomm ...
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Profiling: the PMPI Interface</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">Every call has a twin</span><span class="small">For each <code class="inline">MPI_X</code> there is an identical <code class="inline">PMPI_X</code>. A tool <strong>redefines</strong> <code class="inline">MPI_X</code>, records stats, then calls <code class="inline">PMPI_X</code> &mdash; with <em>no</em> application changes.</span></div>
+      <pre><code class="language-c" data-trim>
+int MPI_Init(int *argc, char ***argv) {
+  collect_pre_stats();
+  int rc = PMPI_Init(argc, argv);
+  collect_post_stats();
+  return rc;
+}
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Tools built on it</span><span class="small"><strong>Vampir</strong> (timelines), <strong>mpiP</strong> (lightweight profiles), <strong>TAU</strong>, and <strong>ScalaTrace</strong> &mdash; scalable MPI trace compression from <strong>F. Mueller's group at NC&nbsp;State</strong>.</span></div>
+      <p class="tiny muted">General profiling &amp; tracing is Topic 2; here the point is the MPI-specific <code class="inline">PMPI</code> hook.</p>
     </div>
   </div>
 </section>
