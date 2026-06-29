@@ -172,10 +172,11 @@ clone(&amp;sayhello, stack_top,
 <!-- Address space layout diagram -->
 <section data-background-color="#ffffff">
   <h2>Address Spaces: What Each Shares</h2>
-  <div class="cols c3">
-    <div class="center">
-      <div class="src">One process</div>
-      <svg viewBox="0 0 110 220" class="chart" style="max-width:130px">
+  <div class="cols">
+    <div>
+      <div class="center">
+        <div class="src">One process</div>
+        <svg viewBox="0 0 110 220" class="chart" style="max-width:130px">
         <g fill="#f8fafc" stroke="#475569" stroke-width="1.5">
           <rect x="10" y="10"  width="90" height="34" rx="3"/>
           <rect x="10" y="44"  width="90" height="28" rx="3"/>
@@ -189,10 +190,15 @@ clone(&amp;sayhello, stack_top,
           <text x="55" y="116">(grows ↕)</text><text x="55" y="170">Heap</text>
           <text x="55" y="192">Data</text><text x="55" y="208">Code</text></g>
       </svg>
+      </div>
+      <div class="callout warn"><span class="lbl">Private</span>
+        <span class="small">Separate processes share <em>nothing</em> logically. A <strong>copy-on-write</strong> optimization lets them
+        share pages until one writes ("initial sharing").</span></div>
     </div>
-    <div class="center">
-      <div class="src">Threads in one process</div>
-      <svg viewBox="0 0 110 220" class="chart" style="max-width:130px">
+    <div>
+      <div class="center">
+        <div class="src">Threads in one process</div>
+        <svg viewBox="0 0 110 220" class="chart" style="max-width:130px">
         <g fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5">
           <rect x="10" y="10"  width="90" height="30" rx="3"/>
           <rect x="10" y="40"  width="90" height="22" rx="3"/>
@@ -207,13 +213,9 @@ clone(&amp;sayhello, stack_top,
           <text x="55" y="77">T2 stack</text><text x="55" y="170">Heap</text>
           <text x="55" y="190">Data</text><text x="55" y="206">Code</text></g>
       </svg>
-    </div>
-    <div>
+      </div>
       <div class="callout"><span class="lbl">Shared</span>
-        <span class="small">Threads share <strong>code, data, heap, kernel</strong> — only stacks are private.</span></div>
-      <div class="callout warn"><span class="lbl">Private</span>
-        <span class="small">Separate processes share <em>nothing</em> logically. A <strong>copy-on-write</strong> optimization lets them
-        share pages until one writes ("initial sharing").</span></div>
+        <span class="small">Threads share <strong>code, data, heap, kernel</strong> &mdash; only stacks are private.</span></div>
     </div>
   </div>
 </section>
