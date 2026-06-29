@@ -314,6 +314,7 @@ omp_set_num_threads(4);
       <p class="small">Each thread runs a <strong>copy</strong> of the block; <code class="inline">A</code> is a single shared array. All threads wait at the closing barrier.</p>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/openmp-examples/hello-mp"><code class="inline">openmp-examples/hello-mp</code></a></p>
 </section>
 
 <section data-background-color="#ffffff">
@@ -415,6 +416,7 @@ for (i=0; i&lt;N; i++)
       <div class="callout"><span class="lbl">Implicit barrier</span>at the end of <code class="inline">omp for</code>. Add <code class="inline">nowait</code> between two independent loops to remove it.</div>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/openmp-examples/parallel-loop-1"><code class="inline">openmp-examples/parallel-loop-1</code></a></p>
 </section>
 
 <section data-background-color="#ffffff">
@@ -427,6 +429,7 @@ for (i=0; i&lt;N; i++)
     <tr><td><code class="inline">runtime</code></td><td>read from <code class="inline">OMP_SCHEDULE</code></td><td>defer the choice to launch time</td></tr>
   </table>
   <div class="callout warn"><span class="lbl">Trade-off</span>Static has near-zero overhead but can imbalance; dynamic balances load but adds queue contention. Tune <code class="inline">chunk</code>.</div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/openmp-examples/scheduling"><code class="inline">openmp-examples/scheduling</code></a></p>
 </section>
 
 <section data-background-color="#ffffff">
@@ -504,6 +507,7 @@ for (j=0; j&lt;1000; j++)
 printf("%d", IS);   // IS = value at j==999 (defined, but not a real sum!)
 </code></pre>
   <div class="callout warn"><span class="lbl">Watch out</span>This is <em>not</em> how you sum an array — for that you need a <strong>reduction</strong> (next slide).</div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/openmp-examples/private-vs-shared"><code class="inline">openmp-examples/private-vs-shared</code></a></p>
 </section>
 
 <section data-background-color="#ffffff">
@@ -549,6 +553,7 @@ for (i=0; i&lt;n; i++)
       <div class="callout warn"><span class="lbl">FP caution</span>Floating-point <code class="inline">+</code> is not perfectly associative — results can differ in the last bits.</div>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/openmp-examples/avrage-reduction"><code class="inline">openmp-examples/avrage-reduction</code></a></p>
 </section>
 
 
@@ -682,6 +687,7 @@ void postorder(node *p) {
       <p class="tiny muted"><code class="inline">untied</code> lets a suspended task resume on any thread when too many tasks pile up.</p>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/openmp-examples/tasks"><code class="inline">openmp-examples/tasks</code></a></p>
 </section>
 
 <section data-background-color="#ffffff">
@@ -715,6 +721,7 @@ for (k=0; k&lt;N; k++)
       <div class="callout"><span class="lbl">Environment</span><span class="small"><code class="inline">OMP_NUM_THREADS</code>, <code class="inline">OMP_SCHEDULE</code>, <code class="inline">OMP_STACKSIZE</code>.</span></div>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/openmp-examples/Matrix"><code class="inline">openmp-examples/Matrix</code></a></p>
 </section>
 
 <!-- ==================================================================
@@ -755,6 +762,7 @@ for (int i = 0; i &lt; num_steps; i++) {
       <div class="callout"><span class="lbl">Why it's correct</span><span class="small">No lock, no shared-<code class="inline">sum</code> race &mdash; the reduction owns the combine step.</span></div>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/openmp-examples/integral"><code class="inline">openmp-examples/integral</code></a></p>
 </section>
 
 <section data-background-color="#ffffff">

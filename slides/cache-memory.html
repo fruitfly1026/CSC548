@@ -40,8 +40,9 @@
     <div class="callout"><span class="lbl">1 · Hierarchy &amp; Locality</span><span class="small">The memory wall, the latency/bandwidth gap, temporal &amp; spatial locality.</span></div>
     <div class="callout"><span class="lbl">2 · Cache Basics</span><span class="small">Lines, associativity, the 3 C's, AMAT — just enough.</span></div>
     <div class="callout"><span class="lbl">3 · Multicore Concerns</span><span class="small">Coherence, <strong>false sharing</strong>, NUMA &amp; first-touch.</span></div>
-    <div class="callout"><span class="lbl">4 · Programmer Takeaways</span><span class="small">Tiling, AoS vs SoA, padding — write cache-friendly code.</span></div>
-    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">You can't change the hardware, but how you <em>access</em> memory often decides your speed more than your FLOPs.</span></div>
+    <div class="callout"><span class="lbl">4 · Programmer Takeaways</span><span class="small">Loop transforms, tiling, AoS vs SoA, padding — cache-friendly code.</span></div>
+    <div class="callout"><span class="lbl">5 · Case Study</span><span class="small">Matrix multiply: naïve &rarr; tiled &rarr; the &radic;(M/3) limit &rarr; BLAS.</span></div>
+    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">You can't change the hardware, but how you <em>access</em> memory often decides your speed more than your FLOPs. <span class="muted">(Two lectures.)</span></span></div>
   </div>
 </section>
 
@@ -212,6 +213,22 @@ AMAT = 1 + 0.05 * 200
 
 
 
+<section data-background-color="#ffffff">
+  <h2>Stalls, Out-of-Order &amp; Prefetch</h2>
+  <div class="cols">
+    <div>
+      <div class="callout warn"><span class="lbl">A miss stalls the pipeline</span><span class="small">On a miss the core would sit idle for the whole penalty. Modern CPUs hide some of it with <strong>out-of-order execution</strong> &mdash; run other ready instructions from the reorder buffer (ROB) while the miss is outstanding.</span></div>
+      <div class="callout"><span class="lbl">Hardware prefetch</span><span class="small">Stride detectors predict the next lines and fetch them <em>before</em> the load &mdash; turning would-be misses into hits for regular, sequential access.</span></div>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Software prefetch</span><span class="small">Issue an explicit hint (<code class="inline">__builtin_prefetch</code>):
+        <br>&bull; <strong>Non-binding</strong> &mdash; load into cache; safe to mispredict.
+        <br>&bull; <strong>Binding</strong> &mdash; load into a register; must be the right address.</span></div>
+      <div class="callout takeaway"><span class="lbl">Why it matters to you</span><span class="small">Prefetchers love <strong>sequential, predictable</strong> access; they're defeated by <strong>pointer-chasing</strong> &amp; random strides. Write loops the prefetcher can follow.</span></div>
+    </div>
+  </div>
+</section>
+
 <!-- ==================================================================
      MODULE 3 — MULTICORE CONCERNS
      ================================================================== -->
@@ -241,6 +258,27 @@ AMAT = 1 + 0.05 * 200
         <line x1="195" y1="79" x2="195" y2="130" stroke="#16181d" stroke-width="1"/>
       </svg>
       <div class="src">A's write invalidates B's copy.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Snooping &amp; the MESI Protocol</h2>
+  <div class="cols w-64">
+    <div>
+      <p class="small">Bus-based coherence: every cache <strong>snoops</strong> the shared bus and reacts to others' reads/writes. Each line carries one of four states:</p>
+      <table style="font-size:.82em">
+        <tr><th>State</th><th>Meaning</th></tr>
+        <tr><td class="hi"><strong>M</strong>odified</td><td>only copy, dirty (I own it)</td></tr>
+        <tr><td class="hi"><strong>E</strong>xclusive</td><td>only copy, clean (matches memory)</td></tr>
+        <tr><td><strong>S</strong>hared</td><td>clean copy; others may hold it too</td></tr>
+        <tr><td><strong>I</strong>nvalid</td><td>stale &mdash; must refetch</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">A write needs ownership</span><span class="small">To write, a core must reach <strong>M</strong> &mdash; it broadcasts an <strong>invalidate</strong>, flipping every other copy to <strong>I</strong>.</span></div>
+      <div class="callout warn"><span class="lbl">The ping-pong</span><span class="small">Two cores writing the same line trade ownership back and forth &mdash; each write is a bus transaction. This is the engine behind both <em>true</em> and <em>false</em> sharing costs.</span></div>
+      <p class="tiny muted">At large scale the bus broadcast gives way to <strong>directory</strong> protocols (CC-NUMA).</p>
     </div>
   </div>
 </section>
@@ -353,6 +391,53 @@ for (i = 0; i &lt; N; i++)
 </section>
 
 <section data-background-color="#ffffff">
+  <h2>Loop Interchange — Stride Matters</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="code-label">BAD: column stride (jumps N words/iter)</div>
+      <pre><code class="language-c" data-trim>
+for (j = 0; j &lt; N; j++)
+  for (i = 0; i &lt; M; i++)
+    x[i][j] = 2 * x[i][j];   // stride N
+</code></pre>
+      <div class="code-label">GOOD: row order = unit stride (C is row-major)</div>
+      <pre><code class="language-c" data-trim>
+for (i = 0; i &lt; M; i++)
+  for (j = 0; j &lt; N; j++)
+    x[i][j] = 2 * x[i][j];   // stride 1
+</code></pre>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Same result, different traffic</span><span class="small">In <strong>row-major</strong> C the inner loop should walk the <em>last</em> index. Swapping the loops turns a stride-<code class="inline">N</code> scatter into <strong>unit stride</strong> &mdash; one miss brings a line you then fully use.</span></div>
+      <div class="callout"><span class="lbl">Fortran is the opposite</span><span class="small">Column-major &mdash; the <em>first</em> index should be innermost.</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Loop Fusion &amp; Array Merging</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Fusion &mdash; temporal locality</span><span class="small">Merge two passes over the same range so each element is reused <strong>while still hot</strong>, not reloaded in a second loop.</span></div>
+      <pre><code class="language-c" data-trim>
+for (i = 0; i &lt; N; i++) {
+  a[i] = b[i] * c[i];
+  d[i] = a[i] + c[i];   // a[i], c[i] hot
+}
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Merging &mdash; spatial locality</span><span class="small">Interleave arrays always used together so the values land on the <strong>same line</strong>.</span></div>
+      <pre><code class="language-c" data-trim>
+// before              // after (one array)
+int val[N], key[N];    struct{int val,key;} m[N];
+</code></pre>
+      <p class="tiny muted">The opposite layout (SoA) instead helps SIMD &mdash; choose by access pattern (next slides).</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
   <h2>Blocking / Tiling for Locality</h2>
   <div class="cols">
     <div>
@@ -430,6 +515,87 @@ char  pad[128];   // &gt; one cache line
 float b[DIM];
 </code></pre>
       <p class="tiny muted">Same trick (padding to a line boundary) fixes both <strong>conflict misses</strong> and <strong>false sharing</strong> — it just separates things that shouldn't share a line.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 5 — CASE STUDY: MATRIX MULTIPLY
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 5</div>
+  <div class="mod-title">Case Study &mdash; Matrix Multiply &amp; Tiling</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Na&iuml;ve Matmul: Memory-Bound</h2>
+  <div class="cols w-64">
+    <div>
+      <pre><code class="language-c" data-trim>
+// C = C + A*B,  n x n
+for (i = 0; i &lt; n; i++)
+  for (j = 0; j &lt; n; j++)
+    for (k = 0; k &lt; n; k++)
+      C[i][j] += A[i][k] * B[k][j];
+</code></pre>
+      <div class="callout warn"><span class="lbl">B is read n times</span><span class="small">The inner <code class="inline">k</code> loop streams a whole column of <strong>B</strong> per <code class="inline">(i,j)</code> &mdash; and repeats it <code class="inline">n</code> times. Almost nothing stays in cache.</span></div>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Count the slow accesses</span><span class="small"><code class="inline">n&sup3;</code> (B columns) + <code class="inline">n&sup2;</code> (A rows) + <code class="inline">2n&sup2;</code> (C) = <code class="inline">n&sup3;+3n&sup2;</code>.</span></div>
+      <div class="eq small">\( q = \dfrac{f}{m} = \dfrac{2n^3}{n^3+3n^2} \approx 2 \)</div>
+      <div class="callout takeaway"><span class="lbl">&asymp; 2 flops / word</span><span class="small">Two flops per slow word moved &mdash; <strong>memory-bound</strong>. The CPU can do far more flops than memory can feed.</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Blocked (Tiled) Matmul</h2>
+  <div class="cols w-64">
+    <div>
+      <pre><code class="language-c" data-trim>
+// b x b tiles that fit in cache
+for (ii=0; ii&lt;n; ii+=b)
+ for (jj=0; jj&lt;n; jj+=b)
+  for (kk=0; kk&lt;n; kk+=b)
+   for (i=ii; i&lt;ii+b; i++)
+    for (j=jj; j&lt;jj+b; j++)
+     for (k=kk; k&lt;kk+b; k++)
+       C[i][j] += A[i][k]*B[k][j];
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Reuse the tile</span><span class="small">Load a <code class="inline">b&times;b</code> block of A, B, C once; do <code class="inline">b&sup3;</code> flops before evicting. Reuse climbs from 2 to about <code class="inline">b</code>.</span></div>
+      <div class="eq small">\( q \approx \dfrac{2n^3}{(2N+2)\,n^2} \approx b \)</div>
+      <div class="callout takeaway"><span class="lbl">Bigger tile &rarr; more reuse</span><span class="small">Efficiency grows with block size <code class="inline">b</code> &mdash; until the tiles stop fitting in cache.</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>How Big a Tile? The &radic;(M/3) Limit</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">All three tiles must fit</span><span class="small">A, B, C blocks together in cache <code class="inline">M</code>:</span>
+        <div class="eq small" style="margin-top:.3em">\( 3b^2 \le M \;\Rightarrow\; b \le \sqrt{M/3},\; q \le \sqrt{M/3} \)</div></div>
+      <div class="callout warn"><span class="lbl">Hong &amp; Kung (1981)</span><span class="small">No reordering using only associativity can beat <code class="inline">q = O(&radic;M)</code>. Tiling is <strong>asymptotically optimal</strong> for memory traffic.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Real libraries: multi-level tiling</span><span class="small">Tile for <strong>L1</strong>, again for <strong>L2/L3</strong>, and register-block the innermost <strong>micro-kernel</strong> (the GotoBLAS / BLIS design). That's how <strong>BLAS</strong> reaches near-peak.</span></div>
+      <p class="tiny muted">This is exactly the performance ladder you'll climb in the <strong>GEMM midterm</strong>.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Beyond Tiling: BLAS &amp; Strassen</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Use the library</span><span class="small">Vendor <strong>BLAS</strong> (MKL, OpenBLAS, cuBLAS) already does multi-level tiling, packing &amp; vectorization. <strong>Don't hand-roll GEMM</strong> for production &mdash; call <code class="inline">dgemm</code>.</span></div>
+      <div class="callout"><span class="lbl">Same trick everywhere</span><span class="small">Tiling reappears as <strong>shared-memory tiling</strong> on the GPU (Topic 6) and <strong>SUMMA</strong> across nodes.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Strassen: fewer flops</span><span class="small">A 2&times;2 multiply with <strong>7</strong> products instead of 8 &rarr; recursion gives <code class="inline">O(n<sup>2.81</sup>)</code> vs <code class="inline">n&sup3;</code>. Faster for large <code class="inline">n</code>, but more memory and worse stability.</span></div>
+      <p class="tiny muted">The theoretical record exponent is &asymp; 2.37 &mdash; not practical.</p>
     </div>
   </div>
 </section>

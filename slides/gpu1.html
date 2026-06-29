@@ -157,6 +157,7 @@ int main() {
       <div class="callout"><span class="lbl">SPMD</span>Every thread runs the <strong>same</strong> code on a different <code class="inline">i</code>: one program, many data.</div>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/01_hello.cu"><code class="inline">Demos/cuda/01_hello.cu</code></a></p>
 </section>
 
 <!-- Program execution lifecycle -->
@@ -332,6 +333,7 @@ dim3 blocks(N / threadsPerBlock.x,
       <div class="callout"><span class="lbl">Global index</span><code class="inline">blockIdx</code> skips whole blocks of <code class="inline">blockDim</code> threads; <code class="inline">threadIdx</code> offsets within the block.</div>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/03_saxpy.cu"><code class="inline">Demos/cuda/03_saxpy.cu</code></a></p>
 </section>
 
 <!-- Worked indexing example N=32 -->
@@ -508,6 +510,7 @@ cudaMemcpy(hostPtr, devicePtr, size,
       <div class="callout"><span class="lbl">dest, src, size, dir</span>Read it as "copy <code class="inline">size</code> bytes <strong>into</strong> the first argument <strong>from</strong> the second."</div>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/02_vector_add.cu"><code class="inline">Demos/cuda/02_vector_add.cu</code></a></p>
 </section>
 
 <!-- ==================================================================

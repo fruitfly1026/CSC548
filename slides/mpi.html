@@ -168,6 +168,7 @@ int main(int argc, char *argv[]) {
       <p class="tiny muted">Launch details are implementation-dependent (MPICH, OpenMPI, Intel MPI…).</p>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/mpi/01_hello.c"><code class="inline">Demos/mpi/01_hello.c</code></a></p>
 </section>
 
 <section data-background-color="#ffffff">
@@ -225,6 +226,7 @@ int main(int argc, char *argv[]) {
       <div class="callout"><span class="lbl">Tags</span>An integer that lets the receiver filter messages. Use <code class="inline">MPI_ANY_TAG</code> to accept any. (Tags avoid confusion with <em>datatypes</em>.)</div>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/mpi/03_ping_pong.c"><code class="inline">Demos/mpi/03_ping_pong.c</code></a></p>
 </section>
 
 <section data-background-color="#ffffff">
@@ -256,6 +258,7 @@ MPI_Recv(start, count, datatype,
     </div>
   </div>
   <div class="callout"><span class="lbl">Matching</span>A receive completes only when source <em>and</em> tag (and communicator) match a pending send.</div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/mpi/02_send_recv.c"><code class="inline">Demos/mpi/02_send_recv.c</code></a></p>
 </section>
 
 <section data-background-color="#ffffff">
@@ -312,6 +315,7 @@ Waitall();
       <p class="tiny muted">Or use <code class="inline">MPI_Sendrecv</code>, which does both atomically.</p>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/mpi/06_deadlock.c"><code class="inline">Demos/mpi/06_deadlock.c</code></a></p>
 </section>
 
 <section data-background-color="#ffffff">
@@ -478,6 +482,7 @@ MPI_Reduce(&amp;mypart, &amp;total, 1,
       <p class="tiny muted">Predefined ops are associative &amp; commutative; user ops must be associative.</p>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/mpi/04_collectives.c"><code class="inline">Demos/mpi/04_collectives.c</code></a></p>
 </section>
 
 
@@ -650,6 +655,7 @@ int main(int argc, char *argv[]) {
 </code></pre>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/mpi/05_pi.c"><code class="inline">Demos/mpi/05_pi.c</code></a></p>
 </section>
 
 <section data-background-color="#ffffff">

@@ -616,6 +616,7 @@ for (int m = 0; m &lt; width/TILE_WIDTH; m++) {        // m = phase index
 devP[row*width + col] = pValue;
 </code></pre>
   <div class="callout"><span class="lbl">Two barriers</span><strong>#1</strong> after the loads so every thread sees the full tiles; <strong>#2</strong> so no thread overwrites the tile before others finish reading it. <code class="inline">width/TILE_WIDTH</code> = number of phases.</div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/04_matmul.cu"><code class="inline">Demos/cuda/04_matmul.cu</code></a></p>
 </section>
 
 <!-- Choosing TILE_WIDTH -->

@@ -229,6 +229,7 @@ for (int i = 0; i &lt; n; i++)
       <p class="small">Doubling lanes only helps if you can feed them.</p>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/simd/03_dot_product.c"><code class="inline">Demos/simd/03_dot_product.c</code></a></p>
 </section>
 
 
@@ -274,6 +275,7 @@ clang -Rpass=loop-vectorize -Rpass-missed=loop-vectorize saxpy.c
       <div class="callout warn"><span class="lbl"><code class="inline">-ffast-math</code></span><span class="small">Lets the compiler reassociate FP (needed to vectorize reductions) — but <strong>changes results</strong> in the last bits. Use deliberately.</span></div>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/simd/04_auto_vectorize.c"><code class="inline">Demos/simd/04_auto_vectorize.c</code></a></p>
 </section>
 
 <section data-background-color="#ffffff">
@@ -392,6 +394,7 @@ vy = _mm256_fmadd_ps(vs, vx, vy);
       <div class="callout"><span class="lbl">set1 / setzero</span><code class="inline">_mm256_set1_ps(x)</code> fills every lane with <code class="inline">x</code>; <code class="inline">_mm256_setzero_ps()</code> clears the register.</div>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/simd/01_vector_add.c"><code class="inline">Demos/simd/01_vector_add.c</code></a></p>
 </section>
 
 <section data-background-color="#ffffff">
@@ -428,6 +431,7 @@ void saxpy_avx(int n, float a,
 </code></pre>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/simd/02_saxpy.c"><code class="inline">Demos/simd/02_saxpy.c</code></a></p>
 </section>
 
 <section data-background-color="#ffffff">
