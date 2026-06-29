@@ -274,13 +274,14 @@ void main() {
   <h2>Message Passing: The Same Task</h2>
   <div class="cols w-64">
     <div>
-      <div class="code-label">Parent sends operands; child returns work</div>
+      <div class="code-label">Parent sends operands; child returns the result</div>
       <pre><code class="language-c" data-trim>
-int a, b;
+int a, b, sum;            // parent's variables
 
-void dosum() {
-  recvMsg(mainID, &amp;a, &amp;b);
-  printf("child&gt; sum is %d", a + b);
+void dosum() {            // child: separate address space
+  int x, y;               // child's OWN copies
+  recvMsg(mainID, &amp;x, &amp;y);
+  sendMsg(mainID, x + y); // return the result
 }
 void main() {
   if (fork() == 0)        // child
@@ -288,24 +289,26 @@ void main() {
   else {                  // parent
     a = 5; b = 3;
     sendMsg(childID, a, b);
-    wait(childID);
-    printf("all done, exiting\n");
+    recvMsg(childID, &amp;sum);     // receive result
+    waitpid(childID, NULL, 0);  // reap the child
+    printf("sum is %d\n", sum);
   }
 }
 </code></pre>
     </div>
     <div>
       <div class="callout warn"><span class="lbl">Explicit communication</span>
-        <span class="small">Data only crosses between processes via <code class="inline">sendMsg</code> /
-        <code class="inline">recvMsg</code> — nothing is shared.</span></div>
-      <div class="callout ok"><span class="lbl">Synchronization for free</span>
-        <span class="small">Send/receive <strong>automatically synchronize</strong>: the receiver blocks until the
-        message arrives. No separate <code class="inline">signal</code> variable needed.</span></div>
+        <span class="small">Data crosses only via <code class="inline">sendMsg</code> / <code class="inline">recvMsg</code> &mdash;
+        nothing is shared. The child's <code class="inline">x</code>, <code class="inline">y</code> are <strong>its own copies</strong>,
+        not the parent's <code class="inline">a</code>, <code class="inline">b</code>.</span></div>
+      <div class="callout ok"><span class="lbl">Synchronization &mdash; (almost) for free<sup>*</sup></span>
+        <span class="small">Send/receive <strong>synchronize on their own</strong>: the receiver blocks until the message
+        arrives. No separate <code class="inline">ready</code> / <code class="inline">done</code> flags.</span></div>
       <div class="callout takeaway"><span class="lbl">Trade-off</span>
-        Message passing <em>bundles</em> communication and synchronization — simpler reasoning, but you pay to move
-        every byte.</div>
+        <span class="small">Message passing <em>bundles</em> communication and synchronization &mdash; simpler reasoning, but you pay to move every byte.</span></div>
     </div>
   </div>
+  <p class="tiny muted" style="margin-top:.35em"><sup>*</sup> Not entirely free: whether the <strong>sender</strong> blocks depends on the send mode (buffered vs. synchronous vs. ready) &mdash; we open up <strong>MPI's send modes</strong> in Topic&nbsp;3.</p>
 </section>
 
 <!-- ==================================================================
