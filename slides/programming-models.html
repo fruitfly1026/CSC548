@@ -162,6 +162,7 @@ clone(&amp;sayhello, stack_top,
         <span class="small">Threads share the address space via <code class="inline">CLONE_VM</code> &rarr;
         <strong>implicit</strong> communication through memory. The <strong>flags pick exactly what's shared</strong>;
         <code class="inline">gettid()</code> differs per thread, while <code class="inline">getpid()</code> is the same.</span></div>
+      <p class="tiny muted">"Share everything" = the <strong>address space</strong> (code, data, heap). Each thread still has its <strong>own stack, registers &amp; PC</strong>.</p>
     </div>
   </div>
   <aside class="notes">This is the crux: shared memory ≈ threads (share address space, communicate implicitly);
