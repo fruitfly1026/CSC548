@@ -224,36 +224,49 @@ clone(&amp;sayhello, stack_top,
   <h2>Shared Memory: Communication &amp; Synchronization</h2>
   <div class="cols w-64">
     <div>
-      <div class="code-label">Two threads share a, b, sum, signal</div>
+      <div class="code-label">Two threads share a, b, sum + flags</div>
       <pre><code class="language-c" data-trim>
-int a, b, sum, signal = 0;
+int a, b, sum;
+int ready = 0, done = 0;   // two flags
 
-void dosum(args) {
-  while (signal == 0) {}  // wait for work
+int dosum(void *arg) {
+  while (!ready) {}         // wait for work
   sum = a + b;
-  signal = 0;             // done
+  done = 1;                 // mark complete
+  return 0;
 }
 void main() {
-  clone(&amp;dosum, ...);     // spawn child
+  clone(&amp;dosum, ...);       // spawn child
   a = 5; b = 3;
-  signal = 1;             // tell child to work
-  while (signal == 1) {}  // wait for child
+  ready = 1;                // work is available
+  while (!done) {}          // wait for child
   printf("sum is %d", sum);
 }
 </code></pre>
     </div>
     <div>
       <div class="callout"><span class="lbl">Communication</span>
-        <span class="small">The values of <code class="inline">a</code>, <code class="inline">b</code>, <code class="inline">sum</code>
-        are <strong>never explicitly sent</strong> — they live in shared memory.</span></div>
-      <div class="callout warn"><span class="lbl">Synchronization</span>
-        <span class="small"><code class="inline">signal</code> is the only thing being coordinated. The spin-loops
-        <em>sequence</em> the two threads so the read of <code class="inline">sum</code> sees the write.</span></div>
-      <div class="callout takeaway"><span class="lbl">Lesson</span>
-        Shared memory separates <strong>data sharing</strong> (free, through memory) from
-        <strong>synchronization</strong> (which you must write explicitly).</div>
+        <span class="small"><code class="inline">a</code>, <code class="inline">b</code>, <code class="inline">sum</code>
+        are <strong>never explicitly sent</strong> &mdash; they live in shared memory.</span></div>
+      <div class="callout"><span class="lbl">Synchronization</span>
+        <span class="small">Only the flags <code class="inline">ready</code> / <code class="inline">done</code> are coordinated;
+        the spin-loops <em>try</em> to order the two threads.</span></div>
     </div>
   </div>
+  <p class="q" style="margin:.4em 0 .15em">But is this code <em>guaranteed</em> correct?</p>
+  <div class="cols">
+    <div class="callout warn fragment"><span class="lbl">&#9312; Compiler &mdash; infinite spin</span>
+      <span class="small"><code class="inline">while(!ready){}</code> reads a plain global; the optimizer may cache it in a
+      register and <strong>never re-read it</strong> &rarr; spins forever. Fix: <code class="inline">volatile</code> /
+      <code class="inline">atomic</code>. Bites on <strong>every</strong> platform.</span></div>
+    <div class="callout warn fragment"><span class="lbl">&#9313; Hardware &mdash; stale a, b</span>
+      <span class="small">On <strong>weak memory</strong> (ARM, Power) the child can see <code class="inline">ready=1</code>
+      <em>before</em> <code class="inline">a=5, b=3</code> &rarr; <code class="inline">sum</code> reads stale values. Fix: a
+      <strong>fence / acquire-release</strong>. (x86-TSO happens to hide it &mdash; a "works on my machine" trap.)</span></div>
+  </div>
+  <div class="callout takeaway fragment"><span class="lbl">Real lesson</span><span class="small">It is correct only under
+    <strong>sequential consistency</strong> &mdash; the poster child for <em>why</em> we need
+    <strong>memory-consistency models, atomics &amp; fences</strong> (Topic 7).</span></div>
 </section>
 
 <!-- Message passing example -->
