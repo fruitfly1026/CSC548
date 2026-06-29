@@ -560,7 +560,7 @@ void main(void) {
     <div>
       <div class="callout"><span class="lbl">Distribution</span>
         <span class="small">Every node holds <code class="inline">N*P/THREADS</code> rows of <strong>A</strong> and
-        <strong>C</strong> — the <code class="inline">shared [blocksize]</code> declares the layout.</span></div>
+        <strong>C</strong>.</span></div>
       <div class="callout takeaway"><span class="lbl">Affinity expression</span>
         <span class="small"><code class="inline">&amp;A[i][0]</code> in <code class="inline">upc_forall</code> assigns
         iteration <code class="inline">i</code> to the thread <strong>where <code class="inline">A[i][0]</code> lives</strong>
