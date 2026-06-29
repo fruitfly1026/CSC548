@@ -149,14 +149,19 @@ else
       <div class="code-label">Thread — share everything (<code class="inline">clone</code>)</div>
       <pre><code class="language-c" data-trim>
 void sayhello() {
-  printf("child thread, id %d", getpid());
+  printf("child thread, tid %d", gettid());
 }
-printf("parent thread, id %d", getpid());
-clone(&amp;sayhello, &amp;stack, flags, ());
+printf("parent thread, tid %d", gettid());
+
+// what's shared is set by the flags;
+// CLONE_VM = share the address space
+clone(&amp;sayhello, stack_top,
+      CLONE_VM | CLONE_FILES | CLONE_FS, NULL);
 </code></pre>
       <div class="callout ok"><span class="lbl">Lightweight</span>
-        <span class="small">Small creation cost; threads share the address space →
-        <strong>implicit</strong> communication through memory.</span></div>
+        <span class="small">Threads share the address space via <code class="inline">CLONE_VM</code> &rarr;
+        <strong>implicit</strong> communication through memory. The <strong>flags pick exactly what's shared</strong>;
+        <code class="inline">gettid()</code> differs per thread, while <code class="inline">getpid()</code> is the same.</span></div>
     </div>
   </div>
   <aside class="notes">This is the crux: shared memory ≈ threads (share address space, communicate implicitly);
