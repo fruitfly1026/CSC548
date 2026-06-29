@@ -251,9 +251,17 @@ void main() {
       <div class="callout"><span class="lbl">Synchronization</span>
         <span class="small">Only the flags <code class="inline">ready</code> / <code class="inline">done</code> are coordinated;
         the spin-loops <em>try</em> to order the two threads.</span></div>
+      <div class="callout takeaway"><span class="lbl">Lesson</span>
+        <span class="small">Shared memory separates <strong>data sharing</strong> (free, through memory) from
+        <strong>synchronization</strong> (which you must write explicitly).</span></div>
     </div>
   </div>
-  <p class="q" style="margin:.4em 0 .15em">But is this code <em>guaranteed</em> correct?</p>
+</section>
+
+<!-- Is the spin-loop actually correct? (split out of the previous slide) -->
+<section data-background-color="#ffffff">
+  <h2>Shared Memory: Is the Spin-Loop Correct?</h2>
+  <p class="small">The handshake on the previous slide &mdash; the <code class="inline">ready</code> / <code class="inline">done</code> spin-loops &mdash; <em>looks</em> right. It isn't, for two independent reasons:</p>
   <div class="cols">
     <div class="callout warn fragment"><span class="lbl">&#9312; Compiler &mdash; infinite spin</span>
       <span class="small"><code class="inline">while(!ready){}</code> reads a plain global; the optimizer may cache it in a
