@@ -92,14 +92,14 @@
   <div class="symkey"><span>\(T_S\) — best serial time</span><span>\(T_P\) — parallel time on <em>p</em> PEs</span></div>
   <table style="font-size:.82em">
     <tr><th>Metric</th><th>Definition</th><th>What it tells you</th></tr>
-    <tr><td><strong>Execution time</strong></td><td><code class="inline">T<sub>S</sub></code>, <code class="inline">T<sub>P</sub></code></td><td>wall-clock: best serial vs. parallel on <em>p</em> PEs</td></tr>
-    <tr><td class="hi"><strong>Speedup</strong></td><td><code class="inline">S<sub>p</sub> = T<sub>S</sub>/T<sub>P</sub></code></td><td>how many&times; faster &mdash; ideal <code class="inline">S<sub>p</sub> = p</code></td></tr>
-    <tr><td class="hi"><strong>Efficiency</strong></td><td><code class="inline">E = S<sub>p</sub>/p</code></td><td>fraction of a PE usefully used &mdash; ideal <code class="inline">1</code></td></tr>
-    <tr><td><strong>Cost</strong></td><td><code class="inline">C = p &times; T<sub>P</sub></code></td><td>processor-time product &mdash; what you're billed</td></tr>
-    <tr><td><strong>Overhead</strong></td><td><code class="inline">T<sub>o</sub> = p&middot;T<sub>P</sub> &minus; T<sub>S</sub></code></td><td>total extra work beyond the serial computation</td></tr>
-    <tr><td><strong>Scalability</strong></td><td>trend of <code class="inline">S<sub>p</sub></code>, <code class="inline">E</code></td><td>do they hold as <em>p</em> (&amp; problem) grow? (Amdahl / Gustafson)</td></tr>
+    <tr><td><strong>Execution time</strong></td><td>\(T_S,\ T_P\)</td><td>wall-clock: best serial vs. parallel on <em>p</em> PEs</td></tr>
+    <tr><td class="hi"><strong>Speedup</strong></td><td>\(S_p = T_S/T_P\)</td><td>how many&times; faster &mdash; ideal \(S_p = p\)</td></tr>
+    <tr><td class="hi"><strong>Efficiency</strong></td><td>\(E = S_p/p\)</td><td>fraction of a PE usefully used &mdash; ideal \(1\)</td></tr>
+    <tr><td><strong>Cost</strong></td><td>\(C = p \times T_P\)</td><td>processor-time product &mdash; what you're billed</td></tr>
+    <tr><td><strong>Overhead</strong></td><td>\(T_o = p\,T_P - T_S\)</td><td>total extra work beyond the serial computation</td></tr>
+    <tr><td><strong>Scalability</strong></td><td>trend of \(S_p,\ E\)</td><td>do they hold as <em>p</em> (&amp; problem) grow? (Amdahl / Gustafson)</td></tr>
   </table>
-  <div class="callout takeaway"><span class="lbl">The through-line</span>Every metric is a function of just two times, <code class="inline">T<sub>S</sub></code> and <code class="inline">T<sub>P</sub></code>. We define each next, then bound them with <strong>Amdahl</strong> &amp; <strong>Gustafson</strong>.</div>
+  <div class="callout takeaway"><span class="lbl">The through-line</span>Every metric is a function of just two times, \(T_S\) and \(T_P\). We define each next, then bound them with <strong>Amdahl</strong> &amp; <strong>Gustafson</strong>.</div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -107,9 +107,8 @@
   <div class="symkey"><span>\(T_S\) — best serial time</span><span>\(T_P\) — parallel time on p PEs</span></div>
   <div class="cols">
     <div>
-      <p class="small">The most straightforward metric: <strong>elapsed (wall-clock) time</strong> from the start of computation to when the <em>last</em> processing element finishes.</p>
-      <div class="callout"><span class="lbl">Parallel overhead</span>The total work spent beyond the serial computation:
-        <div class="eq small" style="margin-top:.4em">\( T_o = p\,T_P - T_S \)</div></div>
+      <p class="small">The most straightforward metric: <strong>elapsed (wall-clock) time</strong> from the start of computation to when the <em>last</em> processing element finishes: \(T_S\) and \(T_P\).</p>
+      <div class="callout"><span class="lbl">It's the max, not the sum</span><span class="small">Parallel time is set by the <strong>slowest</strong> PE &mdash; one straggler and everyone waits. That's why load balance matters.</span></div>
     </div>
     <div>
       <div class="callout"><span class="lbl">Charging for usage</span>Centers bill in <strong>service units</strong>:</div>
@@ -128,8 +127,8 @@ SUs = #processors
   <div class="cols w-64">
     <div>
       <div class="eq small">\( S_p = \dfrac{T_S}{T_P} \)</div>
-      <div class="callout warn"><span class="lbl">Fair baseline</span><code class="inline">T<sub>S</sub></code> must be the time of the <strong>best sequential algorithm</strong> — not your parallel code run on one PE.</div>
-      <p class="small">Ideal is <code class="inline">S<sub>p</sub> = p</code> (linear). Reporting against a slow serial baseline inflates speedup dishonestly.</p>
+      <div class="callout warn"><span class="lbl">Fair baseline</span>\(T_S\) must be the time of the <strong>best sequential algorithm</strong> — not your parallel code run on one PE.</div>
+      <p class="small">Ideal is \(S_p = p\) (linear). Reporting against a slow serial baseline inflates speedup dishonestly.</p>
     </div>
     <div class="center">
       <svg viewBox="0 0 320 240" class="chart" style="max-width:340px">
@@ -153,20 +152,34 @@ SUs = #processors
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>Metrics: Efficiency &amp; Cost</h2>
+  <h2>Metric: Efficiency</h2>
   <div class="cols">
     <div>
       <div class="callout"><span class="lbl">Efficiency</span>Fraction of time a PE is <strong>usefully</strong> employed — the ratio of actual to ideal performance.
         <div class="eq small" style="margin-top:.4em">\( E = \dfrac{S_p}{p} = \dfrac{T_S}{p\,T_P} \)</div></div>
-      <p class="tiny muted"><code class="inline">E = 1</code> is perfect (linear); typical programs sit below 1.</p>
+      <p class="tiny muted">\(E = 1\) is perfect (linear); real programs sit below 1 and <strong>fall as \(p\) grows</strong> — overhead takes a bigger share.</p>
     </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Efficiency = cost-efficiency</span>It's speedup normalized by the resources you paid for. High speedup at <em>low</em> efficiency means you're <strong>burning PEs</strong> for diminishing returns.</div>
+      <p class="tiny muted center">14&times; on 16 PEs (\(E\approx0.88\)) &rarr; 20&times; on 32 PEs (\(E\approx0.63\)): double the machine for ~40% more speedup — efficiency tells you it wasn't worth it.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Metrics: Cost &amp; Overhead</h2>
+  <div class="cols">
     <div>
       <div class="callout"><span class="lbl">Cost</span>Resource usage = processor-time product:
         <div class="eq small" style="margin-top:.4em">\( C = p \times T_P \)</div></div>
-      <div class="callout warn"><span class="lbl">Idle time still bills</span>Load imbalance hurts twice: it raises <code class="inline">T<sub>P</sub></code> <em>and</em> charges idle PEs. Watch where speedup stops scaling.</div>
+      <div class="callout warn"><span class="lbl">Idle time still bills</span>Load imbalance hurts twice: it raises \(T_P\) <em>and</em> charges idle PEs. Watch where speedup stops scaling.</div>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Parallel overhead</span>Total work spent beyond the serial computation:
+        <div class="eq small" style="margin-top:.4em">\( T_o = p\,T_P - T_S = C - T_S \)</div></div>
+      <div class="callout takeaway"><span class="lbl">Cost buys overhead</span>Subtract the useful serial work \(T_S\) from the total processor-time \(C\); what remains, \(T_o\), is pure overhead — communication, idle time, redundant work.</div>
     </div>
   </div>
-  <p class="tiny muted center">If speedup is 14 on 16 PEs but only 20 on 32 PEs, doubling the PEs barely helped — cost nearly doubled for ~40% more speedup. <strong>Efficiency = cost-efficiency.</strong></p>
 </section>
 
 
@@ -369,9 +382,9 @@ SUs = #processors
   <h2>Isoefficiency — How Big Must the Problem Grow?</h2>
   <div class="cols">
     <div>
-      <p class="small">Write efficiency with total overhead <code class="inline">T<sub>o</sub>(W,p)</code> and problem size (work) <code class="inline">W</code>:</p>
+      <p class="small">Write efficiency with total overhead \(T_o(W,p)\) and problem size (work) \(W\):</p>
       <div class="eq small">\( E = \dfrac{1}{1 + \dfrac{T_o(W,p)}{W}} \)</div>
-      <p class="small">To hold <code class="inline">E</code> constant as <code class="inline">p</code> grows, <code class="inline">W</code> must rise to keep <code class="inline">T<sub>o</sub>/W</code> fixed:</p>
+      <p class="small">To hold \(E\) constant as \(p\) grows, \(W\) must rise to keep \(T_o/W\) fixed:</p>
       <div class="eq small">\( W = K \cdot T_o(W,p) \)</div>
       <p class="tiny muted"><code class="inline">W(p)</code> is the <strong>isoefficiency function</strong> — the growth needed to keep efficiency constant.</p>
     </div>
@@ -381,7 +394,7 @@ SUs = #processors
         <code class="inline">W(p) ≤ O(p)</code> ⇒ <strong>scalable</strong> (work grows ≤ linearly)<br>
         <code class="inline">W(p) = O(p²)</code> ⇒ <strong>poorly scalable</strong></span></div>
       <div class="callout takeaway"><span class="lbl">Summing example</span>
-        <span class="small">Overhead <code class="inline">T<sub>o</sub> = 2p\log p</code>, so
+        <span class="small">Overhead \(T_o = 2p\log p\), so
         <div class="eq small" style="margin-top:.3em">\( W = K\cdot 2p\log p \)</div>
         slightly worse than linear ⇒ <strong>fairly scalable</strong>.</span></div>
     </div>
@@ -406,7 +419,7 @@ SUs = #processors
     <div class="callout"><span class="lbl">Excess computation — "replicating"</span><span class="small">Work repeated by multiple processes that the serial program did once.</span></div>
   </div>
   <div class="callout warn"><span class="lbl">All of it counts</span>
-    <span class="small">These add up to <code class="inline">T<sub>o</sub> = p\,T<sub>P</sub> − T<sub>S</sub></code>. Every unit of overhead drags efficiency below 1 and pulls real speedup below the Amdahl bound.</span></div>
+    <span class="small">These add up to \(T_o = p\,T_P - T_S\). Every unit of overhead drags efficiency below 1 and pulls real speedup below the Amdahl bound.</span></div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -553,7 +566,7 @@ PAPI_stop_counters(val, 2);
 <section data-background-color="#ffffff">
   <h2>Performance — Big Picture</h2>
   <div class="cols c3">
-    <div class="callout"><span class="lbl">Measure</span><code class="inline">S = T<sub>S</sub>/T<sub>P</sub></code>, <code class="inline">E = S/p</code> against the <em>best serial</em> baseline.</div>
+    <div class="callout"><span class="lbl">Measure</span>\(S = T_S/T_P\), \(E = S/p\) against the <em>best serial</em> baseline.</div>
     <div class="callout"><span class="lbl">Bound</span><strong>Amdahl</strong> caps strong scaling at <code class="inline">1/(1−f)</code>; <strong>Gustafson</strong> rewards weak scaling.</div>
     <div class="callout"><span class="lbl">Scale</span><strong>Isoefficiency</strong> says how fast work must grow to keep efficiency.</div>
   </div>
