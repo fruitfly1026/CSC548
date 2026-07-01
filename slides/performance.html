@@ -26,9 +26,9 @@
   <div class="meta">Instructor: Jiajia Li<br>Fall 2026<br>08/26/2026</div>
   <aside class="notes">
     Performance is the whole reason we go parallel. This deck builds the vocabulary to measure it —
-    execution time, speedup, efficiency, cost — then the two laws that bound it (Amdahl for fixed
-    problems, Gustafson for scaled ones), what eats your speedup (overhead), and finally the tools
-    you use to find the hot spots.
+    execution time, speedup, efficiency, cost — then scalability and the two laws that bound it
+    (Amdahl for fixed problems, Gustafson for scaled ones), what eats your speedup (overhead),
+    and finally the tools you use to find the hot spots.
   </aside>
 </section>
 
@@ -37,10 +37,9 @@
   <h2>Agenda</h2>
   <div class="cols c3">
     <div class="callout"><span class="lbl">1 · Metrics</span><span class="small">Execution time, speedup, efficiency, cost.</span></div>
-    <div class="callout"><span class="lbl">2 · Amdahl's Law</span><span class="small">Serial fraction caps fixed-size speedup.</span></div>
-    <div class="callout"><span class="lbl">3 · Gustafson &amp; Scaling</span><span class="small">Scaled speedup, strong vs. weak scaling, isoefficiency.</span></div>
-    <div class="callout"><span class="lbl">4 · Overhead</span><span class="small">Load imbalance, communication, sync, excess work.</span></div>
-    <div class="callout"><span class="lbl">5 · Profiling &amp; Tracing</span><span class="small">gprof, VTune, PAPI, Valgrind, Score-P.</span></div>
+    <div class="callout"><span class="lbl">2 · Scalability</span><span class="small">Strong vs. weak scaling, isoefficiency, Amdahl, Gustafson.</span></div>
+    <div class="callout"><span class="lbl">3 · Overhead</span><span class="small">Load imbalance, communication, sync, excess work.</span></div>
+    <div class="callout"><span class="lbl">4 · Profiling &amp; Tracing</span><span class="small">gprof, VTune, PAPI, Valgrind, Score-P.</span></div>
     <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Measure first; the <em>serial fraction</em> and <em>overhead</em> decide how far you scale.</span></div>
   </div>
 </section>
@@ -129,22 +128,30 @@ SUs = #processors
       <div class="eq small">\( S_p = \dfrac{T_S}{T_P} \)</div>
       <div class="callout warn"><span class="lbl">Fair baseline</span>\(T_S\) must be the time of the <strong>best sequential algorithm</strong> — not your parallel code run on one PE.</div>
       <p class="small">Ideal is \(S_p = p\) (linear). Reporting against a slow serial baseline inflates speedup dishonestly.</p>
+      <div class="callout ok">
+        <span class="lbl">Super-linear speedup</span>
+        <span class="small">Extra hardware advantage exploited by parallelization:</span>
+        <ul class="small">
+          <li>Better utilization of faster storage (cache, memory)</li>
+          <li>Exploratory decomposition</li>
+        </ul>
+      </div>
     </div>
     <div class="center">
-      <svg viewBox="0 0 320 240" class="chart" style="max-width:340px">
-        <line x1="40" y1="200" x2="300" y2="200" class="axis"/>
+      <svg viewBox="0 0 380 240" class="chart" style="max-width:380px">
+        <line x1="40" y1="200" x2="285" y2="200" class="axis"/>
         <line x1="40" y1="200" x2="40" y2="20" class="axis"/>
-        <text x="170" y="232" text-anchor="middle" class="lbl">processing elements p</text>
+        <text x="162" y="232" text-anchor="middle" class="lbl">processing elements p</text>
         <text x="14" y="115" text-anchor="middle" class="lbl" transform="rotate(-90 14 115)">speedup S</text>
         <!-- linear ideal -->
-        <line x1="40" y1="200" x2="300" y2="30" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 4"/>
-        <text x="250" y="40" class="note" fill="#64748b">linear (ideal)</text>
+        <line x1="40" y1="200" x2="285" y2="30" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="240" y="40" class="note" fill="#64748b">linear (ideal)</text>
         <!-- super-linear -->
-        <path d="M40,200 C140,130 220,55 300,18" stroke="#16a34a" stroke-width="2.5" fill="none"/>
+        <path d="M40,200 C135,130 210,55 285,18" stroke="#16a34a" stroke-width="2.5" fill="none"/>
         <text x="120" y="95" class="note" fill="#16a34a">super-linear</text>
         <!-- typical sub-linear -->
-        <path d="M40,200 C130,150 220,120 300,100" class="trend"/>
-        <text x="215" y="135" class="note" fill="#CC0000">typical (sub-linear)</text>
+        <path d="M40,200 C125,150 210,120 285,100" class="trend"/>
+        <text x="205" y="135" class="note" fill="#CC0000">typical (sub-linear)</text>
       </svg>
       <div class="src">Most real curves fall below the diagonal.</div>
     </div>
@@ -185,11 +192,96 @@ SUs = #processors
 
 
 <!-- ==================================================================
-     MODULE 2 — AMDAHL'S LAW
+     MODULE 2 — SCALABILITY
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 2</div>
-  <div class="mod-title">Amdahl's Law</div>
+  <div class="mod-title">Scalability</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Scalability</h2>
+  <div class="cols">
+    <div>
+      <div class="callout">
+        <span class="lbl">Two dimensions must grow</span>
+        <strong>Parallel programs need to accommodate growth in two dimensions:</strong>
+        <ul class="small">
+          <li>Problem size</li>
+          <li>Number of processing elements</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="callout takeaway">
+        <span class="lbl">Scalability</span>
+        <span class="small">Capacity to increase speedup in proportion to the number of processing elements.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>More Definitions</h2>
+  <div class="cols">
+    <div>
+      <div class="callout">
+        <span class="lbl">Problem size</span>
+        <ul class="small">
+          <li>Amount of computation in solving the problem</li>
+          <li>Basic steps of computation in best sequential algorithm
+            <ul>
+              <li>Not just data size</li>
+            </ul>
+          </li>
+          <li>Correlated with serial execution time</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="callout takeaway">
+        <span class="lbl">Scalable parallel systems</span>
+        <span class="small">Able to maintain efficiency by simultaneously increasing number of processing elements and problem size.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Strong vs. Weak Scaling</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Strong scaling</span>Fix the <strong>problem size</strong>, add PEs.<br>Goal: finish the <em>same</em> work faster.<br>This is the world <strong>Amdahl</strong> describes — the serial part caps you.</div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Weak scaling</span>Grow the <strong>problem with p</strong> (fixed work per PE).<br>Goal: solve a <em>bigger</em> problem in the same time.<br>This is the world <strong>Gustafson</strong> describes.</div>
+    </div>
+  </div>
+  <div class="callout"><span class="lbl">Why both matter</span>
+    <span class="small">Programs must accommodate growth in <strong>two dimensions</strong> — problem size <em>and</em> number of PEs. A method great at strong scaling can stall at weak scaling, and vice-versa.</span></div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Isoefficiency — How Big Must the Problem Grow?</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Write efficiency with total overhead \(T_o(W,p)\) and problem size (work) \(W\):</p>
+      <div class="eq small">\( E = \dfrac{1}{1 + \dfrac{T_o(W,p)}{W}} \)</div>
+      <p class="small">To hold \(E\) constant as \(p\) grows, \(W\) must rise to keep \(T_o/W\) fixed:</p>
+      <div class="eq small">\( W = K \cdot T_o(W,p) \)</div>
+      <p class="tiny muted"><code class="inline">W(p)</code> is the <strong>isoefficiency function</strong> — the growth needed to keep efficiency constant.</p>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Reading it</span>
+        <span class="small">
+        <code class="inline">W(p) ≤ O(p)</code> ⇒ <strong>scalable</strong> (work grows ≤ linearly)<br>
+        <code class="inline">W(p) = O(p²)</code> ⇒ <strong>poorly scalable</strong></span></div>
+      <div class="callout takeaway"><span class="lbl">Summing example</span>
+        <span class="small">Overhead \(T_o = 2p\log p\), so
+        <div class="eq small" style="margin-top:.3em">\( W = K\cdot 2p\log p \)</div>
+        slightly worse than linear ⇒ <strong>fairly scalable</strong>.</span></div>
+    </div>
+  </div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -302,32 +394,10 @@ SUs = #processors
     </div>
     <div>
       <div class="callout warn"><span class="lbl">Even worse than the curve</span>Amdahl is an <strong>upper bound</strong>. Real programs fall <em>below</em> it — the parallel part never divides perfectly at zero coordination cost.</div>
-      <div class="callout takeaway"><span class="lbl">Takeaway</span>Attack the <strong>serial fraction first</strong> — it sets the ceiling. Then attack the <strong>overhead</strong> (Module 4) — it pulls you below it.</div>
+      <div class="callout takeaway"><span class="lbl">Takeaway</span>Attack the <strong>serial fraction first</strong> — it sets the ceiling. Then attack the <strong>overhead</strong> (next topic) — it pulls you below it.</div>
       <div class="callout"><span class="lbl">Super-linear speedup</span><span class="small">Occasionally speedup <em>exceeds</em> p — usually more aggregate <strong>cache</strong> so the working set now fits in fast memory (also replication, or a lucky early exit in search).</span></div>
     </div>
   </div>
-</section>
-
-<!-- ==================================================================
-     MODULE 3 — GUSTAFSON & SCALING
-     ================================================================== -->
-<section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Module 3</div>
-  <div class="mod-title">Gustafson's Law &amp; Scaling</div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>Strong vs. Weak Scaling</h2>
-  <div class="cols">
-    <div>
-      <div class="callout"><span class="lbl">Strong scaling</span>Fix the <strong>problem size</strong>, add PEs. Goal: finish the <em>same</em> work faster. This is the world <strong>Amdahl</strong> describes — the serial part caps you.</div>
-    </div>
-    <div>
-      <div class="callout takeaway"><span class="lbl">Weak scaling</span>Grow the <strong>problem with p</strong> (fixed work per PE). Goal: solve a <em>bigger</em> problem in the same time. This is the world <strong>Gustafson</strong> describes.</div>
-    </div>
-  </div>
-  <div class="callout"><span class="lbl">Why both matter</span>
-    <span class="small">Programs must accommodate growth in <strong>two dimensions</strong> — problem size <em>and</em> number of PEs. A method great at strong scaling can stall at weak scaling, and vice-versa.</span></div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -378,36 +448,11 @@ SUs = #processors
   </div>
 </section>
 
-<section data-background-color="#ffffff">
-  <h2>Isoefficiency — How Big Must the Problem Grow?</h2>
-  <div class="cols">
-    <div>
-      <p class="small">Write efficiency with total overhead \(T_o(W,p)\) and problem size (work) \(W\):</p>
-      <div class="eq small">\( E = \dfrac{1}{1 + \dfrac{T_o(W,p)}{W}} \)</div>
-      <p class="small">To hold \(E\) constant as \(p\) grows, \(W\) must rise to keep \(T_o/W\) fixed:</p>
-      <div class="eq small">\( W = K \cdot T_o(W,p) \)</div>
-      <p class="tiny muted"><code class="inline">W(p)</code> is the <strong>isoefficiency function</strong> — the growth needed to keep efficiency constant.</p>
-    </div>
-    <div>
-      <div class="callout"><span class="lbl">Reading it</span>
-        <span class="small">
-        <code class="inline">W(p) ≤ O(p)</code> ⇒ <strong>scalable</strong> (work grows ≤ linearly)<br>
-        <code class="inline">W(p) = O(p²)</code> ⇒ <strong>poorly scalable</strong></span></div>
-      <div class="callout takeaway"><span class="lbl">Summing example</span>
-        <span class="small">Overhead \(T_o = 2p\log p\), so
-        <div class="eq small" style="margin-top:.3em">\( W = K\cdot 2p\log p \)</div>
-        slightly worse than linear ⇒ <strong>fairly scalable</strong>.</span></div>
-    </div>
-  </div>
-</section>
-
-
-
 <!-- ==================================================================
-     MODULE 4 — SOURCES OF OVERHEAD
+     MODULE 3 — SOURCES OF OVERHEAD
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Module 4</div>
+  <div class="mod-num">Module 3</div>
   <div class="mod-title">Sources of Overhead</div>
 </section>
 
@@ -496,10 +541,10 @@ for (i=0; i&lt;n; i++)
 
 
 <!-- ==================================================================
-     MODULE 5 — PROFILING & TRACING
+     MODULE 4 — PROFILING & TRACING
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Module 5</div>
+  <div class="mod-num">Module 4</div>
   <div class="mod-title">Profiling &amp; Tracing Tools</div>
 </section>
 
