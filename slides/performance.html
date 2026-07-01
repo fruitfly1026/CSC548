@@ -88,6 +88,21 @@
 </section>
 
 <section data-background-color="#ffffff">
+  <h2>Performance Metrics at a Glance</h2>
+  <div class="symkey"><span><strong>T<sub>S</sub></strong> — best serial time</span><span><strong>T<sub>P</sub></strong> — parallel time on <em>p</em> PEs</span></div>
+  <table style="font-size:.82em">
+    <tr><th>Metric</th><th>Definition</th><th>What it tells you</th></tr>
+    <tr><td><strong>Execution time</strong></td><td><code class="inline">T<sub>S</sub></code>, <code class="inline">T<sub>P</sub></code></td><td>wall-clock: best serial vs. parallel on <em>p</em> PEs</td></tr>
+    <tr><td class="hi"><strong>Speedup</strong></td><td><code class="inline">S<sub>p</sub> = T<sub>S</sub>/T<sub>P</sub></code></td><td>how many&times; faster &mdash; ideal <code class="inline">S<sub>p</sub> = p</code></td></tr>
+    <tr><td class="hi"><strong>Efficiency</strong></td><td><code class="inline">E = S<sub>p</sub>/p</code></td><td>fraction of a PE usefully used &mdash; ideal <code class="inline">1</code></td></tr>
+    <tr><td><strong>Cost</strong></td><td><code class="inline">C = p &times; T<sub>P</sub></code></td><td>processor-time product &mdash; what you're billed</td></tr>
+    <tr><td><strong>Overhead</strong></td><td><code class="inline">T<sub>o</sub> = p&middot;T<sub>P</sub> &minus; T<sub>S</sub></code></td><td>total extra work beyond the serial computation</td></tr>
+    <tr><td><strong>Scalability</strong></td><td>trend of <code class="inline">S<sub>p</sub></code>, <code class="inline">E</code></td><td>do they hold as <em>p</em> (&amp; problem) grow? (Amdahl / Gustafson)</td></tr>
+  </table>
+  <div class="callout takeaway"><span class="lbl">The through-line</span>Every metric is a function of just two times, <code class="inline">T<sub>S</sub></code> and <code class="inline">T<sub>P</sub></code>. We define each next, then bound them with <strong>Amdahl</strong> &amp; <strong>Gustafson</strong>.</div>
+</section>
+
+<section data-background-color="#ffffff">
   <h2>Metric: Execution Time</h2>
   <div class="symkey"><span><strong>T<sub>S</sub></strong> — best serial time</span><span><strong>T<sub>P</sub></strong> — parallel time on p PEs</span></div>
   <div class="cols">
