@@ -329,7 +329,7 @@ output: 2-way replicated (GFS redundancy)
     <div>
       <p class="small">The open-source counterpart of GFS: redundant storage on commodity hardware, built to <strong>expect and tolerate failures</strong>, optimized for large files and batch reads.</p>
       <div class="callout"><span class="lbl">Layout</span><span class="small">Files = collections of <strong>blocks</strong> (classically 64&nbsp;MB). Every block replicated on <strong>≥ 3</strong> nodes.</span></div>
-      <div class="callout"><span class="lbl">Roles</span><span class="small"><strong>NameNode</strong> holds metadata (files→blocks); <strong>SecondaryNameNode</strong> backs it up; <strong>DataNodes</strong> store &amp; serve blocks.</span></div>
+      <div class="callout"><span class="lbl">Roles</span><span class="small"><strong>NameNode</strong> holds metadata (files→blocks); <strong>SecondaryNameNode</strong> periodically checkpoints the metadata (merges the edit log into the fsimage) — <em>not</em> a failover; <strong>DataNodes</strong> store &amp; serve blocks.</span></div>
     </div>
     <div class="center">
       <svg viewBox="0 0 300 200" class="chart" style="max-width:320px">

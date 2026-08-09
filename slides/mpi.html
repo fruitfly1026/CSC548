@@ -241,7 +241,7 @@ MPI_Send(start, count, datatype,
       <ul class="tiny">
         <li>Buffer described by <code class="inline">(start, count, datatype)</code></li>
         <li><code class="inline">dest</code> = rank of target in <code class="inline">comm</code></li>
-        <li>On return, the data is delivered — <strong>buffer is reusable</strong> (but may not yet be received at the target)</li>
+        <li>On return, the <strong>send buffer may be reused</strong> — the message may have been buffered internally and <em>not</em> yet received at the target</li>
       </ul>
     </div>
     <div>
@@ -531,7 +531,7 @@ MPI_Comm_split(MPI_COMM_WORLD,
     <div>
       <table style="font-size:.76em">
         <tr><th>MPI type</th><th>C type</th></tr>
-        <tr><td><code class="inline">MPI_CHAR</code></td><td>signed char</td></tr>
+        <tr><td><code class="inline">MPI_CHAR</code></td><td>char</td></tr>
         <tr><td class="hi"><code class="inline">MPI_INT</code></td><td>signed int</td></tr>
         <tr><td><code class="inline">MPI_LONG</code></td><td>signed long int</td></tr>
         <tr><td><code class="inline">MPI_FLOAT</code></td><td>float</td></tr>

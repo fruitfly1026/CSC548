@@ -400,7 +400,7 @@ void whoami() {
   int id = omp_get_thread_num();
   int P  = omp_get_num_threads();
   int s = id*N/P, e = (id+1)*N/P;
-  for (i=s; i&lt;e; i++)
+  for (int i=s; i&lt;e; i++)
     a[i] = a[i] + b[i];
 }
 </code></pre>
@@ -518,7 +518,7 @@ printf("%d", IS);   // IS = value at j==999 (defined, but not a real sum!)
       <p class="small">Different from <code class="inline">private</code>, which masks the global and is re-allocated each region.</p>
     </div>
     <div>
-      <div class="callout"><span class="lbl">copyprivate / copyin</span>Broadcast one thread's value of a threadprivate into all threads' copies.</div>
+      <div class="callout"><span class="lbl">copyin vs copyprivate</span><code class="inline">copyin(A)</code> broadcasts the <strong>master's</strong> <code class="inline">threadprivate</code> value to the whole team at a <code class="inline">parallel</code> region; <code class="inline">copyprivate</code> broadcasts a <em>private</em> value out of a <code class="inline">single</code> block to the other threads.</div>
       <pre><code class="language-c" data-trim>
 int A[N];
 #pragma omp threadprivate(A)
@@ -619,7 +619,7 @@ for (i = 0; i &lt; n; i++) a[i] *= 2;
   <h2>Implicit Barriers &amp; False Sharing</h2>
   <div class="cols">
     <div>
-      <div class="callout"><span class="lbl">Implicit barriers at</span><span class="small">end of <code class="inline">parallel</code>, <code class="inline">for</code>, <code class="inline">sections</code>, <code class="inline">single</code> — unless <code class="inline">nowait</code>.</span></div>
+      <div class="callout"><span class="lbl">Implicit barriers at</span><span class="small">end of <code class="inline">parallel</code> (mandatory — cannot be removed), and of <code class="inline">for</code> / <code class="inline">sections</code> / <code class="inline">single</code> — those three removable with <code class="inline">nowait</code>.</span></div>
       <p class="small">Use <code class="inline">nowait</code> to overlap independent phases — but only when the next phase truly doesn't depend on the previous.</p>
     </div>
     <div>
@@ -663,7 +663,7 @@ sum[id] += 4.0/(1.0+x*x);
 {
   p = head;
   while (p) {
-    #pragma omp task
+    #pragma omp task firstprivate(p)   // capture this node
       process(p);
     p = p-&gt;next;
   }

@@ -339,22 +339,22 @@ SUs = #processors
         <text x="54" y="284">0</text><text x="54" y="219">10</text><text x="54" y="154">20</text>
         <text x="54" y="89">30</text><text x="54" y="24">40</text>
       </g>
-      <!-- f=0.50 (Smax=2): S = 1/(0.5+0.5/p) -->
+      <!-- f=0.50 (cap 2): S = 1/(0.5+0.5/p); y = 280 - 6.5*S -->
       <polyline fill="none" stroke="#94a3b8" stroke-width="2.5"
-        points="60,280 133,273 206,267 280,265 353,263 427,262 500,261 573,261 647,261 720,261"/>
-      <text x="600" y="255" class="note" fill="#64748b">f=0.50  (cap 2&times;)</text>
-      <!-- f=0.90 (Smax=10) -->
+        points="60,274 133,271 206,270 280,268 353,268 427,267 500,267 573,267 647,267 720,267"/>
+      <text x="610" y="262" class="note" fill="#64748b">f=0.50  (cap 2&times;)</text>
+      <!-- f=0.90 (cap 10) -->
       <polyline fill="none" stroke="#3b82f6" stroke-width="2.5"
-        points="60,280 133,247 206,221 280,206 353,196 427,190 500,187 573,185 647,184 720,183"/>
-      <text x="610" y="178" class="note" fill="#3b82f6">f=0.90  (cap 10&times;)</text>
-      <!-- f=0.95 (Smax=20) -->
+        points="60,274 133,268 206,260 280,249 353,238 427,229 500,223 573,219 647,217 720,216"/>
+      <text x="612" y="210" class="note" fill="#3b82f6">f=0.90  (cap 10&times;)</text>
+      <!-- f=0.95 (cap 20) -->
       <polyline fill="none" stroke="#16a34a" stroke-width="2.5"
-        points="60,280 133,242 206,205 280,177 353,159 427,148 500,141 573,138 647,136 720,135"/>
-      <text x="610" y="128" class="note" fill="#16a34a">f=0.95  (cap 20&times;)</text>
-      <!-- f=0.99 (Smax=100) clipped at top of chart -->
+        points="60,274 133,268 206,257 280,242 353,221 427,198 500,180 573,167 647,159 720,155"/>
+      <text x="612" y="150" class="note" fill="#16a34a">f=0.95  (cap 20&times;)</text>
+      <!-- f=0.99 (cap 100): curve exceeds S=40 by p=128, clips at chart top -->
       <polyline fill="none" stroke="#CC0000" stroke-width="2.5"
-        points="60,280 133,237 206,184 280,131 353,86 427,57 500,41 573,33 647,28 720,25"/>
-      <text x="450" y="46" class="note" fill="#CC0000">f=0.99  (cap 100&times;)</text>
+        points="60,274 133,267 206,255 280,231 353,190 427,121 500,25 573,20 647,20 720,20"/>
+      <text x="540" y="40" class="note" fill="#CC0000">f=0.99  (cap 100&times;)</text>
     </svg>
     <div class="src">Each curve flattens toward its ceiling <code class="inline">1/(1−f)</code>. Adding PEs past the knee buys almost nothing.</div>
   </div>

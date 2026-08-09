@@ -154,7 +154,7 @@ for (int i = 0; i &lt; n; i++)
     <tr><th>Extension</th><th>Year</th><th>Register</th><th>Width</th><th><code class="inline">float</code> lanes</th><th><code class="inline">double</code> lanes</th></tr>
     <tr><td class="hi">MMX</td><td>1997</td><td>MM0–7 (reused FP)</td><td>64-bit</td><td>integer only</td><td>—</td></tr>
     <tr><td class="hi">SSE / SSE2…4</td><td>1999</td><td>XMM0–15</td><td>128-bit</td><td>4</td><td>2</td></tr>
-    <tr><td class="hi">AVX / AVX2</td><td>2011</td><td>YMM0–15</td><td>256-bit</td><td>8</td><td>4</td></tr>
+    <tr><td class="hi">AVX / AVX2</td><td>2011 / '13</td><td>YMM0–15</td><td>256-bit</td><td>8</td><td>4</td></tr>
     <tr><td class="hi">AVX-512</td><td>2016</td><td>ZMM0–31</td><td>512-bit</td><td>16</td><td>8</td></tr>
   </table>
   <div class="callout"><span class="lbl">The pattern</span>Each generation <strong>doubles</strong> the register width (and adds registers). Wider register = more lanes per instruction = more work per cycle. AVX-512 also adds dedicated <strong>mask registers</strong> (k0–k7).</div>

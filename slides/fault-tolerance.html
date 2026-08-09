@@ -214,7 +214,7 @@
         <tr><td>System MTBF <code class="inline">M</code></td><td>4 h = 240 min</td></tr>
         <tr><td class="hi"><code class="inline">τ = √(2·C·M)</code></td><td class="hi">√(2·1·240) ≈ <strong>22 min</strong></td></tr>
       </table>
-      <p class="small">So checkpoint roughly every <strong>22 minutes</strong>. Halve the MTBF (more nodes) and the interval drops to ≈ 15 min; make checkpoints 4× cheaper and it rises to ≈ 44 min.</p>
+      <p class="small">So checkpoint roughly every <strong>22 minutes</strong>. Halve the MTBF (more nodes) and the interval drops to ≈ 15 min; make checkpoints 4× more expensive and it rises to ≈ 44 min.</p>
       <p class="tiny muted">Wasted time per failure ≈ ½·τ (expected lost work) + C (the write). Minimizing total overhead yields the √ formula.</p>
     </div>
   </div>
@@ -324,7 +324,7 @@
   <div class="cols w-64">
     <div>
       <div class="callout takeaway"><span class="lbl">Idea</span>Encode redundancy <strong>in the data itself</strong>, so the algorithm can detect — and often locate and correct — a corrupted value <strong>without any rollback</strong>. The classic case is dense linear algebra.</div>
-      <p class="small"><strong>Matrix-multiply checksums.</strong> Augment <code class="inline">A</code> with a <em>row-checksum</em> column (each row's element sum) and <code class="inline">B</code> with a <em>column-checksum</em> row. Then in <code class="inline">C = A·B</code>, the checksum row/column are <strong>preserved</strong> by the multiply:</p>
+      <p class="small"><strong>Matrix-multiply checksums.</strong> Augment <code class="inline">A</code> with a <em>column-checksum</em> row (each column's sum) and <code class="inline">B</code> with a <em>row-checksum</em> column (each row's sum). Then in <code class="inline">C = A·B</code>, the checksum row/column are <strong>preserved</strong> by the multiply:</p>
       <div class="eq small">\( \sum_j C_{ij} = C^{r}_i,\qquad \sum_i C_{ij} = C^{c}_j \)</div>
       <p class="small">After the multiply, recompute each row/column sum and compare to the stored checksum. A <strong>mismatch in row <em>i</em> and column <em>j</em></strong> pinpoints the bad entry <code class="inline">C<sub>ij</sub></code>; the checksum difference gives the <strong>correction</strong> to add back.</p>
       <div class="callout"><span class="lbl">Cross-link → Linear Algebra advanced topic</span>ABFT lives inside the matmul/factorization kernels covered there; it recovers <em>in place</em>, complementing checkpoint/restart.</div>

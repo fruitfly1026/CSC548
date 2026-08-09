@@ -261,7 +261,7 @@ if (threadIdx.x &lt; 16) {
     </div>
     <div>
       <div class="callout warn"><span class="lbl">Cost</span>Not all ALUs do useful work while a path runs — the masked lanes idle.</div>
-      <div class="callout"><span class="lbl">Worst case</span>Heavy divergence can drop you to as low as <strong>1/8 of peak</strong> throughput.</div>
+      <div class="callout"><span class="lbl">Worst case</span>A fully divergent 32-thread warp serializes all 32 paths — as low as <strong>1/32 of peak</strong> throughput.</div>
       <span class="tiny muted">No divergence cost if all 32 lanes take the same branch.</span>
     </div>
   </div>

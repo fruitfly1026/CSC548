@@ -418,7 +418,7 @@ print sum;
     <div>
       <pre><code class="language-c" data-trim>
 // parent and child already spawned
-id = getpid();
+id = get_rank();            // logical rank: 0 or 1
 local_iter = 4;
 start_iter = id * local_iter;
 end_iter   = start_iter + local_iter;
@@ -541,7 +541,7 @@ if (id == 0) {
     <div>
       <pre><code class="language-c" data-trim>
 shared [N*P/THREADS] double A[N][P]; // rows of A
-shared [N*P/THREADS] double C[N][M]; // rows of C
+shared [N*M/THREADS] double C[N][M]; // rows of C
 shared [M/THREADS]   double B[P][M]; // cols of B
 
 void main(void) {
