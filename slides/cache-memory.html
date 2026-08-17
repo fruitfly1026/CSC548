@@ -23,7 +23,7 @@
   <div class="eyebrow">CSC 548 · Parallel Systems</div>
   <h1>Cache &amp; Memory Systems</h1>
   <div class="sub">The memory hierarchy, from a <strong>programmer's</strong> view</div>
-  <div class="meta">Instructor: Jiajia Li<br>Fall 2026<br>10/05/2026</div>
+  <div class="meta">Instructor: Jiajia Li<br>Fall 2026<br>09/23/2026</div>
   <aside class="notes">
     In CSC 548 we treat caches lightly and from a programmer's perspective — the deep architecture is
     CSC 506's job. The goal here is the handful of things a parallel programmer <em>must</em> know:
@@ -591,7 +591,7 @@ for (ii=0; ii&lt;n; ii+=b)
   <div class="cols">
     <div>
       <div class="callout"><span class="lbl">Use the library</span><span class="small">Vendor <strong>BLAS</strong> (MKL, OpenBLAS, cuBLAS) already does multi-level tiling, packing &amp; vectorization. <strong>Don't hand-roll GEMM</strong> for production &mdash; call <code class="inline">dgemm</code>.</span></div>
-      <div class="callout"><span class="lbl">Same trick everywhere</span><span class="small">Tiling reappears as <strong>shared-memory tiling</strong> on the GPU (Topic 6) and <strong>SUMMA</strong> across nodes.</span></div>
+      <div class="callout"><span class="lbl">Same trick everywhere</span><span class="small">Tiling reappears as <strong>shared-memory tiling</strong> on the GPU (Topic 8) and <strong>SUMMA</strong> across nodes.</span></div>
     </div>
     <div>
       <div class="callout takeaway"><span class="lbl">Strassen: fewer flops</span><span class="small">A 2&times;2 multiply with <strong>7</strong> products instead of 8 &rarr; recursion gives <code class="inline">O(n<sup>2.81</sup>)</code> vs <code class="inline">n&sup3;</code>. Faster for large <code class="inline">n</code>, but more memory and worse stability.</span></div>

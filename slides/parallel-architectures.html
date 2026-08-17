@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSC 548 · Topic 7 — Parallel Architectures</title>
+
+<!-- reveal.js core (CDN) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/theme.css?v=13">
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================ TITLE ============================ -->
+<section class="title-slide" data-background-color="#ffffff">
+  <div class="eyebrow">CSC 548 · Parallel Systems</div>
+  <h1>Parallel Architectures</h1>
+  <div class="sub">How parallel machines are <strong>organized</strong> — and why it shapes your code</div>
+  <div class="meta">Instructor: Jiajia Li<br>Fall 2026<br>Topic 7 · Two lectures: 09/30 &amp; 10/05/2026</div>
+  <aside class="notes">
+    Topic 7 spans two lectures. Lecture 1 (09/30) is the architectural map: Flynn's taxonomy, the shared-
+    vs distributed-memory split, UMA/NUMA/CC-NUMA, and the node/cluster hierarchy. Lecture 2 (10/05) is a
+    gentle, introductory treatment of cache coherence and memory consistency — the architectural view, not
+    the protocol mechanics. The detailed MESI protocol and cache internals live in Topic 6 (Cache &amp;
+    Memory); interconnect networks get their own lecture in Topic 9. The through-line: the memory model a
+    machine hands you decides the programming model you must use.
+  </aside>
+</section>
+
+<!-- Agenda -->
+<section data-background-color="#ffffff">
+  <h2>Agenda — Two Lectures</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Lecture 1 · 09/30 — The Machine Map</span><span class="small">
+        Flynn's taxonomy (SISD/SIMD/MISD/MIMD), SPMD vs MPMD, tightly vs loosely coupled, shared- vs
+        distributed-memory, UMA/NUMA/CC-NUMA, multicore/SMP/clusters, an interconnect preview.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Lecture 2 · 10/05 — Coherence &amp; Consistency</span><span class="small">
+        Why coherence is needed, snooping vs directory-based coherence (conceptual), then memory
+        consistency: sequential vs relaxed models, and why fences &amp; atomics exist. Kept introductory.</span></div>
+    </div>
+  </div>
+  <div class="callout"><span class="lbl">Theme</span><span class="small">There is <em>no</em> single parallel machine model. The <strong>memory organization</strong> you're given dictates how you must program it — and once memory is cached &amp; shared, hardware owes you a <strong>coherence</strong> and a <strong>consistency</strong> guarantee.</span></div>
+</section>
+
+<!-- ############################################################
+     LECTURE 1 — THE MACHINE MAP
+     ############################################################ -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Lecture 1 · 09/30</div>
+  <div class="mod-title">The Parallel Machine Map</div>
+</section>
+
+<!-- ==================================================================
+     MODULE 1 — CLASSIFYING PARALLEL MACHINES
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 1</div>
+  <div class="mod-title">Classifying Parallel Machines</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Why We Need a Taxonomy</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">No single standard</span>Unlike the one <strong>von Neumann</strong> model for serial machines, there is <strong>no single standard</strong> for parallel machines &mdash; dozens of architectures have been built and are in use.</div>
+      <p class="small">The modern trend: fewer fully <em>custom</em> designs, more <strong>commodity</strong> CPUs &amp; GPUs wired together with <strong>specialized interconnects</strong>. A taxonomy lets us reason about a machine we've never seen.</p>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Two lenses we'll use</span><span class="small">Every machine can be placed along two independent axes:
+        <br>&bull; <strong>Flynn's taxonomy</strong> &mdash; by instruction &amp; data streams (this module).
+        <br>&bull; <strong>Memory model</strong> &mdash; shared vs. distributed, UMA / NUMA (Module 2).</span></div>
+      <p class="tiny muted">A given machine is usually a <em>point</em> in both spaces at once, e.g. "a MIMD, distributed-memory, CC-NUMA-per-node cluster."</p>
+    </div>
+  </div>
+  <aside class="notes">
+    Emphasize that the two lenses are orthogonal. Students often conflate "SIMD" with "shared memory" —
+    they are unrelated classifications. A GPU is SIMD-ish (SIMT) but has its own distributed device memory;
+    a multi-socket Xeon is MIMD with shared NUMA memory.
+  </aside>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Flynn's Taxonomy</h2>
+  <div class="symkey">
+    <span><strong>IS</strong> instruction stream(s)</span>
+    <span><strong>DS</strong> data stream(s)</span>
+    <span><strong>PE</strong> processing element</span>
+  </div>
+  <div class="cols w-64">
+    <div>
+      <table style="font-size:.82em">
+        <tr><th></th><th>Single data</th><th>Multiple data</th></tr>
+        <tr><td><strong>Single instr.</strong></td><td class="hi">SISD<br><span class="tiny muted">plain serial CPU</span></td><td>SIMD<br><span class="tiny muted">vector / GPU lanes</span></td></tr>
+        <tr><td><strong>Multiple instr.</strong></td><td>MISD<br><span class="tiny muted">rare</span></td><td class="hi">MIMD<br><span class="tiny muted">multicore, clusters</span></td></tr>
+      </table>
+      <p class="small">Classify a machine by how many <strong>instruction streams</strong> and <strong>data streams</strong> it runs at once (Flynn, 1966).</p>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">SIMD intuition</span>"Everyone flip a coin; if heads, raise your hand." One order, executed by all on their own datum.</div>
+      <div class="callout"><span class="lbl">MIMD intuition</span>Each processor runs its <em>own</em> program on its <em>own</em> data, on its own schedule.</div>
+      <div class="callout takeaway"><span class="lbl">Where the course lives</span>Most machines you'll program are <strong>MIMD</strong>; GPUs add <strong>SIMD</strong> lanes underneath.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    The taxonomy is coarse — that's the point and the criticism. It captures the control model, not the
+    memory model. Two SIMD lanes vs. two full MIMD cores differ mainly in whether they fetch one shared
+    instruction or two independent instruction streams.
+  </aside>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Flynn's Four Classes in Detail</h2>
+  <div class="cols">
+    <div class="callout fragment"><span class="lbl">SISD</span><span class="small"><strong>Single Instruction, Single Data.</strong> One instruction stream on one data stream &mdash; a classic single-core CPU. <em>No parallelism</em> (though pipelining &amp; superscalar hide inside it).</span></div>
+    <div class="callout fragment"><span class="lbl">SIMD</span><span class="small"><strong>Single Instruction, Multiple Data.</strong> One instruction applied to many data elements in lockstep &mdash; <strong>vector units (AVX)</strong> and <strong>GPU warps</strong>. The engine of <em>data parallelism</em>.</span></div>
+  </div>
+  <div class="cols">
+    <div class="callout fragment"><span class="lbl">MISD</span><span class="small"><strong>Multiple Instruction, Single Data.</strong> Many instruction streams on one data stream &mdash; <strong>rare</strong>; occasionally cited for systolic arrays or fault-tolerant pipelines (same datum checked several ways).</span></div>
+    <div class="callout takeaway fragment"><span class="lbl">MIMD</span><span class="small"><strong>Multiple Instruction, Multiple Data.</strong> Independent processors, each with its own program &amp; data &mdash; <strong>multicore CPUs &amp; clusters</strong>. The general parallel machine; in practice usually run as <strong>SPMD</strong>.</span></div>
+  </div>
+  <div class="callout"><span class="lbl">Real machines mix them</span>A <strong>MIMD</strong> cluster of multicore nodes, each core with <strong>SIMD</strong> vector units, each node with a <strong>SIMT</strong> GPU. You'll write mostly MIMD (MPI / OpenMP) with SIMD &amp; GPU underneath.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Concrete Machines by Flynn Class</h2>
+  <table style="font-size:.8em;margin-top:.3em">
+    <tr><th>Class</th><th>Historic</th><th>Today</th><th>You program it with</th></tr>
+    <tr><td class="hi"><strong>SISD</strong></td><td>early mainframes, PDP-11</td><td>one core of any CPU</td><td>plain C / any language</td></tr>
+    <tr><td class="hi"><strong>SIMD</strong></td><td>Cray-1 vectors, CM-1, MasPar, ILLIAC&nbsp;IV</td><td>SSE / AVX / AVX-512, ARM SVE, GPU warps (SIMT)</td><td>auto-vectorizer, intrinsics, CUDA</td></tr>
+    <tr><td><strong>MISD</strong></td><td>systolic arrays (debated)</td><td>~none in general use; fault-tolerant lockstep cores</td><td>&mdash;</td></tr>
+    <tr><td class="hi"><strong>MIMD</strong></td><td>Cosmic Cube, CM-5, IBM SP</td><td>multicore CPUs, multi-socket servers, clusters, Top500 machines</td><td>OpenMP, MPI, pthreads</td></tr>
+  </table>
+  <div class="callout"><span class="lbl">SIMT is a variant of SIMD</span><span class="small">NVIDIA's <strong>SIMT</strong> (Single Instruction, Multiple Thread) is SIMD with per-lane masking: a <strong>warp</strong> of 32 threads shares one instruction, but threads may diverge on branches (at a cost). Detail in <strong>Topic 8 (GPU)</strong>.</span></div>
+  <aside class="notes">
+    MISD is the empty box everyone argues about. The honest answer: no commercially important machine is
+    purely MISD; it survives mostly as a teaching category and in safety-critical lockstep designs (e.g.,
+    automotive/aerospace cores running the same data through redundant pipelines to catch faults).
+  </aside>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>SIMD &amp; MIMD, Up Close</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">SIMD &mdash; one controller, many lanes</span>
+        <span class="small">A single control unit broadcasts each instruction to many ALUs that run it in <strong>lockstep</strong> on different data.</span>
+        <ul class="tiny" style="margin:.35em 0 0 .9em">
+          <li><strong>Vector processors</strong> (Cray) and CPU <strong>SIMD units</strong> (SSE / AVX / AVX-512)</li>
+          <li><strong>Array processors</strong> (historic: CM-1, MasPar)</li>
+          <li><strong>GPUs</strong> &mdash; <strong>SIMT</strong>: a warp of 32 threads shares one instruction</li>
+          <li>Great for <strong>regular, data-parallel</strong> work; hurt by <strong>branch divergence</strong></li>
+        </ul></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">MIMD &mdash; independent processors</span>
+        <span class="small">Each processor has its <em>own</em> control &amp; data &mdash; the general parallel machine. Split by memory:</span>
+        <ul class="tiny" style="margin:.35em 0 0 .9em">
+          <li><strong>Multiprocessors</strong> &mdash; shared memory (SMP, NUMA) &rarr; program with <strong>OpenMP</strong></li>
+          <li><strong>Multicomputers</strong> &mdash; distributed memory / clusters &rarr; program with <strong>MPI</strong></li>
+          <li>Styles: <strong>SPMD</strong> (one program, many data) and <strong>MPMD</strong></li>
+        </ul></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>SPMD vs. MPMD — How We Actually Use MIMD</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">SPMD</span><span class="small"><strong>Single Program, Multiple Data.</strong> <em>Every</em> process runs the <strong>same</strong> executable; behavior differs by <strong>rank / thread id</strong>. This is how almost all MPI and OpenMP code is written.</span></div>
+      <pre><code class="language-c" data-trim>
+int rank; MPI_Comm_rank(MPI_COMM_WORLD, &amp;rank);
+if (rank == 0) collect_results();   // same binary,
+else           compute_chunk(rank); // branch by id
+</code></pre>
+      <p class="tiny muted">SPMD is a <em>programming style</em>, not a hardware class — it runs on MIMD hardware.</p>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">MPMD</span><span class="small"><strong>Multiple Program, Multiple Data.</strong> Different executables cooperate &mdash; e.g. a coupled <strong>ocean + atmosphere</strong> climate model, or a master/worker with distinct binaries. MPI supports it via <code class="inline">MPMD</code> launch (<code class="inline">mpirun -np 2 ocean : -np 6 atmos</code>).</span></div>
+      <div class="callout takeaway"><span class="lbl">Rule of thumb</span><span class="small">Reach for <strong>SPMD</strong> by default (one code path, easier to maintain); use <strong>MPMD</strong> only when the tasks are genuinely different programs.</span></div>
+    </div>
+  </div>
+  <aside class="notes">
+    Key distinction to nail: Flynn's MIMD describes the hardware's capability (independent instruction
+    streams); SPMD/MPMD describe how the programmer organizes the software on top of it. A single MPI
+    program launched on 1000 ranks is SPMD running on MIMD hardware — the most common HPC pattern by far.
+  </aside>
+</section>
+
+<!-- ==================================================================
+     MODULE 2 — COUPLING & MEMORY MODELS
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 2</div>
+  <div class="mod-title">Coupling &amp; Memory Organization</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Tightly- vs. Loosely-Coupled</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Tightly coupled</span><span class="small">Processors share <strong>one physical memory</strong> and communicate through it at hardware speed (ns). One OS image. &rarr; <strong>multiprocessors</strong> (SMP, NUMA).</span></div>
+      <p class="small">Communication is <em>implicit</em>: write a variable, another core reads it. Fast, but the shared memory limits how many processors you can add.</p>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Loosely coupled</span><span class="small">Each node has its <strong>own memory &amp; OS</strong>; they communicate by <strong>messages</strong> over a network (&micro;s). &rarr; <strong>multicomputers</strong> / clusters.</span></div>
+      <p class="small">Communication is <em>explicit</em>: you must send &amp; receive. Slower per message, but scales to <strong>millions</strong> of cores.</p>
+    </div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">The trade</span>Tighter coupling = easier programming, harder scaling. Looser coupling = harder programming, near-unlimited scaling. Real machines are <strong>loosely-coupled clusters of tightly-coupled nodes</strong>.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Shared vs. Distributed Memory</h2>
+  <div class="cols">
+    <div class="center">
+      <div class="code-label">Shared memory (one address space)</div>
+      <svg viewBox="0 0 300 170" class="chart" style="max-width:320px">
+        <rect x="20" y="18" width="60" height="26" rx="4" fill="#3b82f6"/><text x="50" y="36" text-anchor="middle" fill="#fff" class="lbl">PE0</text>
+        <rect x="120" y="18" width="60" height="26" rx="4" fill="#3b82f6"/><text x="150" y="36" text-anchor="middle" fill="#fff" class="lbl">PE1</text>
+        <rect x="220" y="18" width="60" height="26" rx="4" fill="#3b82f6"/><text x="250" y="36" text-anchor="middle" fill="#fff" class="lbl">PE2</text>
+        <line x1="50" y1="44" x2="50" y2="88" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="150" y1="44" x2="150" y2="88" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="250" y1="44" x2="250" y2="88" stroke="#16181d" stroke-width="1.5"/>
+        <rect x="20" y="88" width="260" height="16" rx="3" fill="#16181d"/>
+        <rect x="60" y="122" width="180" height="30" rx="5" fill="#CC0000"/><text x="150" y="142" text-anchor="middle" fill="#fff" class="lbl">one shared memory</text>
+        <line x1="150" y1="104" x2="150" y2="122" stroke="#16181d" stroke-width="1.5"/>
+      </svg>
+      <div class="src">Communicate by <strong>reading/writing</strong> shared variables &rarr; OpenMP.</div>
+    </div>
+    <div class="center">
+      <div class="code-label">Distributed memory (private per node)</div>
+      <svg viewBox="0 0 300 170" class="chart" style="max-width:320px">
+        <g>
+          <rect x="18" y="18" width="70" height="26" rx="4" fill="#3b82f6"/><text x="53" y="36" text-anchor="middle" fill="#fff" class="lbl">PE0</text>
+          <rect x="18" y="46" width="70" height="20" rx="3" fill="#CC0000"/><text x="53" y="61" text-anchor="middle" fill="#fff" class="lbl">Mem0</text>
+          <rect x="115" y="18" width="70" height="26" rx="4" fill="#3b82f6"/><text x="150" y="36" text-anchor="middle" fill="#fff" class="lbl">PE1</text>
+          <rect x="115" y="46" width="70" height="20" rx="3" fill="#CC0000"/><text x="150" y="61" text-anchor="middle" fill="#fff" class="lbl">Mem1</text>
+          <rect x="212" y="18" width="70" height="26" rx="4" fill="#3b82f6"/><text x="247" y="36" text-anchor="middle" fill="#fff" class="lbl">PE2</text>
+          <rect x="212" y="46" width="70" height="20" rx="3" fill="#CC0000"/><text x="247" y="61" text-anchor="middle" fill="#fff" class="lbl">Mem2</text>
+        </g>
+        <line x1="53" y1="66" x2="53" y2="104" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="150" y1="66" x2="150" y2="104" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="247" y1="66" x2="247" y2="104" stroke="#16181d" stroke-width="1.5"/>
+        <rect x="18" y="104" width="264" height="16" rx="3" fill="#16181d"/>
+        <text x="150" y="140" text-anchor="middle" class="note">interconnection network</text>
+      </svg>
+      <div class="src">Communicate by <strong>messages</strong> over the network &rarr; MPI.</div>
+    </div>
+  </div>
+  <div class="callout"><span class="lbl">The programming model follows the memory model</span><span class="small">Shared address space &rarr; think in <strong>threads &amp; locks</strong>. Separate address spaces &rarr; think in <strong>send/receive</strong>. Getting this mapping right is half of parallel programming.</span></div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Shared Memory: Bus-Based SMP</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Bus-based SMP</span>Any processor can read/write <strong>any</strong> memory location over a shared bus &mdash; one global address space, uniform access.</div>
+      <p class="small"><strong>Advantage:</strong> cheap connection; threads communicate just by touching shared variables.</p>
+      <p class="small"><strong>Limit:</strong> the <strong>bus bandwidth</strong> &mdash; it doesn't scale past a modest number of processors, and two PEs modifying the same data need <strong>locks</strong>.</p>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 180" class="chart" style="max-width:330px">
+        <g>
+          <rect x="20" y="20" width="64" height="26" rx="4" fill="#3b82f6"/><text x="52" y="38" text-anchor="middle" fill="#fff" class="lbl">PE0</text>
+          <rect x="118" y="20" width="64" height="26" rx="4" fill="#3b82f6"/><text x="150" y="38" text-anchor="middle" fill="#fff" class="lbl">PE1</text>
+          <rect x="216" y="20" width="64" height="26" rx="4" fill="#3b82f6"/><text x="248" y="38" text-anchor="middle" fill="#fff" class="lbl">PE&thinsp;N-1</text>
+        </g>
+        <line x1="52" y1="46" x2="52" y2="90" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="150" y1="46" x2="150" y2="90" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="248" y1="46" x2="248" y2="90" stroke="#16181d" stroke-width="1.5"/>
+        <rect x="20" y="90" width="260" height="14" rx="3" fill="#16181d"/>
+        <text x="150" y="118" text-anchor="middle" class="note">shared bus</text>
+        <g>
+          <rect x="20" y="134" width="64" height="26" rx="4" fill="#CC0000"/><text x="52" y="152" text-anchor="middle" fill="#fff" class="lbl">Mem0</text>
+          <rect x="118" y="134" width="64" height="26" rx="4" fill="#CC0000"/><text x="150" y="152" text-anchor="middle" fill="#fff" class="lbl">Mem1</text>
+          <rect x="216" y="134" width="64" height="26" rx="4" fill="#CC0000"/><text x="248" y="152" text-anchor="middle" fill="#fff" class="lbl">Mem&thinsp;k</text>
+        </g>
+        <line x1="52" y1="104" x2="52" y2="134" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="150" y1="104" x2="150" y2="134" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="248" y1="104" x2="248" y2="134" stroke="#16181d" stroke-width="1.5"/>
+      </svg>
+      <div class="src">One bus, one memory pool — the classic UMA machine.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    The single bus is the scaling wall for UMA. Every core snoops it; add cores and contention rises.
+    This is exactly why real many-core and multi-socket systems moved to distributed (NUMA) memory with a
+    point-to-point interconnect instead of one shared bus.
+  </aside>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Memory Organization: UMA, NUMA, CC-NUMA</h2>
+  <div class="symkey">
+    <span><strong>UMA</strong> Uniform Memory Access</span>
+    <span><strong>NUMA</strong> Non-Uniform Memory Access</span>
+    <span><strong>CC-NUMA</strong> Cache-Coherent NUMA</span>
+  </div>
+  <p class="small">Two axes: <strong>address space</strong> (shared vs. message-passing) and <strong>physical memory</strong> (centralized vs. distributed). NUMA / CC-NUMA are <strong>distributed <em>shared</em> memory</strong>.</p>
+  <table style="font-size:.82em;margin:.2em auto .6em">
+    <tr><th>Axis</th><th>UMA</th><th>NUMA / CC-NUMA</th><th>Message-passing cluster</th></tr>
+    <tr><td><strong>Address space</strong></td><td class="hi">shared</td><td class="hi">shared</td><td>separate (private)</td></tr>
+    <tr><td><strong>Physical memory</strong></td><td>centralized</td><td class="hi">distributed</td><td>distributed</td></tr>
+  </table>
+  <div class="cols c3">
+    <div class="callout fragment" data-fragment-index="1"><span class="lbl">UMA</span><span class="small"><strong>Centralized shared memory</strong> &mdash; one pool over a shared bus; uniform latency but doesn't scale.</span></div>
+    <div class="callout fragment" data-fragment-index="2"><span class="lbl">NUMA</span><span class="small"><strong>Distributed shared memory</strong> &mdash; memory across nodes (local fast, remote slower); one address space; scales.</span></div>
+    <div class="callout takeaway fragment" data-fragment-index="4"><span class="lbl">CC-NUMA</span><span class="small"><strong>NUMA + hardware cache coherence</strong> &mdash; most multi-socket servers today.</span></div>
+  </div>
+  <div class="cols">
+    <div>
+      <div class="callout warn fragment" data-fragment-index="3"><span class="lbl">The new problem: coherence</span>The same variable cached in two PEs may hold <strong>different values</strong> &mdash; the cache controller must enforce coherence. <strong>CC-NUMA</strong> solves it in hardware. <span class="muted">(Lecture 2.)</span></div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 150" class="chart" style="max-width:400px">
+        <g>
+          <rect x="20" y="14" width="64" height="22" rx="4" fill="#3b82f6"/><text x="52" y="30" text-anchor="middle" fill="#fff" class="lbl">PE0</text>
+          <rect x="118" y="14" width="64" height="22" rx="4" fill="#3b82f6"/><text x="150" y="30" text-anchor="middle" fill="#fff" class="lbl">PE1</text>
+          <rect x="216" y="14" width="64" height="22" rx="4" fill="#3b82f6"/><text x="248" y="30" text-anchor="middle" fill="#fff" class="lbl">PE&thinsp;p-1</text>
+          <rect x="20" y="40" width="64" height="18" rx="3" fill="#cbd5e1"/><text x="52" y="53" text-anchor="middle" class="lbl">cache</text>
+          <rect x="118" y="40" width="64" height="18" rx="3" fill="#cbd5e1"/><text x="150" y="53" text-anchor="middle" class="lbl">cache</text>
+          <rect x="216" y="40" width="64" height="18" rx="3" fill="#cbd5e1"/><text x="248" y="53" text-anchor="middle" class="lbl">cache</text>
+          <rect x="20" y="60" width="64" height="18" rx="3" fill="#CC0000"/><text x="52" y="73" text-anchor="middle" fill="#fff" class="lbl">Mem0</text>
+          <rect x="118" y="60" width="64" height="18" rx="3" fill="#CC0000"/><text x="150" y="73" text-anchor="middle" fill="#fff" class="lbl">Mem1</text>
+          <rect x="216" y="60" width="64" height="18" rx="3" fill="#CC0000"/><text x="248" y="73" text-anchor="middle" fill="#fff" class="lbl">Mem&thinsp;p-1</text>
+        </g>
+        <line x1="52" y1="78" x2="52" y2="106" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="150" y1="78" x2="150" y2="106" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="248" y1="78" x2="248" y2="106" stroke="#16181d" stroke-width="1.5"/>
+        <rect x="20" y="106" width="260" height="16" rx="3" fill="#16181d"/>
+        <text x="150" y="140" text-anchor="middle" class="note">interconnection network</text>
+      </svg>
+      <div class="src">NUMA: each PE owns local memory; all reachable, remote is slower.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    Fragment order tells the story: UMA first, then distribute the memory to get NUMA (scales), then note
+    that distributed caches break the single-value illusion (coherence problem), and finally CC-NUMA fixes
+    it in hardware. Every modern 2- or 4-socket server is CC-NUMA. We open Lecture 2 on exactly that
+    coherence problem; the programmer-facing consequence (first-touch page placement) is in Topic 6.
+  </aside>
+</section>
+
+<!-- ==================================================================
+     MODULE 3 — INSIDE A NODE
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 3</div>
+  <div class="mod-title">Inside a Node — Multicore, SMP &amp; Clusters</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Multicore &amp; the Chip Multiprocessor</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Why multicore?</span><span class="small">Frequency scaling hit a <strong>power wall</strong> (~2005). Instead of one faster core, put <strong>several cores</strong> on one die &mdash; a <strong>chip multiprocessor (CMP)</strong>. Performance now comes from <em>parallelism</em>, not clock speed.</span></div>
+      <div class="callout"><span class="lbl">SMP</span><span class="small"><strong>Symmetric Multiprocessing</strong> &mdash; identical cores, equal access to shared memory, one OS scheduling across all of them. A multicore chip is an SMP on a die.</span></div>
+      <p class="tiny muted">"Symmetric" = no master/worker asymmetry; any core can run any task.</p>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 200" class="chart" style="max-width:330px">
+        <rect x="10" y="10" width="280" height="180" rx="8" fill="none" stroke="#CC0000" stroke-width="2"/>
+        <text x="150" y="28" text-anchor="middle" class="note" fill="#CC0000">one socket (die)</text>
+        <g>
+          <rect x="30" y="40" width="55" height="34" rx="4" fill="#3b82f6"/><text x="57" y="61" text-anchor="middle" fill="#fff" class="lbl">Core0</text>
+          <rect x="95" y="40" width="55" height="34" rx="4" fill="#3b82f6"/><text x="122" y="61" text-anchor="middle" fill="#fff" class="lbl">Core1</text>
+          <rect x="160" y="40" width="55" height="34" rx="4" fill="#3b82f6"/><text x="187" y="61" text-anchor="middle" fill="#fff" class="lbl">Core2</text>
+          <rect x="225" y="40" width="55" height="34" rx="4" fill="#3b82f6"/><text x="252" y="61" text-anchor="middle" fill="#fff" class="lbl">Core3</text>
+        </g>
+        <g>
+          <rect x="30" y="76" width="55" height="16" rx="2" fill="#93c5fd"/><text x="57" y="88" text-anchor="middle" class="tiny">L1/L2</text>
+          <rect x="95" y="76" width="55" height="16" rx="2" fill="#93c5fd"/><text x="122" y="88" text-anchor="middle" class="tiny">L1/L2</text>
+          <rect x="160" y="76" width="55" height="16" rx="2" fill="#93c5fd"/><text x="187" y="88" text-anchor="middle" class="tiny">L1/L2</text>
+          <rect x="225" y="76" width="55" height="16" rx="2" fill="#93c5fd"/><text x="252" y="88" text-anchor="middle" class="tiny">L1/L2</text>
+        </g>
+        <rect x="30" y="104" width="250" height="26" rx="4" fill="#60a5fa"/><text x="155" y="121" text-anchor="middle" fill="#fff" class="lbl">shared L3 cache</text>
+        <rect x="30" y="150" width="250" height="26" rx="4" fill="#CC0000"/><text x="155" y="167" text-anchor="middle" fill="#fff" class="lbl">local DRAM (this socket)</text>
+      </svg>
+      <div class="src">Private L1/L2 per core, shared L3 per socket.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    Tie back to the power wall from Topic 1 (the "free lunch is over"). The CMP is the industry's answer:
+    the transistor budget still grows, but it buys cores, not gigahertz. That is precisely why this course
+    exists — the speedup is now the programmer's responsibility.
+  </aside>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Cache Hierarchy per Socket</h2>
+  <div class="cols w-64">
+    <div>
+      <p class="small">Within a socket the cores share a memory hierarchy. Levels get <strong>larger and slower</strong> as you descend; the top levels are <strong>private</strong>, the last level is <strong>shared</strong>.</p>
+      <table style="font-size:.8em">
+        <tr><th>Level</th><th>Scope</th><th>Rough latency</th></tr>
+        <tr><td class="hi">L1 (I &amp; D)</td><td>per-core, private</td><td>~4 cyc</td></tr>
+        <tr><td class="hi">L2</td><td>per-core (usually)</td><td>~10&ndash;15 cyc</td></tr>
+        <tr><td>L3 (LLC)</td><td>shared per socket</td><td>~40 cyc</td></tr>
+        <tr><td>Local DRAM</td><td>this NUMA node</td><td>~200+ cyc</td></tr>
+        <tr><td>Remote DRAM</td><td>other socket</td><td>1.5&ndash;2&times; local</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Shared LLC = fast on-socket sharing</span><span class="small">Threads on the same socket exchange data through the shared <strong>L3</strong> &mdash; much cheaper than crossing to another socket's memory.</span></div>
+      <div class="callout warn"><span class="lbl">Crossing sockets is the cliff</span><span class="small">A miss served by a <em>remote</em> socket costs far more. Keeping a thread near its data (affinity + first-touch) is the practical NUMA lesson &mdash; <strong>detail in Topic 6</strong>.</span></div>
+      <p class="tiny muted">The exact numbers vary by CPU; the <em>ratios</em> are what matter for reasoning about locality.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>From Sockets to Nodes to Clusters</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Core</span><span class="small">One instruction stream + private L1/L2. The unit of a thread.</span></div>
+    <div class="callout"><span class="lbl">Socket / CMP</span><span class="small">Several cores + shared L3 + local DRAM. One NUMA domain.</span></div>
+    <div class="callout"><span class="lbl">Node</span><span class="small">One or more sockets (CC-NUMA) + often GPUs + a NIC. One OS image; the unit of an MPI rank set.</span></div>
+  </div>
+  <div class="cols c3" style="margin-top:.4em">
+    <div class="callout"><span class="lbl">Rack</span><span class="small">Many nodes + top-of-rack switch.</span></div>
+    <div class="callout"><span class="lbl">Cluster / Supercomputer</span><span class="small">Thousands of nodes joined by a high-speed <strong>interconnect</strong>; the whole Top500 machine.</span></div>
+    <div class="callout takeaway"><span class="lbl">Nested parallelism</span><span class="small">SIMD lanes &sub; core &sub; socket &sub; node &sub; cluster. Each level has its own tool.</span></div>
+  </div>
+  <div class="callout"><span class="lbl">Two-level programming</span><span class="small"><strong>MPI across nodes</strong> (distributed memory) + <strong>OpenMP / CUDA within a node</strong> (shared memory / accelerator). This "MPI+X" hybrid is the dominant HPC pattern.</span></div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Interconnects — A Preview</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Once memory is <strong>distributed</strong>, performance is decided by the <strong>network</strong> that joins nodes (and sockets, and GPUs). Two things matter:</p>
+      <div class="callout"><span class="lbl">Latency</span><span class="small">Time for a small message to arrive &mdash; dominates fine-grained communication &amp; synchronization.</span></div>
+      <div class="callout"><span class="lbl">Bandwidth</span><span class="small">Bytes/sec for large transfers &mdash; dominates bulk data movement (halo exchange, all-to-all).</span></div>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Topologies you'll meet</span><span class="small">Bus, ring, mesh / torus, hypercube, fat-tree, dragonfly &mdash; each trades cost against diameter &amp; bisection bandwidth.</span></div>
+      <div class="callout takeaway"><span class="lbl">Full treatment: Topic 9</span><span class="small">Interconnection networks &mdash; topology, routing, and how they cap the scalability of your MPI program &mdash; are a whole later lecture. Keep them in mind as the "glue" of every loosely-coupled machine.</span></div>
+    </div>
+  </div>
+  <aside class="notes">
+    Just plant the flag here. The point is that the memory-organization choice (distributed) forces a
+    network, and the network's latency/bandwidth become first-order performance factors. We quantify
+    topologies, bisection bandwidth, and routing in Topic 9.
+  </aside>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Lecture 1 Capstone: One Machine, Every Class</h2>
+  <div class="cols">
+    <div>
+      <p class="small">A real supercomputer today is <strong>all of Flynn's classes at once</strong>, layered:</p>
+      <ul class="small">
+        <li><strong>MIMD</strong> cluster &mdash; thousands of independent nodes (distributed memory, MPI).</li>
+        <li>Each node = <strong>multicore CC-NUMA</strong> shared memory (OpenMP within the node).</li>
+        <li>Each core has <strong>SIMD</strong> vector units (AVX-512 / SVE).</li>
+        <li>Each node hosts <strong>SIMT GPUs</strong> &mdash; thousands of data-parallel lanes.</li>
+      </ul>
+      <div class="callout takeaway"><span class="lbl">Why no single API suffices</span><span class="small">You compose them: <strong>MPI + OpenMP + CUDA</strong>, each matched to a level of the hierarchy.</span></div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 230" class="chart" style="max-width:330px">
+        <rect x="8" y="8" width="284" height="214" rx="8" fill="none" stroke="#CC0000" stroke-width="2"/>
+        <text x="150" y="24" text-anchor="middle" class="note" fill="#CC0000">MIMD cluster (MPI)</text>
+        <g>
+          <rect x="22" y="34" width="120" height="180" rx="6" fill="#eef2ff" stroke="#3b82f6"/>
+          <rect x="158" y="34" width="120" height="180" rx="6" fill="#eef2ff" stroke="#3b82f6"/>
+          <text x="82" y="50" text-anchor="middle" class="tiny">node (CC-NUMA)</text>
+          <text x="218" y="50" text-anchor="middle" class="tiny">node (CC-NUMA)</text>
+        </g>
+        <g>
+          <rect x="32" y="58" width="46" height="30" rx="3" fill="#3b82f6"/><text x="55" y="72" text-anchor="middle" fill="#fff" class="tiny">core</text><text x="55" y="83" text-anchor="middle" fill="#fff" class="tiny">SIMD</text>
+          <rect x="86" y="58" width="46" height="30" rx="3" fill="#3b82f6"/><text x="109" y="72" text-anchor="middle" fill="#fff" class="tiny">core</text><text x="109" y="83" text-anchor="middle" fill="#fff" class="tiny">SIMD</text>
+          <rect x="168" y="58" width="46" height="30" rx="3" fill="#3b82f6"/><text x="191" y="72" text-anchor="middle" fill="#fff" class="tiny">core</text><text x="191" y="83" text-anchor="middle" fill="#fff" class="tiny">SIMD</text>
+          <rect x="222" y="58" width="46" height="30" rx="3" fill="#3b82f6"/><text x="245" y="72" text-anchor="middle" fill="#fff" class="tiny">core</text><text x="245" y="83" text-anchor="middle" fill="#fff" class="tiny">SIMD</text>
+        </g>
+        <rect x="32" y="94" width="100" height="18" rx="2" fill="#60a5fa"/><text x="82" y="107" text-anchor="middle" fill="#fff" class="tiny">shared L3</text>
+        <rect x="168" y="94" width="100" height="18" rx="2" fill="#60a5fa"/><text x="218" y="107" text-anchor="middle" fill="#fff" class="tiny">shared L3</text>
+        <rect x="32" y="118" width="100" height="18" rx="2" fill="#CC0000"/><text x="82" y="131" text-anchor="middle" fill="#fff" class="tiny">DRAM</text>
+        <rect x="168" y="118" width="100" height="18" rx="2" fill="#CC0000"/><text x="218" y="131" text-anchor="middle" fill="#fff" class="tiny">DRAM</text>
+        <rect x="32" y="142" width="100" height="62" rx="4" fill="#16a34a"/><text x="82" y="168" text-anchor="middle" fill="#fff" class="tiny">SIMT GPU</text><text x="82" y="182" text-anchor="middle" fill="#fff" class="tiny">1000s of lanes</text>
+        <rect x="168" y="142" width="100" height="62" rx="4" fill="#16a34a"/><text x="218" y="168" text-anchor="middle" fill="#fff" class="tiny">SIMT GPU</text><text x="218" y="182" text-anchor="middle" fill="#fff" class="tiny">1000s of lanes</text>
+        <line x1="142" y1="124" x2="158" y2="124" stroke="#16181d" stroke-width="2"/>
+        <text x="150" y="216" text-anchor="middle" class="tiny muted">network</text>
+      </svg>
+      <div class="src">One machine: MIMD + SIMD + SIMT, shared &amp; distributed memory.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    This closes Lecture 1. Everything so far assumed shared memory "just works." Lecture 2 pays that debt:
+    the moment several caches hold copies of the same shared line, the hardware owes us a coherence and a
+    consistency guarantee — and understanding those is what keeps shared-memory code correct.
+  </aside>
+</section>
+
+<!-- ############################################################
+     LECTURE 2 — COHERENCE & CONSISTENCY
+     ############################################################ -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Lecture 2 · 10/05</div>
+  <div class="mod-title">Cache Coherence &amp; Memory Consistency</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Two Guarantees Shared Memory Owes You</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Cache coherence</span><span class="small"><em>"Do all cores agree on the value of <strong>one</strong> location?"</em> A per-<strong>address</strong> guarantee about propagating and ordering writes to a single variable.</span></div>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Memory consistency</span><span class="small"><em>"In what <strong>order</strong> do writes to <strong>different</strong> locations become visible?"</em> The contract about ordering <em>across</em> variables.</span></div>
+    </div>
+  </div>
+  <div class="callout warn"><span class="lbl">Scope of this lecture — introductory</span><span class="small">We build the <strong>architectural view</strong>: why each is needed and how it's provided at a high level. The detailed <strong>MESI</strong> protocol, snooping state machines, and cache internals are developed in <strong>Topic 6 (Cache &amp; Memory)</strong> &mdash; we won't duplicate them here.</span></div>
+  <aside class="notes">
+    Set expectations up front: this is the conceptual, architectural treatment. Students should leave able
+    to state the coherence problem, the two coherence properties, the snooping-vs-directory distinction,
+    and the sequential-vs-relaxed consistency idea — plus why fences/atomics exist. The gritty protocol
+    transitions are Topic 6's job.
+  </aside>
+</section>
+
+<!-- ==================================================================
+     MODULE 4 — CACHE COHERENCE
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 4</div>
+  <div class="mod-title">Cache Coherence — Why &amp; How</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The Coherence Problem</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">The setup</span><span class="small">Each core has a <strong>private cache</strong> but they share one address space. Caching a shared variable makes <strong>multiple copies</strong> of the same location.</span></div>
+      <div class="callout warn"><span class="lbl">The bug</span><span class="small">If one core writes its copy and the others keep their <strong>stale</strong> copies, the cores now <em>disagree</em> about the value. The shared-memory illusion is broken.</span></div>
+      <p class="tiny muted">Uniprocessors never had this problem — there was only one copy of each location.</p>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 300 200" class="chart" style="max-width:330px">
+        <rect x="20" y="16" width="80" height="26" rx="4" fill="#3b82f6"/><text x="60" y="34" text-anchor="middle" fill="#fff" class="lbl">Core A</text>
+        <rect x="200" y="16" width="80" height="26" rx="4" fill="#3b82f6"/><text x="240" y="34" text-anchor="middle" fill="#fff" class="lbl">Core B</text>
+        <rect x="20" y="52" width="80" height="26" rx="4" fill="#fca5a5"/><text x="60" y="70" text-anchor="middle" class="lbl">x = 1 (new)</text>
+        <rect x="200" y="52" width="80" height="26" rx="4" fill="#fde68a"/><text x="240" y="70" text-anchor="middle" class="lbl">x = 0 (stale)</text>
+        <text x="150" y="70" text-anchor="middle" class="note" fill="#CC0000">disagree!</text>
+        <line x1="60" y1="78" x2="60" y2="120" stroke="#16181d" stroke-width="1.5"/>
+        <line x1="240" y1="78" x2="240" y2="120" stroke="#16181d" stroke-width="1.5"/>
+        <rect x="20" y="120" width="260" height="14" rx="3" fill="#16181d"/>
+        <text x="150" y="150" text-anchor="middle" class="note">shared bus / interconnect</text>
+        <rect x="90" y="164" width="120" height="26" rx="4" fill="#CC0000"/><text x="150" y="182" text-anchor="middle" fill="#fff" class="lbl">memory: x = 0</text>
+        <line x1="150" y1="134" x2="150" y2="164" stroke="#16181d" stroke-width="1.5"/>
+      </svg>
+      <div class="src">Two cached copies, one written — now they diverge.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    This is the canonical failure from CSC 506 chap6: P1 and P2 both load sum=0, each writes back its own
+    dirty value, and neither sees the other's update. Note it happens with both write-back and
+    write-through caches (write-through updates memory but leaves the other cache stale). The only way to
+    avoid it without a protocol is to not cache shared data — which destroys performance.
+  </aside>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Coherence: The Two Properties</h2>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Write propagation</span>A value written in one cache <strong>must reach</strong> the other caches &mdash; by <em>updating</em> or <em>invalidating</em> their copies.</div>
+    <div class="callout"><span class="lbl">Write serialization</span>Successive writes to the <em>same</em> location are <strong>seen in the same order</strong> by <strong>all</strong> caches &mdash; everyone agrees on one global order.</div>
+  </div>
+  <div class="callout warn"><span class="lbl">Why serialization matters</span><span class="small">If two cores write <code class="inline">x</code> and two other cores observe those writes in <strong>different orders</strong>, they'd settle on different final values of <code class="inline">x</code>. The system would be incoherent. Only writes need ordering; read-vs-read can be freely reordered.</span></div>
+  <div class="callout takeaway"><span class="lbl">A coherence protocol guarantees both</span><span class="small">Doable in hardware or software, but software has very high overhead &mdash; so real machines do it in <strong>hardware</strong>. Two families of mechanism follow.</span></div>
+  <aside class="notes">
+    Straight from CSC 506 chap6's "two properties" slide. Propagation = the new value gets out; serialization
+    = everyone sees writes to a given address in one agreed order. A write must appear atomic and its
+    completion must be detectable. These two properties are the definition of coherence.
+  </aside>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Providing Coherence: Snooping vs. Directory</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Snooping (broadcast)</span><span class="small">Every cache <strong>watches (snoops)</strong> a shared bus. On a write, the writer broadcasts; others <strong>invalidate</strong> (or update) their copy. The bus provides the global write order for free.</span>
+        <ul class="tiny" style="margin:.3em 0 0 .9em">
+          <li>Simple, low latency for few cores</li>
+          <li><strong>Doesn't scale</strong> &mdash; broadcast &amp; bus bandwidth saturate</li>
+          <li>Natural fit for a bus-based UMA/SMP</li>
+        </ul></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Directory-based</span><span class="small">A <strong>directory</strong> tracks, for each line, <em>which caches hold a copy</em>. On a write, the directory sends <strong>point-to-point</strong> invalidations only to the sharers &mdash; no broadcast.</span>
+        <ul class="tiny" style="margin:.3em 0 0 .9em">
+          <li>More state &amp; latency per access</li>
+          <li><strong>Scales</strong> to many sockets/nodes</li>
+          <li>The mechanism behind <strong>CC-NUMA</strong></li>
+        </ul></div>
+    </div>
+  </div>
+  <div class="callout"><span class="lbl">Two ways to propagate a write</span><span class="small"><strong>Invalidate</strong> (kill other copies; next read re-fetches) is by far the common choice; <strong>update</strong> (push the new value into other copies) is rarer. Either satisfies write propagation.</span></div>
+  <div class="callout warn"><span class="lbl">Protocol details &rarr; Topic 6</span><span class="small">The <strong>MESI</strong> states (Modified/Exclusive/Shared/Invalid) and their transitions are the <em>implementation</em> of snooping coherence &mdash; covered in Cache &amp; Memory, not repeated here.</span></div>
+  <aside class="notes">
+    Keep this conceptual. Snooping = broadcast, great for a bus, caps out at a few dozen cores. Directory =
+    keep a list of sharers and message only them, which is what lets CC-NUMA scale to many sockets and what
+    big shared-memory machines use. MESI is the concrete snooping protocol; explicitly defer it to Topic 6
+    so we don't duplicate.
+  </aside>
+</section>
+
+<!-- ==================================================================
+     MODULE 5 — MEMORY CONSISTENCY
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 5</div>
+  <div class="mod-title">Memory Consistency Models</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>From One Datum to Many</h2>
+  <div class="callout"><span class="lbl">Coherence is per-address</span>Cache coherence only governs propagation and ordering of accesses to a <strong>single</strong> memory location.</div>
+  <p class="center q" style="font-size:1.2em;margin:.55em 0">Is there any need to order accesses to <strong>multiple, different</strong> data items?</p>
+  <div class="callout takeaway"><span class="lbl">Yes</span>Programs rely on ordering <em>between distinct variables</em> (e.g. "set the data, <em>then</em> set the ready flag"). Guaranteeing that cross-address ordering is the job of the <strong>memory consistency model</strong>.</div>
+  <aside class="notes">
+    The pivot from coherence to consistency. Coherence never says anything about how a write to x orders
+    against a write to y. That cross-variable ordering is what programs actually depend on, and it's a
+    separate hardware property: the memory consistency model.
+  </aside>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The Flag Idiom — Why Ordering Matters</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">P0 — producer</div>
+      <pre><code class="language-c" data-trim>
+S1: datum = 5;
+S2: ready = 1;
+</code></pre>
+      <div class="code-label">P1 — consumer</div>
+      <pre><code class="language-c" data-trim>
+S3: while (!ready) {};
+S4: print datum;
+</code></pre>
+    </div>
+    <div>
+      <p class="small">Correctness needs <strong>S1 before S2</strong> and <strong>S3 before S4</strong>.</p>
+      <ul class="small">
+        <li>If <strong>S2 is seen before S1</strong> &rarr; P1 prints <strong>garbage</strong>.</li>
+        <li>If <strong>S4 runs before S3</strong> &rarr; P1 reads before it is ready.</li>
+      </ul>
+      <div class="callout warn"><span class="lbl">The trap</span>Even if P0 <em>executes</em> S1 before S2, P1 does <strong>not necessarily see them in that order</strong> on a real multiprocessor &mdash; hardware &amp; compilers reorder independent accesses.</div>
+    </div>
+  </div>
+  <aside class="notes">
+    The producer/consumer flag is the canonical consistency example (CSC 506 chap6, common in DOACROSS /
+    DOPIPE). Coherence is satisfied — each of datum and ready is individually coherent — yet the program
+    is still wrong if the two writes become visible out of order. That's a consistency issue, not a
+    coherence one.
+  </aside>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Sequential Consistency vs. Relaxed Models</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Sequential consistency (SC)</span><span class="small">The intuitive model (Lamport): every processor's accesses happen in <strong>program order</strong>, and all processors see <strong>one global interleaving</strong> of them.</span></div>
+      <p class="small" style="color:var(--warn)">✗ SC is <strong>expensive</strong> &mdash; it forbids almost every load/store reordering, store buffering, and many compiler optimizations.</p>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Relaxed / weak models</span><span class="small">Real hardware <strong>relaxes</strong> some orderings for speed (e.g. x86 <strong>TSO</strong> lets a load pass an earlier store; ARM/POWER are weaker still). The <strong>consistency model</strong> is the contract: which orderings the hardware <em>does</em> and <em>doesn't</em> guarantee.</span></div>
+      <ul class="tiny" style="margin:.2em 0 0 .9em">
+        <li>Programmers must write code that <strong>conforms</strong> to the model</li>
+        <li>Misreading it &rarr; subtle, timing-dependent <strong>bugs</strong></li>
+        <li>A source of <strong>non-portability</strong> across machines</li>
+      </ul>
+    </div>
+  </div>
+  <aside class="notes">
+    SC is the mental model everyone assumes and almost no fast machine actually provides. The spectrum:
+    SC (strongest) → x86-TSO → ARM/POWER weak. The weaker the model, the more reordering the hardware may
+    do, and the more explicit ordering the programmer must request. Keep it introductory — no need to
+    enumerate every relaxation.
+  </aside>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Fences &amp; Atomics — Getting Order Back</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Memory fence / barrier</span><span class="small">An instruction that <strong>forbids reordering across it</strong> &mdash; all memory ops before the fence complete (become visible) before any after it.</span></div>
+      <div class="callout"><span class="lbl">Atomics</span><span class="small">Read-modify-write ops (compare-and-swap, fetch-and-add) that are <strong>indivisible</strong> and carry ordering guarantees &mdash; the building blocks of locks.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">You rarely write fences by hand</span><span class="small">They're inserted for you by higher-level synchronization:
+        <ul class="tiny" style="margin:.3em 0 0 .9em">
+          <li><code class="inline">OpenMP</code> barriers, <code class="inline">critical</code>, <code class="inline">flush</code></li>
+          <li>Locks / mutexes (<code class="inline">pthreads</code>)</li>
+          <li>C11 / C++11 <code class="inline">atomic</code> with a memory order</li>
+        </ul></span></div>
+      <p class="tiny muted">Rule: if two threads share mutable data, <strong>synchronize</strong> — don't rely on a particular hardware ordering.</p>
+    </div>
+  </div>
+  <div class="callout warn"><span class="lbl">Fixing the flag idiom</span><span class="small">Publish <code class="inline">datum</code>, insert a <strong>release fence</strong>, then set <code class="inline">ready</code>; the consumer does an <strong>acquire</strong> load of <code class="inline">ready</code> before reading <code class="inline">datum</code>. The fences restore the order the relaxed model dropped.</span></div>
+  <aside class="notes">
+    Close the loop: relaxed models drop ordering for speed; fences and atomics let the programmer ask for
+    exactly the ordering they need, where they need it. The practical takeaway for a CSC 548 student is
+    that they'll almost never write a bare fence — OpenMP, locks, and language atomics do it — but they
+    must understand that unsynchronized shared-memory code is undefined for a reason.
+  </aside>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Coherence vs. Consistency — Side by Side</h2>
+  <table style="font-size:.82em;margin-top:.3em">
+    <tr><th></th><th>Cache coherence</th><th>Memory consistency</th></tr>
+    <tr><td><strong>Question</strong></td><td>same value for <em>one</em> location?</td><td>what <em>order</em> across <em>different</em> locations?</td></tr>
+    <tr><td><strong>Scope</strong></td><td class="hi">per single address</td><td class="hi">across multiple addresses</td></tr>
+    <tr><td><strong>Provided by</strong></td><td>coherence protocol (MESI, directory)</td><td>consistency model (SC, TSO, weak)</td></tr>
+    <tr><td><strong>Programmer tool</strong></td><td>mostly automatic (hardware)</td><td>fences, atomics, locks, barriers</td></tr>
+    <tr><td><strong>Where detailed</strong></td><td>Topic 6 (MESI mechanics)</td><td>here + language memory models</td></tr>
+  </table>
+  <div class="callout takeaway"><span class="lbl">One line</span><strong>Coherence keeps copies of a single location in agreement; consistency defines the visible ordering across different locations.</strong> Both are why unsynchronized shared-memory code is wrong.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Where This Fits — The Road Ahead</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">You just learned</span><span class="small">The <strong>hardware map</strong> (Lecture 1) and the <strong>coherence + consistency</strong> guarantees behind shared memory (Lecture 2).</span></div>
+    <div class="callout"><span class="lbl">Topic 6 — Cache &amp; Memory</span><span class="small">Zooms into one node: <strong>MESI</strong> mechanics, false sharing, NUMA first-touch, tiling &mdash; the programmer's memory concerns.</span></div>
+    <div class="callout takeaway"><span class="lbl">Topic 8 — GPU (next)</span><span class="small">Zooms into the <strong>SIMT</strong> accelerator: warps, the device memory hierarchy, and how to write data-parallel kernels.</span></div>
+  </div>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Topic 9 — Interconnects</span><span class="small">Zooms into the <strong>network</strong> gluing the loosely-coupled cluster together: topologies, latency/bandwidth, routing.</span></div>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Then: the programming models</span><span class="small"><strong>OpenMP</strong> for shared memory, <strong>MPI</strong> for distributed memory, <strong>CUDA</strong> for the GPU &mdash; each now has a machine to stand on.</span></div>
+    </div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">One sentence</span><strong>The memory organization a machine hands you decides the programming model you must use — and once memory is cached &amp; shared, coherence and consistency are what keep that model honest.</strong></div>
+  <aside class="notes">
+    Close by making the dependency explicit: architecture first because OpenMP only makes sense once you
+    see shared memory (+ its coherence/consistency cost), MPI once you see distributed memory, and CUDA
+    once you see SIMT. Next lecture (Topic 8) descends into the GPU.
+  </aside>
+</section>
+
+<!-- ===== REFERENCES ===== -->
+<section data-background-color="#f6f8fb">
+  <h2>References</h2>
+  <div class="callout"><span class="lbl">Course material</span>
+    Adapted from the CSC 548 <em>Topic 7 — Parallel Architectures</em> notes, expanding the hardware-landscape
+    overview from the course introduction and reusing the coherence/consistency treatment from the CSC 506
+    architecture courseware (Ch. 6&ndash;7).</div>
+  <ul class="small">
+    <li>T. Rauber &amp; G. Rünger, <em>Parallel Programming: For Multicore and Cluster Systems</em>, 2nd ed., Springer, 2013 — Ch. 2, parallel architectures.</li>
+    <li>Hennessy &amp; Patterson, <em>Computer Architecture: A Quantitative Approach</em> — Flynn's taxonomy, multiprocessors, coherence &amp; consistency.</li>
+    <li>Y. Solihin, <em>Fundamentals of Parallel Multicore Architecture</em> — coherence, snooping/directory, consistency models (basis of the CSC 506 slides).</li>
+    <li>M. J. Flynn, "Some Computer Organizations and Their Effectiveness," <em>IEEE Trans. Computers</em>, 1972; L. Lamport, "How to Make a Multiprocessor Computer That Correctly Executes Multiprocess Programs," 1979.</li>
+  </ul>
+</section>
+
+</div>
+
+<!-- deck-level fixed footer -->
+<div class="deck-footer"><span class="tag">CSC 548</span><span class="sep">·</span>Parallel Architectures</div>
+</div>
+
+<!-- reveal.js core + plugins -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/math/math.js"></script>
+<script>
+  Reveal.initialize({
+    width: 1280, height: 720, margin: 0.04,
+    minScale: 0.2, maxScale: 1.6,
+    center: false,
+    hash: true, slideNumber: 'c/t', history: true,
+    transition: 'slide', transitionSpeed: 'fast',
+    plugins: [ RevealNotes, RevealHighlight, RevealMath.KaTeX ],
+    katex: { delimiters: [
+      {left:'\\(', right:'\\)', display:false},
+      {left:'$$', right:'$$', display:true}
+    ]},
+  });
+</script>
+<script>
+/* Auto-fit: shrink any slide whose content would exceed 720px. */
+(function(){
+  function fit(s){ if(!s) return;
+    s.style.setProperty('--nc-fit','1');
+    var h=s.scrollHeight;
+    if(h>724){ var k=Math.max(0.6, Math.min(1, 720/h));
+      s.style.setProperty('--nc-fit', k.toFixed(3)); }
+  }
+  if(window.Reveal){
+    Reveal.on('ready', function(e){ fit(e.currentSlide); });
+    Reveal.on('slidechanged', function(e){ fit(e.currentSlide); });
+    try{ if(Reveal.isReady && Reveal.isReady()) fit(Reveal.getCurrentSlide()); }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>
