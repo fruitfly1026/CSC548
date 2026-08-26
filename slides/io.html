@@ -89,7 +89,7 @@
   <div class="cols w-64">
     <div>
       <div class="callout"><span class="lbl">Server-side view</span>Parallel I/O = <strong>simultaneous transfer from many storage servers</strong>. One logical file is spread across many disks.</div>
-      <p class="small">Widely deployed: <strong>Lustre</strong>, <strong>GPFS</strong>, PVFS, Ceph, BeeGFS, Google File System. They separate <em>metadata</em> (where the bytes live) from <em>data</em> (the bytes themselves) so both scale independently.</p>
+      <p class="small">Widely deployed: <strong>Lustre</strong>, <strong>GPFS</strong>, PVFS, Ceph, BeeGFS (HPC POSIX). <span class="muted">Big-data DFS such as GFS/HDFS target a different, non-POSIX regime.</span> They separate <em>metadata</em> (where the bytes live) from <em>data</em> (the bytes themselves) so both scale independently.</p>
       <div class="callout takeaway"><span class="lbl">Key idea</span>Bandwidth comes from <strong>parallelism in the storage tier</strong>, not from a faster single disk.</div>
     </div>
     <div class="center">
@@ -119,7 +119,7 @@
     <div>
       <p class="small">A file is cut into fixed-size <strong>stripes</strong> dealt round-robin across a set of <strong>OSTs</strong> (object storage targets). Two knobs:</p>
       <div class="callout"><span class="lbl">stripe size</span>bytes written to one OST before moving to the next (Lustre default ~1 MB).</div>
-      <div class="callout"><span class="lbl">stripe count</span>how many OSTs the file spans (default often 1–2; <code class="inline">-1</code> = all).</div>
+      <div class="callout"><span class="lbl">stripe count</span>how many OSTs the file spans (default <strong>1</strong> — a single OST; <code class="inline">-1</code> = all).</div>
       <p class="tiny muted">Striping is set when the file is <strong>created</strong> and cannot change afterward.</p>
     </div>
     <div class="center">
@@ -248,7 +248,7 @@ lfs df          # per-OST capacity / usage
   <h2>MPI-IO Background</h2>
   <div class="cols">
     <div>
-      <div class="callout"><span class="lbl">Where it came from</span>Snir et al. (IBM, 1994) explored MPI as a context for parallel I/O; the MPI-IO group joined the MPI Forum in 1996.</div>
+      <div class="callout"><span class="lbl">Where it came from</span>Corbett et al. (IBM Watson, 1994) explored MPI as a context for parallel I/O; the MPI-IO group joined the MPI Forum in 1996.</div>
       <div class="callout takeaway"><span class="lbl">Standardized</span>MPI-IO is <strong>Chapter 9 of MPI-2</strong> (1997) — a portable, parallel read/write API with collective operations and derived-datatype file views.</div>
     </div>
     <div>

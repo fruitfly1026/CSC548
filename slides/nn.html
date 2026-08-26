@@ -58,7 +58,7 @@
   <h2>Why Now? Three Ingredients</h2>
   <div class="cols c3">
     <div class="callout"><span class="lbl">Algorithms</span><span class="small">Most core techniques were invented in the 1980s–90s — backprop, conv nets, recurrent nets.</span></div>
-    <div class="callout"><span class="lbl">Big data</span><span class="small">Web-scale labeled datasets arrive in the early 2000s.</span></div>
+    <div class="callout"><span class="lbl">Big data</span><span class="small">Web-scale labeled datasets arrive in the 2000s.</span></div>
     <div class="callout"><span class="lbl">Hardware</span><span class="small">GPUs / accelerators become widely available through the 2010s.</span></div>
   </div>
   <div class="callout takeaway"><span class="lbl">For us</span>Old algorithms + huge data + parallel hardware = a <strong>systems</strong> problem. The interesting question is how to map this compute onto thousands of devices.</div>
@@ -268,7 +268,7 @@
 shard = batch[p]                # disjoint slice
 loss  = forward(model, shard)
 g_p   = backward(loss)          # local gradients
-g     = all_reduce(g_p, op=SUM) # sum across devices
+g     = all_reduce(g_p, op=AVG) # average across devices
 model = optimizer.step(model, g)  # identical update
 </code></pre>
       <p class="tiny muted">After the all-reduce every replica applies the <strong>same</strong> averaged gradient, so all replicas stay in sync.</p>
@@ -565,7 +565,8 @@ model = optimizer.step(model, g)  # identical update
   <div class="cols w-64">
     <div>
       <div class="callout"><span class="lbl">Premise</span>Networks tend to be <strong>over-parameterized</strong> — many weights contribute little. Remove them to save space, time, and energy.</div>
-      <p class="small">Today's sparsity methods reach <strong>10–100×</strong> reduction in model size with little accuracy loss — and Hoefler et al. argue sparsity could yield up to <strong>two orders of magnitude</strong> more efficiency.</p>
+      <p class="small">Today's sparsity methods reach a <strong>10–100×</strong> (up to ~two-orders-of-magnitude) reduction in model size with little accuracy loss.</p>
+      <div class="src">Hoefler et al., "Sparsity in Deep Learning," JMLR 22, 2021.</div>
       <div class="callout warn"><span class="lbl">Accuracy curve</span>Light pruning can <em>reduce noise</em>; a wide middle range stays stable; past a point accuracy <strong>drops</strong> — and where that point is depends on the network.</div>
     </div>
     <div class="center">

@@ -285,7 +285,7 @@
     </div>
     <div>
       <div class="callout warn"><span class="lbl">The cost</span>Dual replication <strong>halves</strong> usable machine throughput (2× resources for 1× work). It only pays off when checkpoint/restart can't keep up.</div>
-      <div class="callout takeaway"><span class="lbl">When replication wins</span>At <strong>extreme scale</strong>, when MTBF drops so low that the machine spends more than ~50% of its time checkpointing and recomputing — then paying 2× to almost never roll back is the better deal.</div>
+      <div class="callout takeaway"><span class="lbl">When replication wins</span>At <strong>extreme scale</strong>, when MTBF drops so low that the machine spends more than ~50% of its time checkpointing and recomputing — then paying 2× to almost never roll back is the better deal. <span class="tiny muted">(the ~50% crossover: Ferreira et al., SC 2011)</span></div>
       <p class="tiny muted">Rule of thumb: checkpointing is cheaper until the failure rate gets high enough that rollback overhead exceeds the cost of a redundant copy.</p>
     </div>
   </div>

@@ -123,7 +123,7 @@
     <div class="callout"><span class="lbl">Also</span><span class="small">Message passing (MPI) for distributed memory; various parallel languages (few widely used).</span></div>
   </div>
   <div class="callout"><span class="lbl">Why directives win for SMP</span>
-    OpenMP standardizes ~30 years of SMP practice: add a few <code class="inline">#pragma</code> lines and the same source still compiles &amp; runs <strong>sequentially</strong> without an OpenMP compiler.</div>
+    OpenMP builds on decades of SMP practice: add a few <code class="inline">#pragma</code> lines and the same source still compiles &amp; runs <strong>sequentially</strong> without an OpenMP compiler (directives are ignored; guard <code class="inline">omp_*()</code> calls with <code class="inline">#ifdef _OPENMP</code>).</div>
 </section>
 
 <!-- ==================================================================
@@ -333,7 +333,7 @@ omp_set_num_threads(4);
   <h2>Structured Blocks &amp; the Software Stack</h2>
   <div class="cols w-64">
     <div>
-      <div class="callout"><span class="lbl">Constructs apply to a structured block</span><span class="small">One entry at the top, one exit at the bottom &mdash; no jumping in or out. (A hard <code class="inline">exit()</code> is the only allowed escape.)</span></div>
+      <div class="callout"><span class="lbl">Constructs apply to a structured block</span><span class="small">One entry at the top, one exit at the bottom &mdash; no jumping in or out. (A hard <code class="inline">exit()</code> is the canonical exception.)</span></div>
       <pre><code class="language-c" data-trim>
 #pragma omp parallel
 {                        // one entry
@@ -514,7 +514,7 @@ printf("%d", IS);   // IS = value at j==999 (defined, but not a real sum!)
   <h2>threadprivate &amp; copyprivate</h2>
   <div class="cols">
     <div>
-      <div class="callout"><span class="lbl">threadprivate</span>Gives each thread its <strong>own persistent copy</strong> of a global/static — preserved across parallel regions (lives on the heap).</div>
+      <div class="callout"><span class="lbl">threadprivate</span>Gives each thread its <strong>own persistent copy</strong> of a global/static — preserved across parallel regions <span class="muted">when the team size is unchanged and dynamic threads are off</span>.</div>
       <p class="small">Different from <code class="inline">private</code>, which masks the global and is re-allocated each region.</p>
     </div>
     <div>
@@ -546,9 +546,9 @@ for (i=0; i&lt;n; i++)
       <table style="font-size:.82em">
         <tr><th>op</th><th>init</th><th>op</th><th>init</th></tr>
         <tr><td><code class="inline">+</code></td><td>0</td><td><code class="inline">*</code></td><td>1</td></tr>
-        <tr><td><code class="inline">-</code></td><td>0</td><td><code class="inline">&amp;&amp;</code></td><td>1</td></tr>
-        <tr><td><code class="inline">||</code></td><td>0</td><td><code class="inline">max</code></td><td>−∞</td></tr>
-        <tr><td><code class="inline">&amp;</code></td><td>all 1s</td><td><code class="inline">min</code></td><td>+∞</td></tr>
+        <tr><td><code class="inline">-</code> <span class="tiny muted">(dep. 5.0)</span></td><td>0</td><td><code class="inline">&amp;&amp;</code></td><td>1</td></tr>
+        <tr><td><code class="inline">||</code></td><td>0</td><td><code class="inline">max</code></td><td>least repr.</td></tr>
+        <tr><td><code class="inline">&amp;</code></td><td>all 1s</td><td><code class="inline">min</code></td><td>largest repr.</td></tr>
       </table>
       <div class="callout warn"><span class="lbl">FP caution</span>Floating-point <code class="inline">+</code> is not perfectly associative — results can differ in the last bits.</div>
     </div>
@@ -563,7 +563,7 @@ for (i=0; i&lt;n; i++)
   <div class="cols">
     <div>
       <div class="callout"><span class="lbl">What's shared by default</span><span class="small">Globals, file-scope &amp; <code class="inline">static</code> vars are <strong>shared</strong>; locals in called routines and the loop index are <strong>private</strong>.</span></div>
-      <div class="callout"><span class="lbl">Override it</span><span class="small"><code class="inline">default(shared)</code> &middot; <code class="inline">default(none)</code> &middot; <code class="inline">default(private)</code> <span class="muted">(Fortran only)</span>.</span></div>
+      <div class="callout"><span class="lbl">Override it</span><span class="small"><code class="inline">default(shared)</code> &middot; <code class="inline">default(none)</code> &middot; <code class="inline">default(private)</code> <span class="muted">(Fortran; C/C++ since OpenMP 5.1)</span>.</span></div>
     </div>
     <div>
       <div class="callout takeaway"><span class="lbl">Reach for <code class="inline">default(none)</code></span><span class="small">Forces you to declare the scope of <strong>every</strong> variable &mdash; the compiler errors on anything you forgot. The cheapest defense against accidental sharing &amp; data races.</span></div>
@@ -593,7 +593,7 @@ for (i = 0; i &lt; n; i++) a[i] *= 2;
 #pragma omp critical
   consume(B, res);
 </code></pre>
-      <p class="tiny muted">One thread at a time in the region.</p>
+      <p class="tiny muted">One thread at a time; all unnamed <code class="inline">critical</code> regions share one lock.</p>
     </div>
     <div>
       <div class="code-label">atomic</div>
@@ -601,7 +601,7 @@ for (i = 0; i &lt; n; i++) a[i] *= 2;
 #pragma omp atomic
   X = X + tmp;
 </code></pre>
-      <p class="tiny muted">Cheap critical for a single memory update.</p>
+      <p class="tiny muted">Cheap update — only for specific read/write/update forms, not general mutual exclusion.</p>
     </div>
     <div>
       <div class="code-label">barrier</div>
@@ -640,7 +640,7 @@ sum[id] += 4.0/(1.0+x*x);
     <div class="callout"><span class="lbl">master</span><span class="small">Only the <strong>master</strong> thread runs it; the others <strong>skip</strong> it &mdash; <em>no</em> barrier.</span></div>
     <div class="callout"><span class="lbl">ordered</span><span class="small">Inside an <code class="inline">ordered</code> loop, forces the block to run in <strong>iteration order</strong> &mdash; for deterministic output from a parallel loop.</span></div>
   </div>
-  <div class="callout warn"><span class="lbl">single vs. master</span><span class="small">Both run a block <em>once</em> &mdash; but <code class="inline">single</code> <strong>synchronizes</strong> (barrier at end) while <code class="inline">master</code> does <strong>not</strong>. Pick by whether the other threads must wait.</span></div>
+  <div class="callout warn"><span class="lbl">single vs. master</span><span class="small">Both run a block <em>once</em> &mdash; but <code class="inline">single</code> <strong>synchronizes</strong> (barrier at end) while <code class="inline">master</code> does <strong>not</strong>. Pick by whether the other threads must wait. <span class="muted">(<code class="inline">master</code> renamed <code class="inline">masked</code> in OpenMP 5.1.)</span></span></div>
 </section>
 
 <!-- ==================================================================

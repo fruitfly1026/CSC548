@@ -148,8 +148,9 @@ else
     <div>
       <div class="code-label">Thread — share everything (<code class="inline">clone</code>)</div>
       <pre><code class="language-c" data-trim>
-void sayhello() {
+int sayhello(void *arg) {
   printf("child thread, tid %d", gettid());
+  return 0;
 }
 printf("parent thread, tid %d", gettid());
 

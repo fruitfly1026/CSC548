@@ -306,7 +306,7 @@ output: 2-way replicated (GFS redundancy)
     <div>
       <div class="callout takeaway"><span class="lbl">Observed</span><span class="small">
         • Scan 10<sup>10</sup> records for a rare pattern (~92K hits): <strong>150&nbsp;s</strong>.<br>
-        • Full sort: <strong>~839&nbsp;s</strong>.</span></div>
+        • Full sort: <strong>~891&nbsp;s</strong>. <span class="muted">(Dean &amp; Ghemawat, OSDI 2004)</span></span></div>
       <p class="small"><strong>Rates tell the story:</strong> input &gt; shuffle &gt; output. Reading is fast (locality); the shuffle moves data over the network; output is slowest because it writes <strong>two replicas</strong>.</p>
       <p class="small">Speculative backup tasks and graceful handling of machine failures keep the job's tail latency in check.</p>
     </div>
@@ -468,7 +468,7 @@ sc = SparkContext(
     ["library.py"] # JARs/files to ship
 )
 </code></pre>
-      <p class="tiny muted">APIs in Scala, Java, Python, R. The context is the handle through which you build RDDs.</p>
+      <p class="tiny muted">APIs in Scala, Java, Python, R. The context is the handle through which you build RDDs. <span class="muted">(Legacy 0.x/1.x constructor; modern PySpark uses <code class="inline">SparkSession</code>.)</span></p>
     </div>
   </div>
 </section>

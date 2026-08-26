@@ -212,8 +212,8 @@
     <div class="center">
       <svg viewBox="0 0 240 150" class="chart" style="max-width:280px">
         <!-- bisection cut -->
-        <line x1="120" y1="10" x2="120" y2="140" stroke="#CC0000" stroke-width="2" stroke-dasharray="5 4"/>
-        <text x="120" y="148" text-anchor="middle" class="tiny" style="fill:#CC0000">bisection</text>
+        <line x1="20" y1="75" x2="220" y2="75" stroke="#CC0000" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="80" y="70" text-anchor="middle" class="tiny" style="fill:#CC0000">bisection</text>
         <!-- links -->
         <g stroke="#1d4ed8" stroke-width="2">
           <line x1="40" y1="40" x2="120" y2="40"/><line x1="120" y1="40" x2="200" y2="40"/>
@@ -234,7 +234,7 @@
     <div>
       <div class="callout"><span class="lbl">Diameter</span><strong>3 hops</strong> (e.g. node 1 → node 6).</div>
       <div class="callout"><span class="lbl">Average distance</span>Sum all 15 pair distances = 25 ⇒ <strong>25 / 15 = 1.67</strong>.</div>
-      <div class="callout"><span class="lbl">Bisection bandwidth</span>The dashed cut severs <strong>3 links</strong> ⇒ <strong>3 × L</strong>.</div>
+      <div class="callout"><span class="lbl">Bisection bandwidth</span>The horizontal cut separates the two rows, severing the <strong>3 vertical links</strong> ⇒ <strong>3 × L</strong>.</div>
     </div>
   </div>
   <aside class="notes">15 unordered pairs for 6 nodes. The distance table (from the original slide) sums to 25, giving an average of 1.67 hops.</aside>
@@ -707,7 +707,7 @@
   <div class="cols w-64">
     <div>
       <ul class="small">
-        <li><strong>128 nodes</strong> arranged as an <strong>8×16 2-D torus</strong></li>
+        <li><strong>up to 128 nodes</strong> in a 2-D torus</li>
         <li>Each node: Proc + 2 memory controllers + Mem + Router</li>
         <li>Router ports: <strong>N, E, S, W</strong> + local cache + 2 MCs + 1 I/O</li>
         <li><strong>Minimal adaptive routing:</strong> one of two ports chosen by congestion, and the selected port must <strong>reduce Manhattan distance</strong></li>
@@ -745,7 +745,7 @@
   <div class="cols">
     <div>
       <div class="callout"><span class="lbl">Flits</span><strong>Phit = Flit = 39 bits</strong> (32 data + 7 ECC). The head flit holds the header (2-bit direction + 8-bit destination + 6 others).</div>
-      <div class="callout"><span class="lbl">Packet classes</span>Six classes — read/write = <strong>3 flits</strong>, data response = <strong>18–19 flits</strong>, plus 4 others.</div>
+      <div class="callout"><span class="lbl">Packet classes</span>Seven classes (six non-special + one special) — requests = <strong>3 flits</strong>, data / Write-IO responses = <strong>18–19 flits</strong>. <span class="tiny muted">(Mukherjee et al., IEEE Micro 2002)</span></div>
     </div>
     <div>
       <div class="callout"><span class="lbl">Virtual channels</span><strong>19 VCs per physical channel.</strong> Each packet class gets its own VC and uses 2 more. <strong>Virtual cut-through</strong> is used, so VC buffer sizes differ by packet size.</div>

@@ -100,7 +100,7 @@
     <div>
       <p class="small">In message passing, data is <strong>explicitly sent</strong> by one process and <strong>explicitly received</strong> by another — a cooperative exchange.</p>
       <div class="callout"><span class="lbl">Advantage</span>Any change to the receiver's memory happens with the receiver's <strong>explicit participation</strong>. Communication and synchronization are combined.</div>
-      <p class="tiny muted">One-sided <code class="inline">Put</code>/<code class="inline">Get</code> (MPI-2) decouples them — a "pull" model where only one side participates.</p>
+      <p class="tiny muted">One-sided <code class="inline">Put</code>/<code class="inline">Get</code> (MPI-2) decouples them — an origin-driven model where only one side participates.</p>
     </div>
     <div class="center">
       <svg viewBox="0 0 280 170" class="chart" style="max-width:300px">
@@ -129,7 +129,7 @@
       <div class="code-label">Brief history</div>
       <table style="font-size:.78em">
         <tr><th>Year</th><th>Milestone</th></tr>
-        <tr><td>1990</td><td>PVM (precursor, Oak Ridge)</td></tr>
+        <tr><td>~1989</td><td>PVM (precursor, Oak Ridge)</td></tr>
         <tr><td class="hi">1994</td><td>MPI-1.0 — C &amp; Fortran bindings</td></tr>
         <tr><td>1997</td><td>MPI-2 — one-sided, parallel I/O, dynamic procs</td></tr>
         <tr><td>2012</td><td>MPI-3 — nonblocking collectives, RMA, MPI_T</td></tr>
@@ -223,7 +223,7 @@ int main(int argc, char *argv[]) {
     </div>
     <div>
       <div class="callout"><span class="lbl">Datatype triple</span>Data in a message is <code class="inline">(start, count, datatype)</code>. Labeling by type lets MPI bridge machines with different memory layouts (heterogeneous comm).</div>
-      <div class="callout"><span class="lbl">Tags</span>An integer that lets the receiver filter messages. Use <code class="inline">MPI_ANY_TAG</code> to accept any. (Tags avoid confusion with <em>datatypes</em>.)</div>
+      <div class="callout"><span class="lbl">Tags</span>An integer that lets the receiver filter messages. Use <code class="inline">MPI_ANY_TAG</code> to accept any. (Tags distinguish different classes of messages.)</div>
     </div>
   </div>
   <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/mpi/03_ping_pong.c"><code class="inline">Demos/mpi/03_ping_pong.c</code></a></p>
@@ -532,7 +532,7 @@ MPI_Comm_split(MPI_COMM_WORLD,
       <table style="font-size:.76em">
         <tr><th>MPI type</th><th>C type</th></tr>
         <tr><td><code class="inline">MPI_CHAR</code></td><td>char</td></tr>
-        <tr><td class="hi"><code class="inline">MPI_INT</code></td><td>signed int</td></tr>
+        <tr><td class="hi"><code class="inline">MPI_INT</code></td><td>int</td></tr>
         <tr><td><code class="inline">MPI_LONG</code></td><td>signed long int</td></tr>
         <tr><td><code class="inline">MPI_FLOAT</code></td><td>float</td></tr>
         <tr><td class="hi"><code class="inline">MPI_DOUBLE</code></td><td>double</td></tr>
@@ -773,7 +773,7 @@ MPI_Win_free(&amp;win);
     <tr><td class="hi"><strong>MPI-3</strong></td><td>2012</td><td><strong>Nonblocking collectives</strong>, improved RMA, neighborhood (topology) collectives, the <strong>MPI_T</strong> tools interface</td></tr>
     <tr><td class="hi"><strong>MPI-4</strong></td><td>2021</td><td><strong>Sessions</strong>, persistent collectives, partitioned communication, better startup scalability</td></tr>
   </table>
-  <p class="tiny muted">Ancestor: <strong>PVM</strong> (Parallel Virtual Machine, 1990). Implementations: <strong>MPICH</strong>, <strong>Open MPI</strong>, Intel MPI, IBM Spectrum MPI &mdash; all portable across clusters &amp; MPPs.</p>
+  <p class="tiny muted">Ancestor: <strong>PVM</strong> (Parallel Virtual Machine, 1989). Implementations: <strong>MPICH</strong>, <strong>Open MPI</strong>, Intel MPI, MVAPICH2 &mdash; all portable across clusters &amp; MPPs.</p>
 </section>
 
 <section data-background-color="#ffffff">

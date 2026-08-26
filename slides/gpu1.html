@@ -114,6 +114,7 @@
       </ul></div>
   </div>
   <div class="callout takeaway"><span class="lbl">One program, two worlds</span>A CUDA program contains <strong>both host code and device code</strong>. A <strong>kernel</strong> is a data-parallel function; invoking it spawns <strong>many lightweight, hardware-scheduled threads</strong> — much like running a graphics shader over many pixels.</div>
+  <div class="src">NVIDIA CUDA C++ Programming Guide — Programming Model (host/device, kernels).</div>
 </section>
 
 <!-- ==================================================================
@@ -157,6 +158,7 @@ int main() {
       <div class="callout"><span class="lbl">SPMD</span>Every thread runs the <strong>same</strong> code on a different <code class="inline">i</code>: one program, many data.</div>
     </div>
   </div>
+  <div class="src">Semantics of <code class="inline">__global__</code>, <code class="inline">threadIdx</code>, and <code class="inline">&lt;&lt;&lt;&gt;&gt;&gt;</code>: NVIDIA CUDA C++ Programming Guide — Programming Model: Kernels &amp; Thread Hierarchy.</div>
   <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/01_hello.cu"><code class="inline">Demos/cuda/01_hello.cu</code></a></p>
 </section>
 
@@ -252,6 +254,7 @@ int main() {
     <tr><td><strong>3D</strong>, size \((D_x, D_y, D_z)\)</td><td>\((x, y, z)\)</td><td>\(\text{ID} = x + y\,D_x + z\,D_x D_y\)</td></tr>
   </table>
   <div class="callout"><span class="lbl">Row-major flatten</span>Each higher dimension multiplies by the product of all the lower dimensions — exactly how a multi-dimensional array is laid out in linear memory.</div>
+  <div class="src">Index formulas for 2D block \((D_x,D_y)\) and 3D block \((D_x,D_y,D_z)\): NVIDIA CUDA C++ Programming Guide — Programming Model: Thread Hierarchy.</div>
 </section>
 
 <!-- One-block 2D matrix add -->
@@ -284,6 +287,7 @@ int main() {
       <div class="callout"><span class="lbl">idx</span><code class="inline">threadIdx.y * blockDim.x + threadIdx.x</code> is the 2D formula with \(D_x =\) <code class="inline">blockDim.x</code>.</div>
     </div>
   </div>
+  <div class="src">2D thread-index flattening and <code class="inline">threadIdx</code>/<code class="inline">blockDim</code> built-ins: NVIDIA CUDA C++ Programming Guide — Programming Model: Thread Hierarchy.</div>
 </section>
 
 <!-- Thread block hardware -->
@@ -295,18 +299,21 @@ int main() {
   </div>
   <div class="cols">
     <div>
-      <p class="small">A block reside on <strong>one core</strong> and its threads share that core's memory — which is why there is a hardware <strong>cap</strong> on threads per block.</p>
+      <p class="small">All threads of a block reside on <strong>one SM</strong> (streaming multiprocessor) and share that SM's on-chip resources — which is why there is a hardware <strong>cap</strong> on threads per block.</p>
       <table>
-        <tr><th>Architecture</th><th>Max threads / block</th></tr>
-        <tr><td>G80, GT200</td><td>up to <strong>512</strong></td></tr>
-        <tr><td>Fermi, Kepler, Maxwell, Pascal</td><td>up to <strong>1024</strong></td></tr>
+        <tr><th>Limit — all current GPUs</th><th>Value</th></tr>
+        <tr><td>Max threads / block</td><td><strong>1024</strong></td></tr>
+        <tr><td>Warp size</td><td><strong>32</strong> threads</td></tr>
+        <tr><td>Max block dims (x, y, z)</td><td><strong>1024, 1024, 64</strong></td></tr>
+        <tr><td>Max resident threads / SM</td><td><strong>2048</strong></td></tr>
       </table>
     </div>
     <div>
-      <div class="callout"><span class="lbl">Why a cap?</span>All threads in a block live on a single core and share its registers / shared memory — a finite resource.</div>
-      <div class="callout takeaway"><span class="lbl">Consequence</span>One block is not enough for big data. We need <strong>many blocks</strong>, addressed with <code class="inline">blockIdx</code> and <code class="inline">blockDim</code>.</div>
+      <div class="callout"><span class="lbl">Why a cap?</span>All threads in a block live on a single <strong>SM</strong> and share its registers and shared memory — a finite resource; threads execute in <strong>warps</strong> of 32. On an <strong>A100</strong> SM: 64 FP32 cores + 192&nbsp;KB L1/shared. On an <strong>H100</strong> SM: 128 cores + 256&nbsp;KB.</div>
+      <div class="callout takeaway"><span class="lbl">Consequence</span>One 1024-thread block is not enough for big data. We need <strong>many blocks</strong>, addressed with <code class="inline">blockIdx</code> and <code class="inline">blockDim</code>.</div>
     </div>
   </div>
+  <div class="src">Limits: NVIDIA CUDA C++ Programming Guide — Compute Capabilities, "Technical Specifications per Compute Capability" (1024 threads/block, warp 32, block dims 1024·1024·64, 2048 resident threads/SM for CC 8.0/9.0). SM figures: NVIDIA A100 (Ampere GA100) &amp; H100 (Hopper GH100) architecture white papers.</div>
 </section>
 
 <!-- Multi-block 2D matrix add -->
@@ -333,6 +340,7 @@ dim3 blocks(N / threadsPerBlock.x,
       <div class="callout"><span class="lbl">Global index</span><code class="inline">blockIdx</code> skips whole blocks of <code class="inline">blockDim</code> threads; <code class="inline">threadIdx</code> offsets within the block.</div>
     </div>
   </div>
+  <div class="src">Global-index pattern <code class="inline">blockIdx·blockDim + threadIdx</code>: NVIDIA CUDA C++ Programming Guide — Programming Model: Thread Hierarchy.</div>
   <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/03_saxpy.cu"><code class="inline">Demos/cuda/03_saxpy.cu</code></a></p>
 </section>
 
@@ -349,6 +357,7 @@ dim3 blocks(N / threadsPerBlock.x,
   </table>
   <div class="callout"><span class="lbl">min</span><code class="inline">i</code><sub>min</sub> = 0·16 + 0 = <strong>0</strong></div>
   <div class="callout ok fragment"><span class="lbl">max</span><code class="inline">i</code><sub>max</sub> = 1·16 + 15 = <strong>31</strong> &nbsp;→&nbsp; <code class="inline">i</code> ranges 0…31, exactly covering N = 32. The same holds for <code class="inline">j</code>.</div>
+  <div class="src">Indexing identity <code class="inline">i = blockIdx.x·blockDim.x + threadIdx.x</code>: NVIDIA CUDA C++ Programming Guide — Programming Model: Thread Hierarchy. (16 and 2×2 are an illustrative launch config, not a hardware limit.)</div>
 </section>
 
 <!-- Block independence / scalability -->
@@ -480,6 +489,7 @@ cudaFree(deviceMemory);
       <div class="callout warn"><span class="lbl">Size in bytes</span>Always multiply element count by <code class="inline">sizeof(type)</code> — CUDA deals in bytes, not elements.</div>
     </div>
   </div>
+  <div class="src"><code class="inline">cudaMalloc</code>/<code class="inline">cudaFree</code> semantics: NVIDIA CUDA C++ Programming Guide — Programming Interface: Device Memory.</div>
 </section>
 
 <!-- cudaMemcpy directions -->
@@ -510,6 +520,7 @@ cudaMemcpy(hostPtr, devicePtr, size,
       <div class="callout"><span class="lbl">dest, src, size, dir</span>Read it as "copy <code class="inline">size</code> bytes <strong>into</strong> the first argument <strong>from</strong> the second."</div>
     </div>
   </div>
+  <div class="src"><code class="inline">cudaMemcpy</code> signature and direction constants: NVIDIA CUDA C++ Programming Guide — Programming Interface: Device Memory.</div>
   <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/02_vector_add.cu"><code class="inline">Demos/cuda/02_vector_add.cu</code></a></p>
 </section>
 
@@ -531,6 +542,7 @@ cudaMemcpy(hostPtr, devicePtr, size,
       ⇒ \(10^6 \times 10^3 = 10^9\) multiplies and \(10^9\) adds = <strong>1 billion multiplies + 1 billion adds</strong>.
     </div></div></div>
   <div class="callout"><span class="lbl">Why GPUs care</span>A million <strong>independent</strong> dot products is a perfect fit for thousands of parallel threads.</div>
+  <div class="src">Operation count is the standard \(2N^3\) FLOP arithmetic for an \(N\times N\) matrix multiply (definitional, no external source). GPU thread-count context: NVIDIA A100 = 6912 / H100 = 16896 FP32 CUDA cores — A100 &amp; H100 architecture white papers.</div>
 </section>
 
 <!-- CPU matmul -->
@@ -577,6 +589,7 @@ void MatrixMultiplyOnDevice(float* M, float* N, float* P, int width) {
 }
 </code></pre>
   <div class="callout"><span class="lbl">Shape of every CUDA program</span>Allocate &amp; upload → launch → download &amp; free.</div>
+  <div class="src"><code class="inline">cudaMalloc</code>/<code class="inline">cudaMemcpy</code>/<code class="inline">cudaFree</code> workflow: NVIDIA CUDA C++ Programming Guide — Programming Interface: Device Memory.</div>
 </section>
 
 <!-- Naive kernel -->
@@ -611,6 +624,7 @@ __global__ void MatrixMultiplyKernel(
       <div class="callout"><span class="lbl">Row × column</span><code class="inline">devM[ty*width+k]</code> walks a row of M; <code class="inline">devN[k*width+tx]</code> walks a column of N.</div>
     </div>
   </div>
+  <div class="src"><code class="inline">__global__</code> kernel and per-thread <code class="inline">threadIdx</code> indexing: NVIDIA CUDA C++ Programming Guide — Programming Model.</div>
 </section>
 
 <!-- Invoke -->
@@ -624,7 +638,8 @@ dim3 blocks(1, 1);
 
 MatrixMultiplyKernel&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;(devM, devN, devP, width);
 </code></pre>
-  <div class="callout warn"><span class="lbl">Single block</span>The whole matrix is mapped to <strong>one block</strong> — set up to expose the limitations we discuss next.</div>
+  <div class="callout warn"><span class="lbl">Single block</span>The whole matrix is mapped to <strong>one block</strong>, so <code class="inline">width × width ≤ 1024</code> (i.e. <code class="inline">width ≤ 32</code>) — set up to expose the limitations we discuss next.</div>
+  <div class="src">1024-thread/block limit: NVIDIA CUDA C++ Programming Guide — Compute Capabilities, "Technical Specifications per Compute Capability."</div>
 </section>
 
 <!-- In-class Q on the naive kernel -->
@@ -633,18 +648,21 @@ MatrixMultiplyKernel&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;(devM, devN, devP, wi
   <div class="qa"><p class="q">1. What is the major <strong>performance</strong> problem?</p>
     <div class="fragment"><div class="a">Lots of <strong>global-memory access</strong>: each thread reads <code class="inline">2·width</code> values from slow global memory but does only <code class="inline">width</code> mul + <code class="inline">width</code> add. The compute-to-memory ratio is roughly <strong>1:1</strong> — the kernel is memory-bound.</div></div></div>
   <div class="qa"><p class="q">2. What is the major <strong>limitation</strong>?</p>
-    <div class="fragment"><div class="a">It uses a <strong>single block</strong>, so it is capped by the <strong>max threads per block</strong> (512 or 1024). Only <strong>small matrices</strong> fit — e.g. at most ~32×32 with a 1024-thread cap.</div></div></div>
+    <div class="fragment"><div class="a">It uses a <strong>single block</strong>, so it is capped by the <strong>max threads per block = 1024</strong>. Only <strong>small matrices</strong> fit — a square tile of at most <strong>32×32 = 1024</strong> threads.</div></div></div>
   <div class="qa"><p class="q">3. What <strong>assumptions</strong> did we make?</p>
     <div class="fragment"><div class="a">The matrix is <strong>square</strong> and <strong>fits in one block</strong>. Fixing these (many blocks, tiling with shared memory) is the next session.</div></div></div>
+  <div class="src">Max threads/block = 1024: NVIDIA CUDA C++ Programming Guide — Compute Capabilities, "Technical Specifications per Compute Capability."</div>
 </section>
 
 <!-- References -->
 <section data-background-color="#ffffff">
   <h2>References</h2>
   <ul class="small">
-    <li>Adapted from <strong>CIS 565</strong> (UPenn, S. Mohammed).</li>
-    <li>Figures from <strong>UIUC ECE498/AL</strong> &amp; the <strong>NVIDIA CUDA C Programming Guide</strong>.</li>
+    <li><strong>Compute-capability limits</strong> (1024 threads/block, warp 32, block/grid dims, per-SM residency): <strong>NVIDIA CUDA C++ Programming Guide</strong> — Compute Capabilities, "Technical Specifications per Compute Capability."</li>
+    <li><strong>Programming model &amp; API</strong> (kernels, <code class="inline">__global__</code>, thread hierarchy, device memory): NVIDIA CUDA C++ Programming Guide.</li>
+    <li><strong>Modern GPU figures</strong> — A100: 108 SMs / 6912 FP32 cores / 192&nbsp;KB L1-sh/SM (<strong>NVIDIA A100 Tensor Core GPU, Ampere GA100</strong> white paper); H100: 132 SMs / 16896 FP32 cores / 256&nbsp;KB L1-sh/SM (<strong>NVIDIA H100 Tensor Core GPU, Hopper GH100</strong> white paper).</li>
     <li>API timeline: NVIDIA CUDA; Khronos (OpenCL, WebGL, Vulkan/SPIR-V, WebGPU); Apple Metal; Microsoft DXR.</li>
+    <li>Pedagogy/figures adapted from <strong>CIS 565</strong> (UPenn) &amp; <strong>UIUC ECE498/AL</strong>.</li>
   </ul>
   <div class="callout takeaway"><span class="lbl">Next session (Session 2 of 2)</span>The GPU execution &amp; memory hierarchy, synchronization, many-block tiled matrix multiply with shared memory, and a full performance-optimization module. <span class="small">Session 3 is an in-class lab.</span></div>
 </section>

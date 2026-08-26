@@ -116,7 +116,7 @@ SUs = #processors
       &times; wall_time
       &times; priority_level
 </code></pre>
-      <p class="tiny muted">You pay for <em>all</em> allocated processors for the <em>whole</em> wall time — idle PEs cost money.</p>
+      <p class="tiny muted">You pay for <em>all</em> allocated processors for the <em>whole</em> wall time — idle PEs cost money. The priority/charge factor is site-specific.</p>
     </div>
   </div>
 </section>
@@ -191,6 +191,23 @@ SUs = #processors
 
 
 
+<section data-background-color="#f6f8fb">
+  <h2>Module 1 — Review</h2>
+  <div class="qa">
+    <p class="q">1. Against which serial time is speedup measured, and why does it matter?</p>
+    <div class="fragment"><div class="a">Against the <strong>best</strong> sequential algorithm's \(T_S\). Otherwise you could fake a big speedup by comparing against a bad serial baseline.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. A program gets speedup 20 on 32 PEs. What is its efficiency?</p>
+    <div class="fragment"><div class="a">\(E = S/p = 20/32 = 0.625\) — about 63% of the machine is doing useful work.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">3. Express efficiency in terms of cost.</p>
+    <div class="fragment"><div class="a">\(E = T_S / C\), where \(C = p\,T_P\).</div></div>
+  </div>
+  <p class="src">Click / press &rarr; to reveal each answer.</p>
+</section>
+
 <!-- ==================================================================
      MODULE 2 — SCALABILITY
      ================================================================== -->
@@ -248,31 +265,168 @@ SUs = #processors
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>Strong vs. Weak Scaling</h2>
+  <h2>Strong vs. Weak Scalability</h2>
+  <p class="small">Two ways to talk about "scaling to more PEs" — they differ in <strong>what you hold fixed</strong> as p grows.</p>
   <div class="cols">
-    <div>
-      <div class="callout"><span class="lbl">Strong scaling</span>Fix the <strong>problem size</strong>, add PEs.<br>Goal: finish the <em>same</em> work faster.<br>This is the world <strong>Amdahl</strong> describes — the serial part caps you.</div>
+    <div class="callout"><span class="lbl">Strong scaling</span>
+      <strong>Fixed total problem size</strong>; add PEs to finish the <em>same</em> work faster.
+      <ul class="small" style="margin:.3em 0 0 .9em">
+        <li>Work per PE <strong>shrinks</strong> as p grows</li>
+        <li>Overhead's share rises → efficiency falls</li>
+        <li>Governed by <strong>Amdahl</strong> → bounded speedup</li>
+      </ul></div>
+    <div class="callout"><span class="lbl">Weak scaling</span>
+      <strong>Fixed work per PE</strong>; grow the problem with p, holding time roughly constant.
+      <ul class="small" style="margin:.3em 0 0 .9em">
+        <li>Total problem size <strong>grows</strong> with p</li>
+        <li>Efficiency can be held ≈ constant</li>
+        <li>Governed by <strong>Gustafson</strong> → near-linear speedup</li>
+      </ul></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Tie it together</span>
+    <strong>Amdahl → strong scaling</strong> (fixed size, bounded speedup); <strong>Gustafson → weak scaling</strong> (grow the problem, near-linear speedup). <strong>Isoefficiency</strong> (later this module) makes the weak-scaling question — <em>how fast must the problem grow to hold efficiency?</em> — precise.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Amdahl's Law</h2>
+  <div class="cols w-64">
+    <div class="center">
+      <svg viewBox="0 0 420 270" class="chart">
+        <!-- axes -->
+        <line class="axis" x1="48" y1="20" x2="48" y2="225"/>
+        <line class="axis" x1="48" y1="225" x2="405" y2="225"/>
+        <text x="226" y="252" text-anchor="middle" class="lbl">number of processors  (1 … 100)</text>
+        <text x="16" y="120" text-anchor="middle" class="lbl" transform="rotate(-90 16 120)">speedup</text>
+        <!-- y ticks 0..100 -->
+        <text x="42" y="29" text-anchor="end" class="lbl">100</text>
+        <text x="42" y="69" text-anchor="end" class="lbl">75</text>
+        <text x="42" y="109" text-anchor="end" class="lbl">50</text>
+        <text x="42" y="149" text-anchor="end" class="lbl">25</text>
+        <text x="42" y="225" text-anchor="end" class="lbl">0</text>
+        <line class="grid" x1="48" y1="65" x2="405" y2="65"/>
+        <line class="grid" x1="48" y1="105" x2="405" y2="105"/>
+        <line class="grid" x1="48" y1="145" x2="405" y2="145"/>
+        <!-- s = 0 : linear diagonal to 100 (x:48->405 maps p:1->100 ; y:225->25 maps S:0->100) -->
+        <line x1="48" y1="225" x2="405" y2="25" stroke="#16a34a" stroke-width="2.5"/>
+        <text x="350" y="38" class="note" style="fill:#16a34a">s = 0</text>
+        <!-- s = 0.01 -> ~50 -->
+        <path d="M48,225 C150,140 280,110 405,105" stroke="#2563eb" stroke-width="2.5" fill="none"/>
+        <text x="402" y="100" text-anchor="end" class="note" style="fill:#2563eb">s = 0.01</text>
+        <!-- s = 0.025 -> ~28 -->
+        <path d="M48,225 C140,170 280,150 405,142" stroke="#7c3aed" stroke-width="2.5" fill="none"/>
+        <text x="402" y="136" text-anchor="end" class="note" style="fill:#7c3aed">s = 0.025</text>
+        <!-- s = 0.05 -> ~17 -->
+        <path d="M48,225 C130,190 280,172 405,157" stroke="#d97706" stroke-width="2.5" fill="none"/>
+        <text x="402" y="170" text-anchor="end" class="note" style="fill:#d97706">s = 0.05</text>
+        <!-- s = 0.1 -> ~9.5 -->
+        <path d="M48,225 C120,205 280,190 405,187" stroke="#dc2626" stroke-width="2.5" fill="none"/>
+        <text x="402" y="201" text-anchor="end" class="note" style="fill:#dc2626">s = 0.1</text>
+        <!-- s = 0.2 -> ~5 -->
+        <path d="M48,225 C120,213 280,205 405,205" stroke="#991b1b" stroke-width="2.5" fill="none"/>
+        <text x="402" y="220" text-anchor="end" class="note" style="fill:#991b1b">s = 0.2</text>
+      </svg>
     </div>
     <div>
-      <div class="callout takeaway"><span class="lbl">Weak scaling</span>Grow the <strong>problem with p</strong> (fixed work per PE).<br>Goal: solve a <em>bigger</em> problem in the same time.<br>This is the world <strong>Gustafson</strong> describes.</div>
+      <div class="callout"><span class="lbl">Amdahl's law</span>
+        Let <strong>s</strong> = the serial fraction of the work; the remaining \(1-s\) splits across \(p\) processors:
+        <div class="eq">\( S(p) \;=\; \dfrac{1}{\,s + \dfrac{1-s}{p}\,} \)</div>
+        As \(p \to \infty\) the second term vanishes, leaving the ceiling
+        <div class="eq">\( S_{max} \;=\; \dfrac{1}{s} \)</div></div>
+      <ul class="small">
+        <li><span class="pill">s = 0</span> ideal — linear, follows the diagonal</li>
+        <li><span class="pill">s = 0.01</span> caps at <strong>100×</strong> (plot ≈ 50 at p = 100)</li>
+        <li><span class="pill">s = 0.2</span> caps at just <strong>5×</strong>, no matter how many PEs</li>
+      </ul>
+      <p class="src">Even a tiny serial fraction puts a hard ceiling on speedup.</p>
     </div>
   </div>
-  <div class="callout"><span class="lbl">Why both matter</span>
-    <span class="small">Programs must accommodate growth in <strong>two dimensions</strong> — problem size <em>and</em> number of PEs. A method great at strong scaling can stall at weak scaling, and vice-versa.</span></div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Amdahl in Reality</h2>
+  <div class="cols w-64">
+    <div class="center">
+      <svg viewBox="0 0 420 260" class="chart">
+        <line class="axis" x1="50" y1="20" x2="50" y2="215"/>
+        <line class="axis" x1="50" y1="215" x2="405" y2="215"/>
+        <text x="227" y="242" text-anchor="middle" class="lbl">number of processors  (0 … 256)</text>
+        <text x="18" y="115" text-anchor="middle" class="lbl" transform="rotate(-90 18 115)">speedup</text>
+        <!-- y 0..80 : y px 215->20 -->
+        <text x="44" y="28" text-anchor="end" class="lbl">80</text>
+        <text x="44" y="76" text-anchor="end" class="lbl">60</text>
+        <text x="44" y="125" text-anchor="end" class="lbl">40</text>
+        <text x="44" y="173" text-anchor="end" class="lbl">20</text>
+        <text x="44" y="215" text-anchor="end" class="lbl">0</text>
+        <line class="grid" x1="50" y1="76" x2="405" y2="76"/>
+        <line class="grid" x1="50" y1="125" x2="405" y2="125"/>
+        <line class="grid" x1="50" y1="173" x2="405" y2="173"/>
+        <!-- x ticks -->
+        <text x="50"  y="230" text-anchor="middle" class="lbl">0</text>
+        <text x="139" y="230" text-anchor="middle" class="lbl">64</text>
+        <text x="227" y="230" text-anchor="middle" class="lbl">128</text>
+        <text x="405" y="230" text-anchor="middle" class="lbl">256</text>
+        <!-- Amdahl's law: keeps rising toward ~73 at 256 (y at 73 ~ 38) -->
+        <path d="M50,215 C150,120 280,65 405,38" stroke="#CC0000" stroke-width="3" fill="none"/>
+        <text x="300" y="55" class="note" style="fill:#CC0000">Amdahl's Law</text>
+        <!-- Reality: peaks ~25 around 64-100 then declines to ~10 at 256 -->
+        <path d="M50,215 C110,180 150,155 200,152 C260,150 340,180 405,191" stroke="#2563eb" stroke-width="3" fill="none"/>
+        <circle cx="200" cy="152" r="4" fill="#2563eb"/>
+        <text x="210" y="148" class="note" style="fill:#2563eb">Reality (peak ≈ 25)</text>
+      </svg>
+      <div class="src">Even after accounting for the serial part, real speedup peaks, then <em>declines</em>.</div>
+    </div>
+    <div>
+      <p>Amdahl's law assumes the only cost is the serial fraction. But adding PEs adds <strong>more than zero overhead</strong>:</p>
+      <ul class="small">
+        <li>Communication grows with p</li>
+        <li>Synchronization &amp; idling grow with p</li>
+        <li>Eventually overhead <em>outweighs</em> the extra compute</li>
+      </ul>
+      <div class="callout warn"><span class="lbl">Past the sweet spot</span>
+        Adding processors can make a program <strong>slower</strong>. Knowing where the curve peaks is half of performance engineering.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Gustafson's Law (Scaled Speedup)</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Amdahl fixes the <strong>problem size</strong> and asks how much faster p PEs run it. Gustafson flips the question: in practice we buy more PEs to solve a <strong>bigger</strong> problem in the <em>same</em> time.</p>
+      <div class="callout"><span class="lbl">Setup</span>
+        Let the parallel work <strong>grow with p</strong> so the parallel time is fixed at \(T_P = 1\), split into a serial slice <strong>s</strong> and a parallel slice <strong>1 − s</strong>.</div>
+      <div class="callout takeaway"><span class="lbl">Scaled speedup</span>
+        <div class="eq">\( S(p) \;=\; s + p\,(1-s) \)</div>
+        <span class="small">Speedup grows <strong>nearly linearly</strong> with p — the serial fraction only lowers the slope, it does <em>not</em> cap the result.</span></div>
+    </div>
+    <div>
+      <div class="callout warn"><span class="lbl">Amdahl — fixed problem</span>
+        Serial fraction s is fixed → \(S \le 1/s\), a <strong>hard ceiling</strong> no matter how many PEs you add.</div>
+      <div class="callout ok"><span class="lbl">Gustafson — scaled problem</span>
+        The problem grows with p → \(S = s + p(1-s)\) keeps <strong>rising with p</strong>, limited only by the serial slice.</div>
+      <ul class="small">
+        <li>\(s = 0.05,\ p = 32\): \(S = 0.05 + 32(0.95) \approx 30.5\)</li>
+        <li>…versus Amdahl's ceiling of \(1/s = 20\) for the <em>same</em> serial fraction</li>
+      </ul>
+      <p class="src">Same s — opposite outlook. The difference is entirely <em>what you hold fixed</em>: the problem, or the work per PE.</p>
+    </div>
+  </div>
 </section>
 
 <section data-background-color="#ffffff">
   <h2>Isoefficiency — How Big Must the Problem Grow?</h2>
   <div class="cols">
     <div>
-      <p class="small">Write efficiency with total overhead \(T_o(W,p)\) and problem size (work) \(W\):</p>
-      <div class="eq small">\( E = \dfrac{1}{1 + \dfrac{T_o(W,p)}{W}} \)</div>
+      <p class="small">Efficiency is <strong>useful work</strong> over <strong>total processor&ndash;time</strong>. Write \(W = T_S\) (problem size = useful work); the cost \(p\,T_P\) splits into useful work plus overhead:</p>
+      <div class="eq small">\( E = \dfrac{S}{p} = \dfrac{T_S}{p\,T_P} = \dfrac{W}{p\,T_P} \)</div>
+      <p class="tiny muted">Since \(T_o = p\,T_P - T_S\), the cost is \(p\,T_P = W + T_o(W,p)\), so</p>
+      <div class="eq small">\( E = \dfrac{W}{W + T_o} = \dfrac{1}{1 + \dfrac{T_o(W,p)}{W}} \)</div>
       <p class="small">To hold \(E\) constant as \(p\) grows, \(W\) must rise to keep \(T_o/W\) fixed:</p>
       <div class="eq small">\( W = K \cdot T_o(W,p) \)</div>
       <p class="tiny muted"><code class="inline">W(p)</code> is the <strong>isoefficiency function</strong> — the growth needed to keep efficiency constant.</p>
     </div>
     <div>
-      <div class="callout"><span class="lbl">Reading it</span>
+      <div class="callout">
         <span class="small">
         <code class="inline">W(p) ≤ O(p)</code> ⇒ <strong>scalable</strong> (work grows ≤ linearly)<br>
         <code class="inline">W(p) = O(p²)</code> ⇒ <strong>poorly scalable</strong></span></div>
@@ -285,167 +439,204 @@ SUs = #processors
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>Amdahl's Law — Fixed Problem Size</h2>
-  <div class="cols">
-    <div>
-      <p class="small">Split the work into a fraction <code class="inline">f</code> that <strong>can</strong> be parallelized and <code class="inline">(1-f)</code> that is <strong>inherently serial</strong>. On <code class="inline">p</code> PEs:</p>
-      <div class="eq small">\( S = \dfrac{1}{(1-f) + \dfrac{f}{p}} \)</div>
-      <div class="callout warn"><span class="lbl">The ceiling</span>As <code class="inline">p → ∞</code>, the parallel term vanishes:
-        <div class="eq small" style="margin-top:.4em">\( S_{\max} = \dfrac{1}{1-f} \)</div></div>
-    </div>
-    <div>
-      <div class="callout takeaway"><span class="lbl">Brutal arithmetic</span>If just <strong>5%</strong> is serial (<code class="inline">f = 0.95</code>), you can never beat <code class="inline">S = 20×</code>, no matter how many PEs you throw at it.</div>
-      <table style="font-size:.82em">
-        <tr><th>serial 1−f</th><th>S<sub>max</sub></th></tr>
-        <tr><td>10%</td><td class="hi">10×</td></tr>
-        <tr><td>5%</td><td class="hi">20×</td></tr>
-        <tr><td>1%</td><td class="hi">100×</td></tr>
-        <tr><td>0.1%</td><td>1000×</td></tr>
-      </table>
-    </div>
-  </div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>Amdahl's Law — the Curves</h2>
-  <div class="center">
-    <svg viewBox="0 0 760 320" class="chart" style="max-width:720px">
-      <!-- axes -->
-      <line x1="60" y1="280" x2="720" y2="280" class="axis"/>
-      <line x1="60" y1="280" x2="60" y2="20" class="axis"/>
-      <text x="390" y="312" text-anchor="middle" class="lbl">number of processing elements p (log scale)</text>
-      <text x="22" y="150" text-anchor="middle" class="lbl" transform="rotate(-90 22 150)">speedup S</text>
-      <!-- gridlines / x labels (log: 1,2,4,8,16,32,64,128,256,512) -->
-      <g class="grid">
-        <line x1="60" y1="280" x2="60" y2="20"/>
-        <line x1="133" y1="280" x2="133" y2="20"/>
-        <line x1="206" y1="280" x2="206" y2="20"/>
-        <line x1="280" y1="280" x2="280" y2="20"/>
-        <line x1="353" y1="280" x2="353" y2="20"/>
-        <line x1="427" y1="280" x2="427" y2="20"/>
-        <line x1="500" y1="280" x2="500" y2="20"/>
-        <line x1="573" y1="280" x2="573" y2="20"/>
-        <line x1="647" y1="280" x2="647" y2="20"/>
-        <line x1="720" y1="280" x2="720" y2="20"/>
-      </g>
-      <g class="tiny" text-anchor="middle">
-        <text x="60" y="294">1</text><text x="133" y="294">2</text><text x="206" y="294">4</text>
-        <text x="280" y="294">8</text><text x="353" y="294">16</text><text x="427" y="294">32</text>
-        <text x="500" y="294">64</text><text x="573" y="294">128</text><text x="647" y="294">256</text>
-        <text x="720" y="294">512</text>
-      </g>
-      <!-- y ticks: map S 0..40 onto 280..20 (260px for 40 → 6.5px/unit) -->
-      <g class="tiny" text-anchor="end">
-        <text x="54" y="284">0</text><text x="54" y="219">10</text><text x="54" y="154">20</text>
-        <text x="54" y="89">30</text><text x="54" y="24">40</text>
-      </g>
-      <!-- f=0.50 (cap 2): S = 1/(0.5+0.5/p); y = 280 - 6.5*S -->
-      <polyline fill="none" stroke="#94a3b8" stroke-width="2.5"
-        points="60,274 133,271 206,270 280,268 353,268 427,267 500,267 573,267 647,267 720,267"/>
-      <text x="610" y="262" class="note" fill="#64748b">f=0.50  (cap 2&times;)</text>
-      <!-- f=0.90 (cap 10) -->
-      <polyline fill="none" stroke="#3b82f6" stroke-width="2.5"
-        points="60,274 133,268 206,260 280,249 353,238 427,229 500,223 573,219 647,217 720,216"/>
-      <text x="612" y="210" class="note" fill="#3b82f6">f=0.90  (cap 10&times;)</text>
-      <!-- f=0.95 (cap 20) -->
-      <polyline fill="none" stroke="#16a34a" stroke-width="2.5"
-        points="60,274 133,268 206,257 280,242 353,221 427,198 500,180 573,167 647,159 720,155"/>
-      <text x="612" y="150" class="note" fill="#16a34a">f=0.95  (cap 20&times;)</text>
-      <!-- f=0.99 (cap 100): curve exceeds S=40 by p=128, clips at chart top -->
-      <polyline fill="none" stroke="#CC0000" stroke-width="2.5"
-        points="60,274 133,267 206,255 280,231 353,190 427,121 500,25 573,20 647,20 720,20"/>
-      <text x="540" y="40" class="note" fill="#CC0000">f=0.99  (cap 100&times;)</text>
-    </svg>
-    <div class="src">Each curve flattens toward its ceiling <code class="inline">1/(1−f)</code>. Adding PEs past the knee buys almost nothing.</div>
-  </div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>Amdahl's Law in Reality</h2>
-  <div class="cols">
+  <h2>Example: Summing <em>n</em> Numbers on <em>p</em> PEs</h2>
+  <div class="cols w-64">
     <div class="center">
-      <svg viewBox="0 0 470 248" class="chart" style="max-width:460px">
-        <g stroke="#e3e6ec" stroke-width="1">
-          <line x1="50" y1="167" x2="420" y2="167"/><line x1="50" y1="120" x2="420" y2="120"/>
-          <line x1="50" y1="72" x2="420" y2="72"/><line x1="50" y1="25" x2="420" y2="25"/>
+      <svg viewBox="0 0 440 200" class="chart">
+        <!-- brace over n -->
+        <path d="M20,40 C20,28 28,28 40,28 L200,28 C212,28 220,28 220,16 C220,28 228,28 240,28 L408,28 C420,28 420,28 420,40"
+              fill="none" stroke="#64748b" stroke-width="2"/>
+        <text x="220" y="14" text-anchor="middle" class="lbl">n numbers</text>
+        <!-- row of circles -->
+        <g fill="#dbeafe" stroke="#3b82f6">
+          <circle cx="36"  cy="62" r="11"/><circle cx="64"  cy="62" r="11"/><circle cx="92"  cy="62" r="11"/>
+          <circle cx="120" cy="62" r="11"/><circle cx="160" cy="62" r="11"/><circle cx="188" cy="62" r="11"/>
+          <circle cx="216" cy="62" r="11"/><circle cx="244" cy="62" r="11"/><circle cx="300" cy="62" r="11"/>
+          <circle cx="328" cy="62" r="11"/><circle cx="356" cy="62" r="11"/><circle cx="384" cy="62" r="11"/>
         </g>
-        <line x1="50" y1="215" x2="420" y2="215" stroke="#16181d" stroke-width="1.2"/>
-        <line x1="50" y1="215" x2="50" y2="20" stroke="#16181d" stroke-width="1.2"/>
-        <g class="note" text-anchor="end" fill="#6b7280">
-          <text x="45" y="219">0</text><text x="45" y="171">20</text><text x="45" y="124">40</text>
-          <text x="45" y="76">60</text><text x="45" y="29">80</text>
+        <text x="142" y="66" text-anchor="middle" class="lbl">· · ·</text>
+        <text x="272" y="66" text-anchor="middle" class="lbl">· · ·</text>
+        <!-- group boxes -->
+        <g fill="none" stroke="#16a34a" stroke-width="2">
+          <rect x="22" y="92" width="112" height="34" rx="8"/>
+          <rect x="146" y="92" width="112" height="34" rx="8"/>
+          <rect x="290" y="92" width="112" height="34" rx="8"/>
         </g>
-        <g class="note" text-anchor="middle" fill="#6b7280">
-          <text x="50" y="227">0</text><text x="122" y="227">50</text><text x="195" y="227">100</text>
-          <text x="267" y="227">150</text><text x="339" y="227">200</text><text x="411" y="227">250</text>
-        </g>
-        <text x="235" y="242" text-anchor="middle" class="note">number of processors p</text>
-        <text x="12" y="118" text-anchor="middle" class="note" transform="rotate(-90 12 118)">speedup</text>
-        <text x="80" y="42" class="note" font-weight="700">1&minus;f = 0.01</text>
-        <polyline points="51,213 86,167 122,135 158,113 195,96 267,72 339,56 420,44" fill="none" stroke="#CC0000" stroke-width="2.5"/>
-        <polyline points="51,213 86,172 122,160 158,156 195,156 267,165 339,177 420,191" fill="none" stroke="#1f3a93" stroke-width="2.5"/>
-        <g>
-          <rect x="246" y="92" width="128" height="42" fill="#fff" stroke="#cbd5e1"/>
-          <line x1="254" y1="106" x2="280" y2="106" stroke="#CC0000" stroke-width="2.5"/><text x="286" y="109" class="note">Amdahl bound</text>
-          <line x1="254" y1="124" x2="280" y2="124" stroke="#1f3a93" stroke-width="2.5"/><text x="286" y="127" class="note">Reality</text>
-        </g>
+        <text x="78"  y="114" text-anchor="middle" class="lbl" style="fill:#15803d">PE 0</text>
+        <text x="202" y="114" text-anchor="middle" class="lbl" style="fill:#15803d">PE 1</text>
+        <text x="346" y="114" text-anchor="middle" class="lbl" style="fill:#15803d">PE p−1</text>
+        <text x="272" y="114" text-anchor="middle" class="lbl">· · ·</text>
+        <text x="220" y="156" text-anchor="middle" class="note">each PE gets  n / p  numbers</text>
       </svg>
-      <div class="src">Real speedup rises, <strong>peaks past the knee, then falls</strong> as overhead outgrows useful work.</div>
     </div>
     <div>
-      <div class="callout warn"><span class="lbl">Even worse than the curve</span>Amdahl is an <strong>upper bound</strong>. Real programs fall <em>below</em> it — the parallel part never divides perfectly at zero coordination cost.</div>
-      <div class="callout takeaway"><span class="lbl">Takeaway</span>Attack the <strong>serial fraction first</strong> — it sets the ceiling. Then attack the <strong>overhead</strong> (next topic) — it pulls you below it.</div>
-      <div class="callout"><span class="lbl">Super-linear speedup</span><span class="small">Occasionally speedup <em>exceeds</em> p — usually more aggregate <strong>cache</strong> so the working set now fits in fast memory (also replication, or a lucky early exit in search).</span></div>
+      <p><strong>Decompose:</strong> spread the n numbers evenly across PE 0 … PE p−1.</p>
+      <ul class="small">
+        <li>Each PE owns a contiguous block of <strong>n / p</strong> numbers</li>
+        <li>This is a simple <em>data decomposition</em></li>
+      </ul>
+      <div class="callout"><span class="lbl">Two phases ahead</span>
+        Each PE first sums its own block (a <strong>local sum</strong>), then the PEs <strong>merge</strong> the local sums into one global sum.</div>
     </div>
   </div>
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>Gustafson's Law — Scaled Speedup</h2>
-  <div class="cols">
-    <div>
-      <p class="small">Gustafson's insight: in practice we <strong>grow the problem</strong> to fill bigger machines, so the serial fraction <em>shrinks</em> relative to the larger parallel part. With serial fraction <code class="inline">s</code> on <code class="inline">p</code> PEs:</p>
-      <div class="eq small">\( S_{\text{scaled}} = s + p\,(1-s) = p - s\,(p-1) \)</div>
-      <p class="tiny muted">Speedup now grows roughly <em>linearly</em> with <code class="inline">p</code> — no fixed ceiling.</p>
-    </div>
-    <div>
-      <div class="callout"><span class="lbl">Amdahl vs. Gustafson</span>
-        <span class="small">Same hardware, different <em>question</em>:<br>
-        <strong>Amdahl</strong> — fixed work, "how much faster?"<br>
-        <strong>Gustafson</strong> — fixed time, "how much bigger?"</span></div>
-      <div class="callout warn"><span class="lbl">No contradiction</span>They model different experiments. Amdahl bounds strong scaling; Gustafson rewards weak scaling.</div>
-    </div>
-  </div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>Worked Example: Summing <em>n</em> Numbers on <em>p</em> PEs</h2>
-  <div class="cols">
-    <div>
-      <p class="small">Each PE locally sums <code class="inline">n/p</code> values, then the partials merge in a tree of depth <code class="inline">log p</code> (a step each direction).</p>
-      <div class="eq small">\( T_P = \dfrac{n}{p} + 2\log p \)</div>
-      <div class="eq small">\( S = \dfrac{n}{\frac{n}{p} + 2\log p} = \dfrac{n\,p}{n + 2p\log p} \)</div>
-      <div class="eq small">\( E = \dfrac{n}{n + 2p\log p} \)</div>
-    </div>
+  <h2>Summing: The Algorithm</h2>
+  <div class="cols w-64">
     <div class="center">
-      <svg viewBox="0 0 320 230" class="chart" style="max-width:330px">
-        <line x1="40" y1="190" x2="300" y2="190" class="axis"/>
-        <line x1="40" y1="190" x2="40" y2="20" class="axis"/>
-        <text x="170" y="218" text-anchor="middle" class="lbl">processing elements p</text>
-        <text x="16" y="105" text-anchor="middle" class="lbl" transform="rotate(-90 16 105)">speedup</text>
-        <line x1="40" y1="190" x2="300" y2="30" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4"/>
-        <text x="250" y="42" class="note" fill="#64748b">linear</text>
-        <!-- bigger n stays closer to linear -->
-        <path d="M40,190 C130,120 220,70 300,48" stroke="#16a34a" stroke-width="2.5" fill="none"/>
-        <text x="225" y="78" class="note" fill="#16a34a">n=512</text>
-        <path d="M40,190 C130,140 220,110 300,95" stroke="#3b82f6" stroke-width="2.5" fill="none"/>
-        <text x="235" y="118" class="note" fill="#3b82f6">n=192</text>
-        <path d="M40,190 C120,165 200,150 300,142" class="trend"/>
-        <text x="235" y="160" class="note" fill="#CC0000">n=64</text>
+      <svg viewBox="0 0 520 230" class="chart">
+        <!-- PEs row -->
+        <g fill="#dbeafe" stroke="#3b82f6">
+          <rect x="20"  y="16" width="64" height="26" rx="6"/><rect x="116" y="16" width="64" height="26" rx="6"/>
+          <rect x="212" y="16" width="64" height="26" rx="6"/><rect x="320" y="16" width="64" height="26" rx="6"/>
+        </g>
+        <text x="52"  y="33" text-anchor="middle" class="lbl">PE 0</text>
+        <text x="148" y="33" text-anchor="middle" class="lbl">PE 1</text>
+        <text x="244" y="33" text-anchor="middle" class="lbl">PE 2</text>
+        <text x="352" y="33" text-anchor="middle" class="lbl">PE 3</text>
+        <!-- local sums -->
+        <g fill="#dcfce7" stroke="#16a34a">
+          <rect x="20"  y="62" width="64" height="24" rx="6"/><rect x="116" y="62" width="64" height="24" rx="6"/>
+          <rect x="212" y="62" width="64" height="24" rx="6"/><rect x="320" y="62" width="64" height="24" rx="6"/>
+        </g>
+        <text x="396" y="74" text-anchor="start" class="lbl">local sums</text>
+        <g class="axis"><line x1="52" y1="42" x2="52" y2="62"/><line x1="148" y1="42" x2="148" y2="62"/><line x1="244" y1="42" x2="244" y2="62"/><line x1="352" y1="42" x2="352" y2="62"/></g>
+        <text x="396" y="90" text-anchor="start" class="note">cost n/p</text>
+        <!-- tree merge level 1 -->
+        <g class="axis"><line x1="52" y1="86" x2="100" y2="120"/><line x1="148" y1="86" x2="100" y2="120"/><line x1="244" y1="86" x2="300" y2="120"/><line x1="352" y1="86" x2="300" y2="120"/></g>
+        <g fill="#fef3c7" stroke="#f59e0b"><rect x="70" y="120" width="60" height="24" rx="6"/><rect x="270" y="120" width="60" height="24" rx="6"/></g>
+        <!-- tree merge level 2 -->
+        <g class="axis"><line x1="100" y1="144" x2="200" y2="180"/><line x1="300" y1="144" x2="200" y2="180"/></g>
+        <rect x="166" y="180" width="68" height="28" rx="7" fill="#fee2e2" stroke="#CC0000"/>
+        <text x="200" y="198" text-anchor="middle" class="lbl" style="fill:#CC0000">global sum</text>
+        <text x="396" y="156" text-anchor="start" class="lbl">tree merge</text>
+        <text x="396" y="172" text-anchor="start" class="note">cost 2 log p</text>
       </svg>
-      <div class="src">Larger <code class="inline">n</code> ⇒ higher efficiency at the same p.</div>
+    </div>
+    <div>
+      <ul class="small">
+        <li><strong>Local sum:</strong> each PE adds its n/p numbers → cost <strong>n / p</strong></li>
+        <li><strong>Tree merge:</strong> combine local sums pairwise up a binary tree → cost <strong>2 log p</strong></li>
+      </ul>
+      <div class="callout takeaway"><span class="lbl">Parallel time</span>
+        <div class="eq">\( T_P \;=\; \dfrac{n}{p} \;+\; 2\log p \)</div>
+        <span class="small"><strong>Why the 2?</strong> Each of the \(\log p\) tree levels costs <strong>1 communication</strong> (receive the partner's partial sum) <strong>+ 1 addition</strong> — communication is counted, each at one time unit. With free communication it would be just \(\log p\).</span><br>
+        <span class="small">First term shrinks with p; second term <em>grows</em> with p — that tension is the whole scalability story.</span></div>
     </div>
   </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Summing: Speedup</h2>
+  <div class="cols w-64">
+    <div class="center">
+      <svg viewBox="0 0 420 270" class="chart">
+        <line class="axis" x1="48" y1="20" x2="48" y2="225"/>
+        <line class="axis" x1="48" y1="225" x2="405" y2="225"/>
+        <text x="226" y="252" text-anchor="middle" class="lbl">number of PEs  (1 … 25)</text>
+        <text x="16" y="120" text-anchor="middle" class="lbl" transform="rotate(-90 16 120)">speedup</text>
+        <!-- y 0..30 : 225->20 -->
+        <text x="42" y="29" text-anchor="end" class="lbl">30</text>
+        <text x="42" y="97" text-anchor="end" class="lbl">20</text>
+        <text x="42" y="165" text-anchor="end" class="lbl">10</text>
+        <text x="42" y="225" text-anchor="end" class="lbl">0</text>
+        <line class="grid" x1="48" y1="97" x2="405" y2="97"/>
+        <line class="grid" x1="48" y1="165" x2="405" y2="165"/>
+        <!-- linear: S = p, p 1..25 -> diagonal -->
+        <line x1="48" y1="225" x2="405" y2="20" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="350" y="34" class="note" style="fill:#64748b">linear</text>
+        <!-- n=512: stays near linear longer, ~21 at 25 -->
+        <path d="M48,225 C150,140 280,75 405,82" stroke="#2563eb" stroke-width="2.5" fill="none"/>
+        <text x="360" y="76" class="note" style="fill:#2563eb">n = 512</text>
+        <!-- n=320: ~17 -->
+        <path d="M48,225 C150,155 280,105 405,110" stroke="#7c3aed" stroke-width="2.5" fill="none"/>
+        <text x="360" y="105" class="note" style="fill:#7c3aed">n = 320</text>
+        <!-- n=192: ~12 -->
+        <path d="M48,225 C140,170 280,140 405,143" stroke="#d97706" stroke-width="2.5" fill="none"/>
+        <text x="360" y="138" class="note" style="fill:#d97706">n = 192</text>
+        <!-- n=64: plateaus ~5 -->
+        <path d="M48,225 C120,195 260,182 405,184" stroke="#CC0000" stroke-width="2.5" fill="none"/>
+        <text x="360" y="180" class="note" style="fill:#CC0000">n = 64</text>
+      </svg>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Speedup</span>
+        <div class="eq">\( S \;=\; \dfrac{n}{T_P} \;=\; \dfrac{np}{\,n + 2p\log p\,} \)</div></div>
+      <ul class="small">
+        <li>Larger <strong>n</strong> stays closer to linear for longer</li>
+        <li>Small <strong>n = 64</strong> plateaus near <strong>5</strong> — overhead dominates quickly</li>
+      </ul>
+      <div class="callout takeaway"><span class="lbl">Lesson</span>
+        For a <em>fixed</em> problem, more PEs eventually stop helping. To keep scaling, you must also <strong>grow n</strong>.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Summing: Efficiency</h2>
+  <div class="cols w-64">
+    <div class="center">
+      <svg viewBox="0 0 420 270" class="chart">
+        <line class="axis" x1="48" y1="20" x2="48" y2="225"/>
+        <line class="axis" x1="48" y1="225" x2="405" y2="225"/>
+        <text x="226" y="252" text-anchor="middle" class="lbl">number of PEs  (1, 4, 8, 16, 32)</text>
+        <text x="16" y="120" text-anchor="middle" class="lbl" transform="rotate(-90 16 120)">efficiency</text>
+        <!-- y 0..1.2 : 225->20, so 1.0 at y=54.2 -->
+        <text x="42" y="29" text-anchor="end" class="lbl">1.2</text>
+        <text x="42" y="63" text-anchor="end" class="lbl">1.0</text>
+        <text x="42" y="148" text-anchor="end" class="lbl">0.5</text>
+        <text x="42" y="225" text-anchor="end" class="lbl">0</text>
+        <line class="grid" x1="48" y1="54" x2="405" y2="54"/>
+        <line class="grid" x1="48" y1="148" x2="405" y2="148"/>
+        <!-- x ticks 1,4,8,16,32 mapped 48..405 -->
+        <text x="48"  y="240" text-anchor="middle" class="lbl">1</text>
+        <text x="138" y="240" text-anchor="middle" class="lbl">4</text>
+        <text x="227" y="240" text-anchor="middle" class="lbl">8</text>
+        <text x="316" y="240" text-anchor="middle" class="lbl">16</text>
+        <text x="405" y="240" text-anchor="middle" class="lbl">32</text>
+        <!-- n=512: stays near 1.0 longer, declines to ~0.7 -->
+        <path d="M48,58 C150,70 280,95 405,112" stroke="#2563eb" stroke-width="2.5" fill="none"/>
+        <text x="350" y="106" class="note" style="fill:#2563eb">n = 512</text>
+        <!-- n=320: declines to ~0.55 -->
+        <path d="M48,58 C150,82 280,118 405,140" stroke="#7c3aed" stroke-width="2.5" fill="none"/>
+        <text x="350" y="134" class="note" style="fill:#7c3aed">n = 320</text>
+        <!-- n=192: declines to ~0.4 -->
+        <path d="M48,58 C140,95 280,150 405,168" stroke="#d97706" stroke-width="2.5" fill="none"/>
+        <text x="350" y="186" class="note" style="fill:#d97706">n = 192</text>
+        <!-- n=64: declines fast to ~0.18 -->
+        <path d="M48,58 C120,120 260,180 405,196" stroke="#CC0000" stroke-width="2.5" fill="none"/>
+        <text x="290" y="204" class="note" style="fill:#CC0000">n = 64</text>
+      </svg>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Efficiency</span>
+        <div class="eq">\( E \;=\; \dfrac{S}{p} \;=\; \dfrac{n}{\,n + 2p\log p\,} \)</div></div>
+      <ul class="small">
+        <li>All curves <strong>decline</strong> as p grows (overhead 2p log p in the denominator)</li>
+        <li>Bigger <strong>n</strong> stays near 1.0 longer</li>
+      </ul>
+      <div class="callout takeaway"><span class="lbl">The fix</span>
+        To <em>hold</em> efficiency constant, grow n as you grow p. <strong>How much?</strong> → isoefficiency.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 2 — Review</h2>
+  <div class="qa">
+    <p class="q">1. State Amdahl's law and the maximum speedup for s = 0.05.</p>
+    <div class="fragment"><div class="a">Max speedup \(S = 1/s\). For s = 0.05, \(S = 1/0.05 = 20\)× — no matter how many PEs.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. What is "problem size W" — is it the data size?</p>
+    <div class="fragment"><div class="a">No — W is the <strong>amount of computation</strong>: the basic steps of the best sequential algorithm. It correlates with serial execution time.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">3. State the isoefficiency relation and what W(p) ≤ O(p) means.</p>
+    <div class="fragment"><div class="a">\(W = K\,T(W,p)\). If W only needs to grow linearly (or less) with p to hold efficiency, the system is <strong>scalable</strong>.</div></div>
+  </div>
+  <p class="src">Click / press &rarr; to reveal each answer.</p>
 </section>
 
 <!-- ==================================================================
@@ -503,7 +694,7 @@ SUs = #processors
       <div class="callout"><span class="lbl">Two-part cost</span>Sending an <code class="inline">m</code>-byte message costs
         <div class="eq small" style="margin-top:.4em">\( t_{\text{msg}} = \alpha + m\,\beta \)</div></div>
       <p class="small"><code class="inline">α</code> = per-<strong>message</strong> latency (startup); <code class="inline">β</code> = per-<strong>byte</strong> transfer cost.</p>
-      <div class="callout warn"><span class="lbl">α dominates</span><code class="inline">α</code> is larger than <code class="inline">β</code> by a factor of <strong>several thousand</strong>. Latency, not bandwidth, kills fine-grained codes.</div>
+      <div class="callout warn"><span class="lbl">α dominates</span><code class="inline">α</code> is larger than <code class="inline">β</code> by a factor of <strong>~10<sup>3</sup>&ndash;10<sup>4</sup></strong> (network-dependent). Latency, not bandwidth, kills fine-grained codes.</div>
     </div>
     <div>
       <div class="callout takeaway"><span class="lbl">Optimization idea</span>Send <strong>fewer, bigger</strong> messages. <em>Combine</em> (aggregate) communication to amortize the fixed <code class="inline">α</code> over many bytes.</div>
@@ -513,32 +704,114 @@ SUs = #processors
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>Case Study: Matrix Multiply — Ratio Matters</h2>
+  <h2>Case Study: Matrix Multiply</h2>
   <div class="cols">
     <div>
-      <div class="code-label">The kernel</div>
+      <p class="small">How would we parallelize this? Start with the serial triple-nested loop:</p>
+      <div class="code-label">Serial matmul — C = A × B</div>
       <pre><code class="language-c" data-trim>
-for (i=0; i&lt;n; i++)
-  for (j=0; j&lt;n; j++) {
+for (i = 0; i &lt; n; i++)
+  for (j = 0; j &lt; n; j++) {
     C[i][j] = 0;
-    for (k=0; k&lt;n; k++)
+    for (k = 0; k &lt; n; k++)
       C[i][j] += A[i][k] * B[k][j];
   }
 </code></pre>
-      <p class="tiny muted"><strong>Naive:</strong> per element of C, fetch one row of A and one column of B — two messages of size <code class="inline">n</code>.</p>
-      <div class="eq small">\( \text{ratio} = \dfrac{2n}{2(\alpha + n\beta)} = \dfrac{n}{\alpha + n\beta} \)</div>
-      <p class="tiny muted">α=1000, β=0.2, n=1000 ⇒ ratio = <strong>0.83</strong> (communication-bound!).</p>
     </div>
     <div>
-      <div class="callout takeaway"><span class="lbl">Block it</span>Compute a <code class="inline">g×g</code> tile of C from <em>bunches</em> of <code class="inline">g</code> rows / columns. Same two messages now carry far more reuse.</div>
-      <div class="eq small">\( \text{ratio} = \dfrac{2g^2 n}{2(\alpha + g\,n\beta)} = \dfrac{g^2 n}{\alpha + g\,n\beta} \)</div>
-      <p class="tiny muted">Same α, β, n with <code class="inline">g=10</code> ⇒ ratio = <strong>33.3</strong>.</p>
-      <div class="callout"><span class="lbl">40× better</span>Blocking raised compute-per-byte ~40×, turning a comm-bound kernel into a compute-bound one — without changing the math.</div>
+      <p>Each element <code class="inline">C[i][j]</code> needs <strong>row i of A</strong> and <strong>column j of B</strong>.</p>
+      <div class="callout"><span class="lbl">The questions</span>
+        <ul class="small" style="margin:.2em 0 0 .9em">
+          <li>How do we <strong>distribute</strong> A and B?</li>
+          <li>How <strong>large</strong> is the overhead?</li>
+          <li>How much does a <strong>message / remote access</strong> cost?</li>
+        </ul></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>A Simple Dynamic Algorithm</h2>
+  <div class="cols">
+    <div>
+      <ul class="small">
+        <li>Distribute <strong>A by rows</strong>, <strong>B by columns</strong></li>
+        <li>Any processor can <strong>request</strong> a row of A or a column of B (two messages)</li>
+        <li>Distribute the work of computing each <strong>element of C</strong> via a load-balancing scheme</li>
+      </ul>
+      <div class="callout ok"><span class="lbl">Bonus</span>
+        Dynamic load balancing works even on <strong>heterogeneous</strong> machines — fast PEs naturally grab more work.</div>
+    </div>
+    <div>
+      <div class="callout warn"><span class="lbl">But how much does it cost?</span>
+        To answer "how large is the overhead?" we need a model of communication, then a
+        <strong>computation–communication ratio</strong> — measured <strong>per PE</strong>, for the unit of work it grabs (one element of C, quantified on the next slide):
+        <div class="eq small">\( \dfrac{\text{useful compute}}{\text{communication}} \)</div>
+        High ratio = compute-bound (good). Low ratio = communication-bound (bad).</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Ratio: The Simple Dynamic Algorithm</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Cost to compute <strong>one element</strong> of C:</p>
+      <ul class="small">
+        <li><strong>Computation</strong> = 2n (one <code class="inline">+</code> and one <code class="inline">*</code> per k; 1 unit time each)</li>
+        <li><strong>Communication</strong> = two messages of size n = \(2(\alpha + n\beta)\)</li>
+      </ul>
+      <div class="eq">\( \text{ratio} \;=\; \dfrac{n}{\alpha + n\beta} \)</div>
+    </div>
+    <div>
+      <div class="callout warn"><span class="lbl">Plug in numbers</span>
+        \(\alpha = 1000,\ \beta = 0.2,\ n = 1000\):
+        <div class="eq small">\( \dfrac{1000}{1000 + 1000\cdot 0.2} = \dfrac{1000}{1200} \approx 0.83 \)</div>
+        Ratio &lt; 1 → <strong>communication-bound</strong>. We move two whole vectors just to do 2n flops. Bad.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>A Better Algorithm: Blocking</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Store A as <strong>row-bunches</strong> (g rows each) and B as <strong>column-bunches</strong>. Each object computes a <strong>g × g section</strong> of C.</p>
+      <ul class="small">
+        <li><strong>Computation</strong> = \(2\,g\,g\,n\) ops</li>
+        <li><strong>Communication</strong> = 2 messages, \(g\,n\) bytes each</li>
+      </ul>
+      <div class="eq">\( \text{ratio} \;=\; \dfrac{g^2 n}{\alpha + g n\beta} \)</div>
+    </div>
+    <div>
+      <div class="callout ok"><span class="lbl">Plug in numbers</span>
+        \(\alpha = 1000,\ \beta = 0.2,\ n = 1000,\ g = 10\):
+        <div class="eq small">\( \dfrac{10^2\cdot 1000}{1000 + 10\cdot 1000\cdot 0.2} = \dfrac{100000}{3000} \approx 33.3 \)</div>
+        From <strong>0.83 → 33.3</strong>: a 40× better ratio. Now <strong>compute-bound</strong>.</div>
+      <div class="callout takeaway"><span class="lbl">Why it works</span>
+        Larger blocks → higher <strong>arithmetic intensity</strong> → the fixed message cost \(\alpha\) is amortized over far more compute.</div>
     </div>
   </div>
 </section>
 
 
+
+<section data-background-color="#f6f8fb">
+  <h2>Module 3 — Review</h2>
+  <div class="qa">
+    <p class="q">1. Name the three sources of parallel overhead.</p>
+    <div class="fragment"><div class="a">Inter-process interaction (talking), idling (waiting), and excess computation (replicating).</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">2. Why does the simple dynamic matmul give a ratio of only 0.83?</p>
+    <div class="fragment"><div class="a">Per element it does just 2n flops but ships two n-element messages: \(n/(\alpha + n\beta) = 1000/1200 \approx 0.83\) — communication-bound.</div></div>
+  </div>
+  <div class="qa">
+    <p class="q">3. How does blocking raise the ratio to 33.3?</p>
+    <div class="fragment"><div class="a">A g×g block does \(g^2 n\) flops per pair of messages: \(g^2 n/(\alpha + gn\beta)\). Bigger blocks amortize \(\alpha\) over more compute → higher arithmetic intensity.</div></div>
+  </div>
+  <p class="src">Click / press &rarr; to reveal each answer.</p>
+</section>
 
 <!-- ==================================================================
      MODULE 4 — PROFILING & TRACING
@@ -564,16 +837,19 @@ for (i=0; i&lt;n; i++)
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>The Toolbox</h2>
-  <table style="font-size:.8em">
+  <h2>Tools</h2>
+  <table style="font-size:.72em">
     <tr><th>Tool</th><th>Kind</th><th>What it's for</th></tr>
     <tr><td class="hi"><strong>gprof</strong></td><td>profiler (sampling + call counts)</td><td>Classic per-function time &amp; call graph; <code class="inline">-pg</code> at compile.</td></tr>
     <tr><td class="hi"><strong>Intel VTune</strong></td><td>profiler (HW sampling)</td><td>Hotspots, microarchitecture, memory &amp; threading analysis.</td></tr>
     <tr><td><strong>Valgrind</strong> (Callgrind/Cachegrind)</td><td>instrumentation (simulation)</td><td>Exact call counts &amp; cache-miss modeling; also memory errors.</td></tr>
     <tr><td class="hi"><strong>PAPI</strong></td><td>HW-counter API</td><td>Portable access to counters (cycles, cache misses, FLOPs) from your code.</td></tr>
+    <tr><td><strong>HPCToolkit</strong></td><td>sampling profiler (CPU + GPU)</td><td>Call-path profiles &amp; traces; supports NVIDIA / AMD / Intel GPUs.</td></tr>
     <tr><td><strong>Score-P</strong> + Vampir/Scalasca</td><td>tracing &amp; profiling</td><td>MPI/OpenMP timelines, communication patterns at scale.</td></tr>
+    <tr><td class="hi"><strong>NVIDIA Nsight</strong> (Systems / Compute)</td><td>GPU profiler</td><td>System-wide timeline (<code class="inline">nsys</code>) + per-kernel counters, occupancy &amp; memory (<code class="inline">ncu</code>); replaces <code class="inline">nvprof</code>.</td></tr>
+    <tr><td class="hi"><strong>AMD rocprof / Omniperf</strong> (ROCm)</td><td>GPU profiler</td><td>HIP/ROCm kernel counters &amp; traces; roofline &amp; hotspot analysis on Radeon/Instinct.</td></tr>
   </table>
-  <p class="tiny muted center">Many tools build on <strong>PAPI</strong> underneath to read the CPU's performance counters.</p>
+  <p class="tiny muted center">CPU tools read counters via <strong>PAPI</strong>; GPU profilers read the vendor's counters (<strong>CUPTI</strong> on NVIDIA, <strong>ROCProfiler</strong> on AMD).</p>
 </section>
 
 <section data-background-color="#ffffff">
@@ -602,7 +878,7 @@ PAPI_stop_counters(val, 2);
     </div>
   </div>
   <div class="callout warn"><span class="lbl">Mind the overhead</span>
-    <span class="small">Instrumentation (Valgrind, <code class="inline">-pg</code>) can slow code 10–100×; sampling profilers (VTune) stay near native speed. Profile a <em>representative</em> run, not a toy input.</span></div>
+    <span class="small">Heavy instrumentation (Valgrind) can slow code 10–100×; <code class="inline">-pg</code>/gprof is much lighter (~1.1–2×); sampling profilers (VTune) stay near native speed. Profile a <em>representative</em> run, not a toy input.</span></div>
 </section>
 
 

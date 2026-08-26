@@ -228,7 +228,7 @@
       <div class="src">Barthels, Psarras, Bientinesi, "Linnea…," ACM TOMS 47(3), 2021.</div>
     </div>
   </div>
-  <div class="callout"><span class="lbl">Why include this group</span>They span the two altitudes that matter: the <strong>micro-kernel</strong> (GETT, like your GEMM tuning) and the <strong>whole-expression optimizer</strong> (Linnea, like a query planner for matrix math). Their survey "The Landscape of Software for Tensor Computations" (Psarras, Karlsson, Bientinesi, 2021) is a good map of the whole field.</div>
+  <div class="callout"><span class="lbl">Why include this group</span>They span the two altitudes that matter: the <strong>micro-kernel</strong> (GETT, like your GEMM tuning) and the <strong>whole-expression optimizer</strong> (Linnea, like a query planner for matrix math). Their survey "The Landscape of Software for Tensor Computations" (Psarras, Karlsson, Li, Bientinesi, 2021) is a good map of the whole field.</div>
   <aside class="notes">
     Bientinesi's HPAC group is worth showing because it connects the two ends of the stack. GETT is the low-level answer
     to "how do I contract fast"; Linnea is the high-level answer to "given a big matrix expression, what order and which
@@ -254,6 +254,7 @@
       <div class="callout warn"><span class="lbl">…and that's exactly what breaks next</span><span class="small">Reduction-to-GEMM assumes <strong>dense, regular</strong> data. Real tensors — reviews, health records, graphs — are <strong>hyper-sparse</strong>. There is no dense matrix to call GEMM on.</span></div>
     </div>
   </div>
+  <div class="src">Framework survey: Psarras, Karlsson, Li &amp; Bientinesi, "The Landscape of Software for Tensor Computations," arXiv:2103.13756, 2021 (per-framework sources on their own slides).</div>
   <aside class="notes">
     Use this as the pivot slide. The dense story has a happy ending: everything reduces to GEMM. The sparse story does
     not — the moment >99.99% of entries are zero, materializing a dense matricization is impossible, and all the format
@@ -320,6 +321,7 @@ val: [a b c d e]
       <p class="tiny muted">Index storage dominates: 3&ndash;4&times; the value bytes for high-order tensors.</p>
     </div>
   </div>
+  <div class="src">Sparse-tensor COO storage: Bader &amp; Kolda, "Efficient MATLAB Computations with Sparse and Factored Tensors," <em>SIAM J. Sci. Comput.</em> 30(1):205–231, 2007.</div>
   <aside class="notes">
     COO is the baseline everyone compares against. Its virtue — mode-agnosticism — matters because tensor kernels
     operate along different modes, and mode-specific formats (like CSF) pay a cost to switch modes. Its vice is index
@@ -420,14 +422,14 @@ val: [a b c d e]
       <p class="tiny muted">CSF is <strong>mode-specific</strong> (may store one tree per mode); HiCOO stays agnostic via <em>blocking</em>; ALTO stays agnostic via <em>linearization</em> of the coordinate space.</p>
     </div>
   </div>
-  <div class="src">Helal, Laukemann, Checconi, Tithi, Ranganathan, Petrini, Sadayappan, "ALTO: Adaptive Linearized Storage of Sparse Tensors," ICS 2021.</div>
+  <div class="src">Helal, Laukemann, Checconi, Tithi, Ranadive, Petrini, Choi, "ALTO: Adaptive Linearized Storage of Sparse Tensors," ICS 2021.</div>
   <aside class="notes">
     ALTO is the contrast piece to HiCOO. Both are mode-agnostic — they don't privilege a mode the way CSF's tree does —
     but they get there differently: HiCOO blocks the coordinate space and stores byte offsets within blocks; ALTO
     linearizes the full coordinate into one integer with an adaptive number of bits per mode, so a space-filling-curve-
     like ordering keeps neighbors close along all modes simultaneously. The payoff is one tensor copy that serves
     MTTKRP for every mode with low imbalance and synchronization — no per-mode copies or reordering. Note the author
-    list includes Jee Choi (a frequent collaborator) and P. Sadayappan.
+    list ends with Jee Choi (a frequent collaborator). P. Sadayappan works with the group on other sparse-tensor papers but is not an ALTO author.
   </aside>
 </section>
 
@@ -449,7 +451,7 @@ val: [a b c d e]
       <div class="callout takeaway"><span class="lbl">Same tricks return</span><span class="small">Tiling, privatization/reduction (false-sharing lesson!), reordering for locality, format specialization.</span></div>
     </div>
   </div>
-  <div class="src">MTTKRP as CP bottleneck: Li et al., IPDPS 2017 &amp; SC 2018. SpTTM: Li et al., IA³/HPEC 2016; Ma et al., J. Parallel Distrib. Comput. 129, 2019.</div>
+  <div class="src">MTTKRP as CP bottleneck: Li et al., IPDPS 2017 &amp; SC 2018. SpTTM: Li et al., IA³ 2016; Ma et al., J. Parallel Distrib. Comput. 129, 2019.</div>
   <aside class="notes">
     These two kernels are why formats matter — they are the innermost loops of the two dominant decompositions. MTTKRP
     for CP, TTM for Tucker. Every parallelization headache from earlier lectures reappears: write conflicts (use
@@ -503,6 +505,7 @@ val: [a b c d e]
       <div class="callout"><span class="lbl">Redundancy across MTTKRPs</span><span class="small"><strong>AdaTM</strong> memoizes shared partial results across the MTTKRP sequence in a CP-ALS sweep — a model-driven space/time tradeoff, up to 8&times; over SPLATT.</span></div>
     </div>
   </div>
+  <div class="src">CP, Tucker, CP-ALS &amp; HOOI: Kolda &amp; Bader, "Tensor Decompositions and Applications," <em>SIAM Review</em> 51(3):455–500, 2009.</div>
   <div class="src">AdaTM: Li, Choi, Perros, Sun, Vuduc, "Model-Driven Sparse CP Decomposition for Higher-Order Tensors," IPDPS 2017.</div>
   <aside class="notes">
     Close the loop: the reason anyone cares about MTTKRP and TTM is that they are the inner loops of CP and Tucker,
@@ -594,6 +597,8 @@ val: [a b c d e]
     <div>
       <p class="small"><strong>Sparse tensors &amp; decompositions</strong></p>
       <ul class="tiny">
+        <li>T. G. Kolda &amp; B. W. Bader, "Tensor Decompositions and Applications," <em>SIAM Review</em> 51(3):455–500, 2009 (CP/Tucker foundations).</li>
+        <li>B. W. Bader &amp; T. G. Kolda, "Efficient MATLAB Computations with Sparse and Factored Tensors," <em>SIAM J. Sci. Comput.</em> 30(1):205–231, 2007 (COO storage).</li>
         <li>J. Li, J. Sun, R. Vuduc, "HiCOO: Hierarchical Storage of Sparse Tensors," <em>SC</em> 2018.</li>
         <li>J. Li et al., "Efficient and Effective Sparse Tensor Reordering," <em>ICS</em> 2019.</li>
         <li>J. Li, C. Battaglino, I. Perros, J. Sun, R. Vuduc, "…In-Place Dense Tensor-Times-Matrix Multiply," <em>SC</em> 2015 (InTensLi).</li>

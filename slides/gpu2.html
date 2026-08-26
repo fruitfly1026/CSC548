@@ -90,19 +90,20 @@
 <section data-background-color="#ffffff">
   <h2>Device &amp; Global Function Constraints</h2>
   <div class="cols">
-    <div class="callout"><span class="lbl">Recursion</span>
+    <div class="callout"><span class="lbl">Allowed on the device</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
         <li>Recursion on the <strong>device</strong> is OK (except very old G80)</li>
         <li><strong>Dynamic parallelism</strong> (a <code class="inline">__global__</code> launching itself) requires compute capability <strong>≥ 3.5</strong></li>
       </ul></div>
-    <div class="callout warn"><span class="lbl">Not allowed inside device code</span>
+    <div class="callout ok"><span class="lbl">Myth-busting — these ARE allowed</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li>No <strong>static</strong> variables</li>
-        <li>No <code class="inline">malloc</code> (classic constraint)</li>
+        <li><strong>Static</strong> <code class="inline">__shared__</code> / <code class="inline">__device__</code> variables <strong>are permitted</strong> in device code</li>
+        <li>Device-side <code class="inline">malloc()</code> / <code class="inline">free()</code> <strong>are supported</strong> from inside a kernel (compute capability ≥ 2.x)</li>
       </ul></div>
   </div>
-  <div class="callout takeaway"><span class="lbl">Why</span>
-    Thousands of threads share the SM's tiny on-chip state — there is no per-thread stack big enough for arbitrary recursion or heap, so the model is deliberately restricted.</div>
+  <div class="callout takeaway"><span class="lbl">Real constraints</span>
+    A kernel must return <code class="inline">void</code> and take no variable arguments. The old "no static variables, no <code class="inline">malloc</code>" rule is <strong>outdated</strong> — but thousands of threads still share the SM's tiny on-chip state, so device heap and deep recursion cost resources: use them deliberately.</div>
+  <div class="src">CUDA C++ Programming Guide — Variable Memory Space Specifiers; Dynamic Global Memory Allocation and Operations.</div>
 </section>
 
 <!-- Math functions & intrinsics -->
@@ -203,12 +204,13 @@ f4.x; f4.y; f4.z; f4.w;     // NOT .r .g .b .a
       </ul></div>
     <div class="callout ok"><span class="lbl">Zero-overhead warp scheduling</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li>Only <strong>one warp</strong> executes at a time</li>
-        <li>Warps whose next instruction's <strong>operands are ready</strong> are eligible</li>
+        <li>Warps whose next instruction's <strong>operands are ready</strong> are eligible; stalled warps are simply skipped — no save/restore cost</li>
         <li>Eligible warps selected by <strong>priority</strong></li>
-        <li>All <strong>32 threads</strong> execute the <strong>same</strong> instruction (SIMT)</li>
+        <li>A modern SM has <strong>4 warp schedulers</strong>, so up to <strong>4 warps</strong> issue per cycle (not just one)</li>
+        <li>All <strong>32 threads</strong> of a warp share one instruction stream (SIMT)</li>
       </ul></div>
   </div>
+  <div class="src">4 schedulers/SM: NVIDIA A100 &amp; H100 Tensor Core GPU Architecture whitepapers (SM diagram). CUDA C++ Programming Guide — Hardware Implementation.</div>
 </section>
 
 <!-- Warp scheduling timeline -->
@@ -249,7 +251,7 @@ f4.x; f4.y; f4.z; f4.w;     // NOT .r .g .b .a
 <!-- Branch divergence -->
 <section data-background-color="#ffffff">
   <h2>Branch Divergence</h2>
-  <p class="small">All 32 threads of a warp share one program counter. If threads take <strong>different branches</strong>, the hardware runs <strong>both paths</strong> with lane <strong>masking</strong>.</p>
+  <p class="small">A warp executes in <strong>SIMT</strong> lockstep. If threads take <strong>different branches</strong>, the hardware runs <strong>both paths</strong> with lane <strong>masking</strong>. <span class="muted">Pre-Volta the 32 threads literally shared <em>one</em> program counter; Volta+ gives each thread its <strong>own</strong> PC (Independent Thread Scheduling) — but a warp still issues one instruction at a time, so divergent paths are still serialized.</span></p>
   <div class="cols">
     <div>
       <div class="code-label">divergent branch in a warp</div>
@@ -267,35 +269,38 @@ if (threadIdx.x &lt; 16) {
     </div>
     <div>
       <div class="callout warn"><span class="lbl">Cost</span>Not all ALUs do useful work while a path runs — the masked lanes idle.</div>
-      <div class="callout"><span class="lbl">Worst case</span>A fully divergent 32-thread warp serializes all 32 paths — as low as <strong>1/32 of peak</strong> throughput.</div>
+      <div class="callout"><span class="lbl">Worst case</span>A fully divergent warp serializes its distinct paths, so throughput falls toward the fraction of lanes active on each path — potentially a large slowdown.</div>
       <span class="tiny muted">No divergence cost if all 32 lanes take the same branch. We revisit divergence as an optimization lever in Part H.</span>
     </div>
   </div>
+  <div class="src">SIMT execution &amp; Independent Thread Scheduling: CUDA C++ Programming Guide — Hardware Implementation (SIMT Architecture); NVIDIA V100 (Volta) Architecture whitepaper.</div>
 </section>
 
 <!-- Exercises: warps & dispatch -->
 <section data-background-color="#ffffff">
   <h2>In-class: Counting Warps</h2>
-  <div class="callout"><span class="lbl">Q1</span>A GT200 SM hosts <strong>1024 threads</strong>. How many warps?
+  <div class="callout"><span class="lbl">Q1</span>A block has <strong>1024 threads</strong> (the max per block). How many warps?
     <div class="fragment" style="margin-top:.4em"><strong>A:</strong> \( 1024 / 32 = 32 \) warps.</div></div>
   <div class="callout"><span class="lbl">Q2</span><strong>3 blocks × 256 threads</strong> — how many warps?
     <div class="fragment" style="margin-top:.4em"><strong>A:</strong> \( 3 \times 256 / 32 = 24 \) warps.</div></div>
-  <div class="callout"><span class="lbl">Q3</span>A warp is 32 threads but an SM has only <strong>8 SPs</strong> — what gives?
-    <div class="fragment" style="margin-top:.4em"><strong>A:</strong> 8 threads enter the SPs per cycle, so it takes <strong>4 cycles</strong> to dispatch a full warp.</div></div>
+  <div class="callout"><span class="lbl">Q3</span>How long to issue one warp?
+    <div class="fragment" style="margin-top:.4em"><strong>A (modern):</strong> A dispatch unit issues <strong>32 threads/clock</strong>, so a whole warp issues in <strong>one cycle</strong>. <span class="muted">(historical, G80: only 8 SPs → 8 threads/cycle → 4 cycles per warp.)</span></div></div>
+  <div class="src">Max 1024 threads/block, warp = 32: CUDA C++ Programming Guide — Compute Capabilities. 32 threads/clock dispatch: NVIDIA A100/H100 whitepapers (SM diagram).</div>
 </section>
 
 <!-- Exercise: latency hiding -->
 <section data-background-color="#ffffff">
   <h2>In-class: Warps to Hide Latency</h2>
-  <div class="callout"><span class="lbl">Setup</span>A kernel has <strong>1 global read (200 cycles)</strong> followed by <strong>4 non-dependent mul/add</strong> ops. How many warps are needed to hide the read latency?</div>
+  <div class="callout"><span class="lbl">Setup <span class="muted">(illustrative, G80-era timing)</span></span>A kernel has <strong>1 global read (200 cycles)</strong> followed by <strong>4 non-dependent mul/add</strong> ops. How many warps are needed to hide the read latency?</div>
   <div class="fragment">
     <div class="callout ok"><span class="lbl">Work it out</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li>Each op takes 4 dispatch cycles → 4 ops = \( 4 \times 4 = 16 \) cycles of independent work per warp</li>
+        <li>Assume each op takes 4 dispatch cycles → 4 ops = \( 4 \times 4 = 16 \) cycles of independent work per warp</li>
         <li>We must cover \( 200 \) cycles: \( 200 / 16 = 12.5 \)</li>
         <li>Round up: \( \lceil 12.5 \rceil = \) <strong>13 warps</strong></li>
       </ul></div>
   </div>
+  <p class="tiny muted">The exact cycle counts are illustrative (G80). The principle is current: enough independent warps must be resident to cover memory latency — this is why occupancy matters.</p>
 </section>
 
 <!-- ==================================================================
@@ -351,15 +356,21 @@ if (threadIdx.x &lt; 16) {
   <h2>Registers</h2>
   <p class="small"><strong>Per-thread</strong>, fast <strong>on-chip</strong>. The register file is split across all resident threads — so register use caps occupancy.</p>
   <div class="cols">
-    <div class="callout"><span class="lbl">G80 budget</span>Per SM: <strong>768 threads</strong> &amp; <strong>8K registers</strong> → \( 8192 / 768 = 10 \) registers/thread available.</div>
-    <div class="callout warn"><span class="lbl">Spill example</span>
+    <div class="callout"><span class="lbl">Modern budget (CC 7.0–9.0)</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li>11 regs × 256-thread blocks → \( 11 \times 256 = 2816 \) regs/block</li>
-        <li>\( 8192 / 2816 = 2 \) blocks → 512 threads → <strong>16 warps</strong></li>
-        <li>Fewer warps → <strong>less latency hiding</strong></li>
+        <li><strong>65,536</strong> (64K) 32-bit registers per SM</li>
+        <li>Up to <strong>255</strong> registers per thread</li>
+        <li>At 2048 resident threads/SM → \( 65536/2048 = 32 \) regs/thread for full occupancy</li>
+      </ul></div>
+    <div class="callout warn"><span class="lbl">Occupancy trade-off <span class="muted">(historical, G80)</span></span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li>G80: 768 thread slots &amp; 8K regs → 10 regs/thread</li>
+        <li>11 regs × 256-thread block → 2 blocks → 512 threads → 16 warps</li>
+        <li>Same effect today: more regs/thread → fewer resident warps → <strong>less latency hiding</strong></li>
       </ul></div>
   </div>
   <div class="callout ok"><span class="lbl">Special registers</span><code class="inline">threadIdx</code> · <code class="inline">blockIdx</code> · <code class="inline">blockDim</code> · <code class="inline">gridDim</code></div>
+  <div class="src">64K regs/SM, 255 regs/thread: CUDA C++ Programming Guide — Compute Capabilities. 2048 resident threads/SM (e.g. A100): NVIDIA A100 whitepaper.</div>
 </section>
 
 <!-- Local memory -->
@@ -384,12 +395,13 @@ if (threadIdx.x &lt; 16) {
 <!-- Shared memory -->
 <section data-background-color="#ffffff">
   <h2>Shared Memory</h2>
-  <p class="small"><strong>Per-block</strong>, fast <strong>on-chip</strong>, full-speed <strong>random access</strong> — the programmer-managed scratchpad.</p>
+  <p class="small"><strong>Per-block</strong>, fast <strong>on-chip</strong>, full-speed <strong>random access</strong> — the programmer-managed scratchpad. It shares a physical block with L1 (192 KB/SM on A100, 256 KB/SM on H100).</p>
   <div class="cols">
-    <div class="callout"><span class="lbl">G80 budget</span>Per SM: <strong>16 KB</strong> shared, up to <strong>8 blocks</strong> → \( 16/8 = 2 \) KB/block if fully occupied.</div>
-    <div class="callout ok"><span class="lbl">Occupancy example</span>If each block uses <strong>5 KB</strong> → \( 16 / 5 = 3 \) blocks per SM (shared memory is the limiter).</div>
+    <div class="callout"><span class="lbl">Modern budget</span>Configurable shared memory per SM: up to <strong>164 KB</strong> (Ampere A100) / <strong>228 KB</strong> (Hopper H100). Above 48 KB/block requires an explicit opt-in.</div>
+    <div class="callout ok"><span class="lbl">Occupancy example</span>If each block uses <strong>50 KB</strong> on A100 → \( \lfloor 164/50 \rfloor = 3 \) blocks per SM (shared memory is the limiter).</div>
   </div>
   <div class="callout takeaway"><span class="lbl">This is the lever</span>Shared memory is what makes <strong>tiled matmul</strong> (Part E) fast — threads in a block cooperatively stage data on-chip.</div>
+  <div class="src">Shared memory/SM (up to 164 KB CC 8.0 / 228 KB CC 9.0), 48 KB opt-in threshold: CUDA C++ Programming Guide — Compute Capabilities. 192/256 KB combined L1+shared: NVIDIA A100 &amp; H100 whitepapers.</div>
 </section>
 
 <!-- Global & constant memory -->
@@ -398,17 +410,18 @@ if (threadIdx.x &lt; 16) {
   <div class="cols">
     <div class="callout"><span class="lbl">Global memory</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li><strong>Long latency</strong> — 100s of cycles, off-chip</li>
-        <li>G80 <strong>86.4 GB/s</strong>, GT200 <strong>150 GB/s</strong>, up to 4 GB</li>
-        <li>Reads cached on 2.x+; <strong>writes invalidate</strong> the cache</li>
+        <li><strong>Long latency</strong> — 100s of cycles, off-chip HBM</li>
+        <li>A100 (HBM2) <strong>1.55 TB/s</strong>, 40 GB; H100 (HBM3) <strong>&gt; 3 TB/s</strong>, 80 GB</li>
+        <li>Cached through L2 (40 MB A100 / 50 MB H100) and L1</li>
       </ul></div>
     <div class="callout ok"><span class="lbl">Constant memory</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
         <li><strong>Short latency / high bandwidth</strong> when all threads read the <strong>same</strong> location</li>
         <li>Cached</li>
-        <li>Up to <strong>64 KB</strong></li>
+        <li>Total <strong>64 KB</strong></li>
       </ul></div>
   </div>
+  <div class="src">Bandwidth/capacity: NVIDIA A100 (1555 GB/s, 40 MB L2) &amp; H100 (&gt;3 TB/s, 50 MB L2) whitepapers. 64 KB constant memory: CUDA C++ Programming Guide — Compute Capabilities.</div>
 </section>
 
 <!-- Variable qualifier table -->
@@ -557,15 +570,16 @@ MatrixMultiplyKernel
   <h2>The Bandwidth Bottleneck</h2>
   <p class="small">Every <code class="inline">pValue +=</code> does <strong>2 global loads</strong> (4 B each) for <strong>2 FLOPs</strong> — far too much memory traffic.</p>
   <div class="cols">
-    <div class="callout warn"><span class="lbl">G80 numbers</span>
+    <div class="callout warn"><span class="lbl">A100 numbers</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li>Peak compute: <strong>346.5 GFLOPS</strong></li>
-        <li>That would need <strong>1386 GB/s</strong> of bandwidth</li>
-        <li>But memory bandwidth is only <strong>86.4 GB/s</strong></li>
+        <li>Peak FP32 compute: <strong>19.5 TFLOPS</strong></li>
+        <li>At 4 B loaded per FLOP that would need <strong>≈ 78 TB/s</strong></li>
+        <li>But HBM2 bandwidth is only <strong>1.55 TB/s</strong></li>
       </ul></div>
-    <div class="callout"><span class="lbl">Result</span>Memory caps you at \( \approx \) <strong>21.6 GFLOPS</strong> (and ~15 in practice) — about <strong>4%</strong> of peak.</div>
+    <div class="callout"><span class="lbl">Result</span>Memory caps you at \( \approx \) <strong>390 GFLOPS</strong> — only about <strong>2%</strong> of peak.</div>
   </div>
   <div class="callout takeaway"><span class="lbl">Fix</span>We must <strong>cut global-memory access</strong> — reuse data on-chip via <strong>shared memory</strong>.</div>
+  <div class="src">A100 FP32 19.5 TFLOPS &amp; HBM2 1555 GB/s: NVIDIA A100 Tensor Core GPU Architecture whitepaper.</div>
 </section>
 
 <!-- Tiling idea -->
@@ -628,21 +642,21 @@ devP[row*width + col] = pValue;
 <!-- Choosing TILE_WIDTH -->
 <section data-background-color="#ffffff">
   <h2>Choosing TILE_WIDTH</h2>
-  <p class="small">Bounded by <strong>max threads/block</strong> (G80/GT200 = 512, Fermi+ = 1024) and <strong>shared memory</strong> per block.</p>
+  <p class="small">Bounded by <strong>max threads/block</strong> (<strong>1024</strong> on all current GPUs, CC ≥ 2.0) and <strong>shared memory</strong> per block.</p>
   <div class="cols">
-    <div class="callout"><span class="lbl">G80 shared-memory limit</span>
+    <div class="callout"><span class="lbl">Sizing the tiles</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li>16 KB/SM, ≤ 8 blocks → 2 KB/block</li>
-        <li>\( 16 \times 16 \times 4\,\text{B} = 1 \) KB each for <code class="inline">sM</code>, <code class="inline">sN</code> → 2 KB</li>
-        <li>So <strong>TILE_WIDTH = 16</strong></li>
-        <li>Larger tile → fewer resident blocks</li>
+        <li>TILE_WIDTH = 32 → \( 32\times32 = 1024 \) threads/block (the max)</li>
+        <li>\( 32 \times 32 \times 4\,\text{B} = 4 \) KB each for <code class="inline">sM</code>, <code class="inline">sN</code> → 8 KB/block — easily within 164 KB (A100)</li>
+        <li>Larger tile → more reuse, but fewer resident blocks</li>
       </ul></div>
     <div class="callout ok"><span class="lbl">Payoff</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li>Each value reused TILE_WIDTH times → global access cut by <strong>16×</strong></li>
-        <li>G80 now supports <strong>345.6 GFLOPS</strong> — near the 346.5 peak</li>
+        <li>Each value reused TILE_WIDTH times → global access cut by <strong>TILE_WIDTH×</strong> (16× at TW=16, 32× at TW=32)</li>
+        <li>Compute-bound instead of bandwidth-bound — approaches the SM's arithmetic peak</li>
       </ul></div>
   </div>
+  <div class="src">Max 1024 threads/block: CUDA C++ Programming Guide — Compute Capabilities. 164 KB shared/SM (A100): NVIDIA A100 whitepaper.</div>
 </section>
 
 <!-- First-order sizing -->
@@ -844,7 +858,7 @@ for (stride = blockDim.x/2; stride &gt; 0; stride /= 2){
       <ul class="small">
         <li>Warp <em>n</em> = threads <strong>32n … 32n+31</strong></li>
         <li>Last warp <strong>padded</strong> if block size not a multiple of 32</li>
-        <li>Fermi+: up to <strong>1024</strong> threads/block</li>
+        <li>Up to <strong>1024</strong> threads/block (CC ≥ 2.0)</li>
       </ul></div>
     <div class="callout"><span class="lbl">2D block (e.g. 64×8)</span>
       <ul class="small">
@@ -861,6 +875,7 @@ for (stride = blockDim.x/2; stride &gt; 0; stride /= 2){
       </ul></div>
   </div>
   <div class="callout takeaway"><span class="lbl">Key</span>Divergence is a property <em>within</em> a warp — threads in different warps never "diverge" from each other. A branch that splits exactly on a <strong>warp boundary</strong> (e.g. <code class="inline">threadIdx.x &gt; warpSize-1</code>) costs <strong>nothing</strong>; one splitting inside a warp (e.g. <code class="inline">threadIdx.x &gt; 15</code>) diverges.</div>
+  <div class="src">Warp = 32 threads, max 1024 threads/block: CUDA C++ Programming Guide — Compute Capabilities.</div>
 </section>
 
 <!-- Which reduction is better -->
@@ -908,7 +923,8 @@ for (stride = blockDim.x/2; stride &gt; 0; stride /= 2){
       Within one load iteration, adjacent threads read <strong>strided addresses</strong> (one full row apart).</div>
   </div>
   <div class="callout ok fragment"><span class="lbl">Answer: (a) is coalesced ✓</span>
-    We want the threads <em>active in a given load iteration</em> to touch <strong>contiguous</strong> memory. The GPU then fuses a full warp's reads into one transaction.</div>
+    We want the threads <em>active in a given load iteration</em> to touch <strong>contiguous</strong> memory. The hardware then fuses a full warp's reads into the minimum number of <strong>32-byte</strong> transactions (CC ≥ 6.0).</div>
+  <div class="src">CUDA C++ Best Practices Guide — Coalesced Access to Global Memory.</div>
 </section>
 
 <!-- DRAM bandwidth -->
@@ -916,14 +932,14 @@ for (stride = blockDim.x/2; stride &gt; 0; stride /= 2){
   <h2>Why Coalescing — DRAM Bandwidth</h2>
   <p class="small">The GPU coalesces consecutive reads from a <strong>full warp</strong> into one wide read. Peak bandwidth needs large consecutive requests.</p>
   <table>
-    <tr><th>GPU generation</th><th>Peak DRAM bandwidth</th></tr>
-    <tr><td>G80</td><td>86.4 GB/s</td></tr>
-    <tr><td>GT200</td><td>150 GB/s</td></tr>
-    <tr><td>Fermi</td><td>192 GB/s</td></tr>
-    <tr><td>Kepler</td><td>240 GB/s</td></tr>
+    <tr><th>GPU (memory)</th><th>Peak DRAM bandwidth</th></tr>
+    <tr><td>V100 (HBM2)</td><td>0.9 TB/s</td></tr>
+    <tr><td>A100 (HBM2)</td><td>1.55 TB/s</td></tr>
+    <tr><td>H100 (HBM3)</td><td>&gt; 3 TB/s</td></tr>
   </table>
   <div class="callout warn"><span class="lbl">Random access</span>
     Scattered / random reads cannot be fused → effective bandwidth drops far below peak.</div>
+  <div class="src">A100 1555 GB/s (≈1.7× V100): NVIDIA A100 whitepaper. H100 HBM3 &gt;3 TB/s: NVIDIA H100 whitepaper. Coalescing rule: CUDA C++ Best Practices Guide — Coalesced Access to Global Memory.</div>
 </section>
 
 <!-- Coalescing strategy -->
@@ -937,7 +953,86 @@ for (stride = blockDim.x/2; stride &gt; 0; stride /= 2){
     </ol></div>
   <div class="callout"><span class="lbl">Modern note</span>
     Less critical on GPUs with large on-chip caches, but the coalesced global → staged shared pattern is still the workhorse for tiled kernels.</div>
-  <div class="src">UIUC ECE498/AL; NVIDIA CUDA C Programming Guide.</div>
+  <div class="src">CUDA C++ Best Practices Guide — Coalesced Access to Global Memory.</div>
+</section>
+
+<!-- cuThermo — access-pattern heat maps -->
+<section data-background-color="#ffffff">
+  <h2>Access Patterns as a Heat Map — Word/Sector View</h2>
+  <div class="symkey">
+    <span><strong>sector</strong> — 32 B, the transaction unit (8 words)</span>
+    <span><strong>word</strong> — 4 B</span>
+    <span><strong>metric</strong> — distinct warps touching a word / a sector</span>
+  </div>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">The coalescing rule</span>A memory instruction issues <strong>per warp</strong>. One warp's accesses to different words of a sector coalesce into <strong>one 32 B transaction</strong>. But accesses to that sector from <strong>different warps cannot coalesce</strong> — each costs its own transaction.</div>
+      <div class="callout takeaway"><span class="lbl">So count distinct warps</span>A plain access count can't tell "1 warp reuses a sector" from "8 warps each touch it once" — the <strong>distinct-warp count of a sector = the number of transactions it costs.</strong></div>
+    </div>
+    <div class="center">
+      <div class="src" style="margin-bottom:.25em">1 sector = 8 words (4 B each)</div>
+      <svg viewBox="0 0 220 120" class="chart" style="max-width:235px">
+        <text x="110" y="15" text-anchor="middle" class="tiny" style="fill:#16a34a">1 warp → 1 transaction (coalesced)</text>
+        <rect x="10" y="22" width="200" height="24" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
+        <g stroke="#16a34a" stroke-width=".7"><line x1="35" y1="22" x2="35" y2="46"/><line x1="60" y1="22" x2="60" y2="46"/><line x1="85" y1="22" x2="85" y2="46"/><line x1="110" y1="22" x2="110" y2="46"/><line x1="135" y1="22" x2="135" y2="46"/><line x1="160" y1="22" x2="160" y2="46"/><line x1="185" y1="22" x2="185" y2="46"/></g>
+        <text x="110" y="76" text-anchor="middle" class="tiny" style="fill:#CC0000">8 warps → 8 transactions (false sharing)</text>
+        <rect x="10" y="83" width="200" height="24" fill="#fee2e2" stroke="#CC0000" stroke-width="1.2"/>
+        <g stroke="#CC0000" stroke-width=".7"><line x1="35" y1="83" x2="35" y2="107"/><line x1="60" y1="83" x2="60" y2="107"/><line x1="85" y1="83" x2="85" y2="107"/><line x1="110" y1="83" x2="110" y2="107"/><line x1="135" y1="83" x2="135" y2="107"/><line x1="160" y1="83" x2="160" y2="107"/><line x1="185" y1="83" x2="185" y2="107"/></g>
+      </svg>
+    </div>
+  </div>
+  <div class="src">Y. Zhao, J. Cui, Z. Li, S. Jiao, X. Liu, J. Li, "cuThermo: Exposing GPU Memory Inefficiencies with Heat Map Profiling," arXiv:2507.18729 (word-sector distinct-warp-count metric). 32 B sector = HW transaction unit.</div>
+</section>
+
+<!-- cuThermo — the six patterns -->
+<section data-background-color="#ffffff">
+  <h2>Six Inefficient Access Patterns (cuThermo)</h2>
+  <table style="font-size:.72em">
+    <tr><th>Pattern</th><th>Heat-map signature</th><th>Why it's slow</th><th>Fix</th></tr>
+    <tr><td><strong>Hotspot</strong></td><td>every word of a sector = all 32 warps (uniform)</td><td>heavy contention on one region</td><td>tile / remap for intra-warp reuse; eviction-priority hints; promote to REG/SMEM</td></tr>
+    <tr><td><strong>Random hot</strong></td><td>words shared by random #warps; whole-sector ≫ any word</td><td>irregular inter-warp contention</td><td>same — raise intra-warp sharing</td></tr>
+    <tr class="hi"><td><strong>False sharing</strong></td><td>GMEM sector: every word warp-private → sector = 8 warps</td><td><strong>8 sector transactions instead of 1</strong> (cross-warp can't coalesce)</td><td>reorganize data (e.g. explicit <strong>transpose</strong> so both kernels read row-major)</td></tr>
+    <tr><td><strong>Misalignment</strong></td><td>boundary sectors touched by 2 warps</td><td>one extra sector transaction (5 vs 4)</td><td>align to 32 B sectors; pad / duplicate</td></tr>
+    <tr><td><strong>Strided</strong></td><td>stride 7: 7/8 words never touched, sector = 8 warps</td><td>7/8 of transactions wasted; also wastes L1</td><td>change layout (e.g. <strong>SoA → AoS</strong>)</td></tr>
+    <tr><td><strong>Abuse of shared memory</strong></td><td>SMEM word/sector touched by only 1 thread or 1 warp</td><td>no cross-warp reuse → steals L1, caps occupancy</td><td>registers (thread-local) / <code class="inline">__shfl</code> (warp-local); allocate less SMEM</td></tr>
+  </table>
+  <div class="src">Y. Zhao, J. Cui, Z. Li, S. Jiao, X. Liu, J. Li, "cuThermo: Exposing GPU Memory Inefficiencies with Heat Map Profiling," arXiv:2507.18729, §4.3 &amp; Fig. 5 (evaluated on Ampere RTX A4500 &amp; RTX 4090).</div>
+</section>
+
+<!-- cuThermo — false sharing deep dive -->
+<section data-background-color="#ffffff">
+  <h2>False Sharing on Global Memory</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout warn"><span class="lbl">The trap</span>A warp's accesses to <strong>different words of one sector</strong> coalesce into <strong>one</strong> 32 B transaction. But the same sector accessed by <strong>different warps cannot be coalesced together</strong> — so a sector whose 8 words are each <em>warp-private</em> costs <strong>8 sector transactions</strong> instead of 1.</div>
+      <div class="callout"><span class="lbl">Heat-map tell</span>The <strong>whole sector's</strong> distinct-warp count is far higher than any single word's — unlike a hot spot, where the sector ≈ its hottest word.</div>
+      <div class="callout takeaway"><span class="lbl">Fix</span>Reorganize data so a warp's threads share sectors — e.g. an <strong>explicit transpose</strong> so a column-major producer and a row-major consumer both read row-major.</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 320 160" class="chart" style="max-width:340px">
+        <g class="tiny" text-anchor="middle" fill="#475569"><text x="37.5" y="22">W0</text><text x="72.5" y="22">W1</text><text x="107.5" y="22">W2</text><text x="142.5" y="22">W3</text><text x="177.5" y="22">W4</text><text x="212.5" y="22">W5</text><text x="247.5" y="22">W6</text><text x="282.5" y="22">W7</text></g>
+        <g stroke="#CC0000" stroke-width="1.3"><line x1="37.5" y1="28" x2="37.5" y2="98"/><line x1="72.5" y1="28" x2="72.5" y2="98"/><line x1="107.5" y1="28" x2="107.5" y2="98"/><line x1="142.5" y1="28" x2="142.5" y2="98"/><line x1="177.5" y1="28" x2="177.5" y2="98"/><line x1="212.5" y1="28" x2="212.5" y2="98"/><line x1="247.5" y1="28" x2="247.5" y2="98"/><line x1="282.5" y1="28" x2="282.5" y2="98"/></g>
+        <rect x="20" y="100" width="280" height="32" fill="#fee2e2" stroke="#CC0000" stroke-width="1.5"/>
+        <g stroke="#CC0000" stroke-width=".8"><line x1="55" y1="100" x2="55" y2="132"/><line x1="90" y1="100" x2="90" y2="132"/><line x1="125" y1="100" x2="125" y2="132"/><line x1="160" y1="100" x2="160" y2="132"/><line x1="195" y1="100" x2="195" y2="132"/><line x1="230" y1="100" x2="230" y2="132"/><line x1="265" y1="100" x2="265" y2="132"/></g>
+        <g class="tiny" text-anchor="middle"><text x="37.5" y="120">0</text><text x="72.5" y="120">1</text><text x="107.5" y="120">2</text><text x="142.5" y="120">3</text><text x="177.5" y="120">4</text><text x="212.5" y="120">5</text><text x="247.5" y="120">6</text><text x="282.5" y="120">7</text></g>
+        <text x="160" y="152" text-anchor="middle" class="tiny" style="fill:#CC0000">Sector 00 · distinct-warp = 8 → 8 transactions</text>
+      </svg>
+    </div>
+  </div>
+  <div class="src">Y. Zhao, J. Cui, Z. Li, S. Jiao, X. Liu, J. Li, "cuThermo: Exposing GPU Memory Inefficiencies with Heat Map Profiling," arXiv:2507.18729 (Fig. 3b &amp; Fig. 5b).</div>
+</section>
+
+<!-- cuThermo — abuse of shared memory (three cases) -->
+<section data-background-color="#ffffff">
+  <h2>Abuse of Shared Memory</h2>
+  <p class="small">Shared memory shares physical space with the L1 cache and exists for one reason: <strong>cross-warp temporal reuse</strong> within a block. Put data there that no other warp reuses and you just shrink L1 and cap occupancy. Three tells on the heat map:</p>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">1 · Thread-local</span><span class="small">A word touched by only <strong>one thread</strong> — thread-private scratch, no sharing at all.<br><strong>Fix:</strong> keep it in <strong>registers</strong> (1-cycle, and it frees L1).</span></div>
+    <div class="callout"><span class="lbl">2 · Warp-local</span><span class="small">Words each touched by only <strong>one warp</strong> (distinct-warp = 1) — no cross-warp reuse, which defeats SMEM's purpose.<br><strong>Fix:</strong> exchange inside the warp with <code class="inline">__shfl</code> instead.</span></div>
+    <div class="callout"><span class="lbl">3 · Waste of SMEM</span><span class="small">Over-allocating shared memory that nobody reuses <strong>shrinks the L1 cache</strong> and lowers <strong>occupancy</strong>.<br><strong>Fix:</strong> allocate only what earns cross-warp reuse.</span></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Rule of thumb</span>Reach for shared memory only when <strong>multiple warps</strong> reuse the same data — otherwise registers (thread-local) or <code class="inline">__shfl</code> (warp-local) are cheaper and leave L1 intact.</div>
+  <div class="src">Y. Zhao, J. Cui, Z. Li, S. Jiao, X. Liu, J. Li, "cuThermo: Exposing GPU Memory Inefficiencies with Heat Map Profiling," arXiv:2507.18729 (§4.1 methodology; §4.3 &amp; Fig. 5a).</div>
 </section>
 
 <!-- ==================================================================
@@ -955,14 +1050,10 @@ for (stride = blockDim.x/2; stride &gt; 0; stride /= 2){
     <span><strong>bank</strong> independent shared-memory port</span>
     <span><strong>SP</strong> streaming processor (CUDA core)</span>
   </div>
-  <p class="small">Shared memory is divided into <strong>banks</strong> (Bank 0 … 31). Each bank serves one address per ~2 cycles. <strong>Successive 32-bit words → successive banks.</strong></p>
-  <table>
-    <tr><th>Generation</th><th>Banks</th><th>SPs concurrent</th></tr>
-    <tr><td>G80 / GT200</td><td>16</td><td>8</td></tr>
-    <tr><td>Fermi+</td><td>32</td><td>16</td></tr>
-  </table>
+  <p class="small">Shared memory is divided into <strong>32 equally-sized banks</strong> (Bank 0 … 31). Each bank delivers <strong>32 bits per clock</strong>; <strong>successive 32-bit words map to successive banks</strong>. The warp is 32 threads and the number of banks is also 32 — a warp can read 32 distinct banks in one transaction. <span class="muted">(historical: G80/GT200 had only <strong>16</strong> banks.)</span></p>
   <div class="callout warn"><span class="lbl">Bank conflict</span>
     Two threads access the <strong>same bank</strong> but <strong>different addresses</strong> → accesses are <strong>serialized</strong>.</div>
+  <div class="src">32 banks, 32 bits/clock, word→bank mapping: CUDA C++ Best Practices Guide — Shared Memory (Bank Conflicts).</div>
 </section>
 
 <!-- Bank patterns -->
@@ -976,11 +1067,12 @@ for (stride = blockDim.x/2; stride &gt; 0; stride /= 2){
   </div>
   <div class="callout warn" style="margin-top:.6em;"><span class="lbl">Stride 8</span>
     Many threads collapse onto few banks → <strong>heavy</strong> conflict (8-way), accesses fully serialized.</div>
+  <div class="src">CUDA C++ Best Practices Guide — Shared Memory (Bank Conflicts).</div>
 </section>
 
 <!-- Fast/slow paths -->
 <section data-background-color="#ffffff">
-  <h2>Fast &amp; Slow Paths (Fermi+)</h2>
+  <h2>Fast &amp; Slow Paths</h2>
   <div class="cols c3">
     <div class="callout ok"><span class="lbl">Fast Path 1</span>
       All threads access <strong>different banks</strong> → one cycle, full throughput.</div>
@@ -990,6 +1082,7 @@ for (stride = blockDim.x/2; stride &gt; 0; stride /= 2){
       Multiple threads → <strong>same bank, different addresses</strong> → accesses <strong>serialized</strong>.</div>
   </div>
   <div class="callout takeaway"><span class="lbl">Cost</span>An <em>N</em>-way conflict takes <em>N</em> times as long as a conflict-free access.</div>
+  <div class="src">CUDA C++ Best Practices Guide — Shared Memory (Bank Conflicts, broadcast).</div>
 </section>
 
 <!-- In-class bank exercise -->
@@ -1010,6 +1103,7 @@ float f = shared[index + s * threadIdx.x];
     <div class="callout ok fragment"><span class="lbl">Rule</span>
       <strong>Odd</strong> stride <em>s</em> (coprime with 32) → maps the 32 threads onto a permutation of the 32 banks → conflict-free. <strong>Even</strong> <em>s</em> shares factors with 32 → conflicts.</div>
   </div>
+  <div class="src">32 banks; conflict-free permutations: CUDA C++ Best Practices Guide — Shared Memory (Bank Conflicts).</div>
 </section>
 
 <!-- ==================================================================
@@ -1029,17 +1123,18 @@ float f = shared[index + s * threadIdx.x];
   </div>
   <p class="small">Each SM splits four resources across resident blocks: <strong>block slots · thread slots · registers · shared memory</strong>.</p>
   <table>
-    <tr><th>Resource</th><th>G80</th><th>Fermi</th><th>Kepler</th></tr>
-    <tr><td>Thread-block slots</td><td>8</td><td>8</td><td>16</td></tr>
-    <tr><td>Thread slots</td><td>768</td><td>1536</td><td>2048</td></tr>
-    <tr><td>Registers</td><td>32 KB</td><td>128 KB</td><td>256 KB</td></tr>
-    <tr><td>Shared memory</td><td>16 KB</td><td>48 KB</td><td>48 KB</td></tr>
+    <tr><th>Resource (per SM)</th><th>V100 (7.0)</th><th>A100 (8.0)</th><th>H100 (9.0)</th></tr>
+    <tr><td>Resident block slots</td><td>32</td><td>32</td><td>32</td></tr>
+    <tr><td>Thread slots</td><td>2048</td><td>2048</td><td>2048</td></tr>
+    <tr><td>32-bit registers</td><td>64K</td><td>64K</td><td>64K</td></tr>
+    <tr><td>Shared memory</td><td>96 KB</td><td>164 KB</td><td>228 KB</td></tr>
   </table>
+  <div class="src">Block/thread slots, 64K registers, shared-memory limits: CUDA C++ Programming Guide — Compute Capabilities (7.0/8.0/9.0). Confirmed in NVIDIA A100 &amp; H100 whitepapers.</div>
 </section>
 
 <!-- G80 occupancy example -->
 <section data-background-color="#ffffff">
-  <h2>G80 Occupancy — Block &amp; Thread Slots</h2>
+  <h2>Occupancy — Block &amp; Thread Slots <span class="muted" style="font-size:.6em">(historical example, G80: 768 thread slots)</span></h2>
   <div class="cols">
     <div class="callout ok"><span class="lbl">Works</span>
       <ul class="small">
@@ -1052,13 +1147,14 @@ float f = shared[index + s * threadIdx.x];
         <li>Exceeds the <strong>768</strong> thread-slot limit ✗</li>
       </ul></div>
   </div>
-  <p class="small">The binding limit is whichever resource runs out first — here, thread slots.</p>
+  <p class="small">The binding limit is whichever resource runs out first — here, thread slots. The <em>method</em> is unchanged today; only the numbers grow (2048 thread slots &amp; 32 resident blocks/SM on V100–H100).</p>
+  <div class="src">G80 = 768 thread slots (historical). Modern limits: CUDA C++ Programming Guide — Compute Capabilities.</div>
 </section>
 
 <!-- Register cliff example -->
 <section data-background-color="#ffffff">
-  <h2>G80 Occupancy — Registers &amp; the Cliff</h2>
-  <p class="small">G80 has 8192 registers/SM. Blocks of 256 threads. (Recall the register-spill sketch from Part C — here is the full occupancy picture.)</p>
+  <h2>Occupancy — Registers &amp; the Cliff <span class="muted" style="font-size:.6em">(historical example, G80)</span></h2>
+  <p class="small">G80 has 8192 registers/SM. Blocks of 256 threads. (Recall the register-spill sketch from Part C — here is the full occupancy picture.) A modern SM has <strong>64K</strong> registers, but the same cliff appears at its own thresholds.</p>
   <div class="cols">
     <div class="callout ok"><span class="lbl">10 regs / thread</span>
       <ul class="small">
@@ -1073,6 +1169,7 @@ float f = shared[index + s * threadIdx.x];
   </div>
   <div class="callout takeaway"><span class="lbl">Performance cliff</span>
     One extra register/thread drops occupancy 768 → 512. <strong>More registers → less TLP.</strong> A small increase in resource use can sharply cut parallelism — unless the extra resources hide global-memory latency.</div>
+  <div class="src">G80 8192 regs/SM (historical). 64K regs/SM today: CUDA C++ Programming Guide — Compute Capabilities.</div>
 </section>
 
 <!-- ==================================================================
@@ -1146,7 +1243,7 @@ for (int k = 0; k &lt; BLOCK_SIZE; k++)
       <li><strong>1</strong> counter increment</li>
     </ul>
     Only about <strong>1/3</strong> of issued instructions are the FP work we care about.</div>
-  <div class="callout"><span class="lbl">SFU bottleneck</span>Special-function units: only <strong>4 per SM</strong>, <strong>1 instruction/clock</strong> each.</div>
+  <div class="callout"><span class="lbl">SFU bottleneck</span>Special-function units (transcendentals — <code class="inline">__sinf</code>, <code class="inline">rsqrt</code>, …) are a <strong>limited-throughput</strong> resource: only a few per SM sub-partition, so SFU-heavy code can bottleneck. <span class="tiny muted">(historical, G80: 4 SFUs/SM, 1 instruction/clock each.)</span></div>
 </section>
 
 <!-- Loop unrolling -->
@@ -1227,10 +1324,11 @@ Pvalue += Ms[ty][0]*Ns[0][tx] + Ms[ty][1]*Ns[1][tx]
 <section data-background-color="#ffffff">
   <h2>References</h2>
   <ul class="small">
-    <li>Adapted from <strong>CIS 565</strong> (UPenn, S. Mohammed).</li>
-    <li>Figures from <strong>UIUC ECE498/AL</strong> &amp; the <strong>NVIDIA CUDA C Programming Guide</strong>.</li>
-    <li>NVIDIA, <em>CUDA C++ Programming Guide</em>. https://docs.nvidia.com/cuda/cuda-c-programming-guide/</li>
-    <li>NVIDIA architecture whitepapers (G80, GT200, Fermi, Kepler, Maxwell, Pascal, Turing, Ampere).</li>
+    <li>Adapted from <strong>CIS 565</strong> (UPenn, S. Mohammed); pedagogy from <strong>UIUC ECE498/AL</strong>.</li>
+    <li><strong>All hardware numbers re-sourced (2026)</strong> to the primary references below; legacy G80/GT200 figures kept only as labeled historical examples.</li>
+    <li>NVIDIA, <em>CUDA C++ Programming Guide</em> — Compute Capabilities; Variable Memory Space Specifiers; Dynamic Global Memory Allocation; SIMT Architecture. https://docs.nvidia.com/cuda/cuda-c-programming-guide/</li>
+    <li>NVIDIA, <em>CUDA C++ Best Practices Guide</em> — Coalesced Access to Global Memory; Shared Memory (Bank Conflicts). https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/</li>
+    <li>NVIDIA architecture whitepapers: <em>V100 (Volta)</em>, <em>A100 (Ampere)</em>, <em>H100 (Hopper)</em>.</li>
   </ul>
   <p class="src">Session 2 of 2 of the CSC 548 GPU unit — memory hierarchy, synchronization, tiling &amp; performance optimization. Session 3 is an in-class lab.</p>
 </section>

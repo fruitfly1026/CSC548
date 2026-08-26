@@ -114,7 +114,7 @@
     <div>
       <div class="callout"><span class="lbl">Temporal</span>An item used now is likely used again <strong>soon</strong> → keep it in cache and reuse it.</div>
       <div class="callout"><span class="lbl">Spatial</span>Using an item makes its <strong>neighbors</strong> likely next → memory moves in <em>cache lines</em>, not single words.</div>
-      <p class="small">Programs touch a small subset of memory in a regular way (the "90/10 rule": ~90% of time in ~10% of code). Hardware bets on locality; your job is to <em>give it</em> locality.</p>
+      <p class="small">Programs touch a small subset of memory in a regular way (a rule of thumb — the "90/10" or "80/20" rule: ~90% of time in ~10% of code). Hardware bets on locality; your job is to <em>give it</em> locality.</p>
     </div>
     <div>
       <div class="code-label">Spatial: row-major sweep is friendly</div>
@@ -448,7 +448,7 @@ for (i = 0; i &lt; N; i++)
   for (k = 0; k &lt; N; k++)
    C[i][j] += A[i][k]*B[k][j];
 </code></pre>
-      <p class="tiny muted">Re-reads all of B for each row of A → ~2N<sup>3</sup>+N<sup>2</sup> traffic; little reuse once data &gt; cache.</p>
+      <p class="tiny muted">Re-reads all of B for each row of A → ~N<sup>3</sup>+3N<sup>2</sup> traffic; little reuse once data &gt; cache.</p>
     </div>
     <div>
       <div class="code-label">Tiled — operate on B×B subblocks</div>
@@ -460,7 +460,7 @@ for (jj=0; jj&lt;N; jj+=B)
     for (k=kk; k&lt;min(kk+B,N); k++)
      C[i][j] += A[i][k]*B[k][j];
 </code></pre>
-      <p class="tiny muted">Capacity misses drop ~2N<sup>3</sup> → ~N<sup>3</sup>/B. Pick B so the working blocks fit in cache (≈ 80–90% of capacity).</p>
+      <p class="tiny muted">Capacity misses drop ~N<sup>3</sup> → ~N<sup>3</sup>/B. Pick B so the working blocks fit in cache (heuristic ≈ 80–90% of capacity; formally 3b² ≤ M).</p>
     </div>
   </div>
   <div class="callout takeaway"><span class="lbl">Idea</span>Reuse a small block many times while it's hot, instead of sweeping whole rows/columns and evicting everything. This is what optimized BLAS (e.g., ATLAS) does for you — use the library when one exists.</div>

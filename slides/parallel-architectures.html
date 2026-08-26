@@ -82,6 +82,7 @@
       <p class="tiny muted">A given machine is usually a <em>point</em> in both spaces at once, e.g. "a MIMD, distributed-memory, CC-NUMA-per-node cluster."</p>
     </div>
   </div>
+  <div class="src">Taxonomy framing: Culler, Singh &amp; Gupta, <em>Parallel Computer Architecture</em>, 1999; Hennessy &amp; Patterson, <em>CAQA</em> 6e.</div>
   <aside class="notes">
     Emphasize that the two lenses are orthogonal. Students often conflate "SIMD" with "shared memory" —
     they are unrelated classifications. A GPU is SIMD-ish (SIMT) but has its own distributed device memory;
@@ -104,6 +105,7 @@
         <tr><td><strong>Multiple instr.</strong></td><td>MISD<br><span class="tiny muted">rare</span></td><td class="hi">MIMD<br><span class="tiny muted">multicore, clusters</span></td></tr>
       </table>
       <p class="small">Classify a machine by how many <strong>instruction streams</strong> and <strong>data streams</strong> it runs at once (Flynn, 1966).</p>
+      <p class="tiny muted src" style="margin-top:.3em">M. J. Flynn, "Very High-Speed Computing Systems," <em>Proc. IEEE</em> 54(12):1901&ndash;1909, 1966 &mdash; origin of SISD/SIMD/MISD/MIMD.</p>
     </div>
     <div>
       <div class="callout"><span class="lbl">SIMD intuition</span>"Everyone flip a coin; if heads, raise your hand." One order, executed by all on their own datum.</div>
@@ -129,18 +131,20 @@
     <div class="callout takeaway fragment"><span class="lbl">MIMD</span><span class="small"><strong>Multiple Instruction, Multiple Data.</strong> Independent processors, each with its own program &amp; data &mdash; <strong>multicore CPUs &amp; clusters</strong>. The general parallel machine; in practice usually run as <strong>SPMD</strong>.</span></div>
   </div>
   <div class="callout"><span class="lbl">Real machines mix them</span>A <strong>MIMD</strong> cluster of multicore nodes, each core with <strong>SIMD</strong> vector units, each node with a <strong>SIMT</strong> GPU. You'll write mostly MIMD (MPI / OpenMP) with SIMD &amp; GPU underneath.</div>
+  <div class="src">Flynn, <em>Proc. IEEE</em> 1966 &amp; <em>IEEE Trans. Computers</em> 1972; Hennessy &amp; Patterson, <em>CAQA</em> 6e.</div>
 </section>
 
 <section data-background-color="#ffffff">
   <h2>Concrete Machines by Flynn Class</h2>
   <table style="font-size:.8em;margin-top:.3em">
     <tr><th>Class</th><th>Historic</th><th>Today</th><th>You program it with</th></tr>
-    <tr><td class="hi"><strong>SISD</strong></td><td>early mainframes, PDP-11</td><td>one core of any CPU</td><td>plain C / any language</td></tr>
+    <tr><td class="hi"><strong>SISD</strong></td><td>early mainframes; PDP-11 (minicomputer)</td><td>one core of any CPU</td><td>plain C / any language</td></tr>
     <tr><td class="hi"><strong>SIMD</strong></td><td>Cray-1 vectors, CM-1, MasPar, ILLIAC&nbsp;IV</td><td>SSE / AVX / AVX-512, ARM SVE, GPU warps (SIMT)</td><td>auto-vectorizer, intrinsics, CUDA</td></tr>
     <tr><td><strong>MISD</strong></td><td>systolic arrays (debated)</td><td>~none in general use; fault-tolerant lockstep cores</td><td>&mdash;</td></tr>
     <tr><td class="hi"><strong>MIMD</strong></td><td>Cosmic Cube, CM-5, IBM SP</td><td>multicore CPUs, multi-socket servers, clusters, Top500 machines</td><td>OpenMP, MPI, pthreads</td></tr>
   </table>
   <div class="callout"><span class="lbl">SIMT is a variant of SIMD</span><span class="small">NVIDIA's <strong>SIMT</strong> (Single Instruction, Multiple Thread) is SIMD with per-lane masking: a <strong>warp</strong> of 32 threads shares one instruction, but threads may diverge on branches (at a cost). Detail in <strong>Topic 8 (GPU)</strong>.</span></div>
+  <div class="src">Machine classification: Flynn, <em>Proc. IEEE</em> 1966; Hennessy &amp; Patterson, <em>CAQA</em> 6e.</div>
   <aside class="notes">
     MISD is the empty box everyone argues about. The honest answer: no commercially important machine is
     purely MISD; it survives mostly as a teaching category and in safety-critical lockstep designs (e.g.,
@@ -171,6 +175,7 @@
         </ul></div>
     </div>
   </div>
+  <div class="src">SIMD/MIMD &amp; the shared-vs-distributed split: Culler, Singh &amp; Gupta, <em>Parallel Computer Architecture</em>, 1999.</div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -190,6 +195,7 @@ else           compute_chunk(rank); // branch by id
       <div class="callout takeaway"><span class="lbl">Rule of thumb</span><span class="small">Reach for <strong>SPMD</strong> by default (one code path, easier to maintain); use <strong>MPMD</strong> only when the tasks are genuinely different programs.</span></div>
     </div>
   </div>
+  <div class="src">SPMD/MPMD programming styles on MIMD hardware: Culler, Singh &amp; Gupta, 1999; Rauber &amp; Rünger, 2nd ed., 2013.</div>
   <aside class="notes">
     Key distinction to nail: Flynn's MIMD describes the hardware's capability (independent instruction
     streams); SPMD/MPMD describe how the programmer organizes the software on top of it. A single MPI
@@ -218,6 +224,7 @@ else           compute_chunk(rank); // branch by id
     </div>
   </div>
   <div class="callout takeaway"><span class="lbl">The trade</span>Tighter coupling = easier programming, harder scaling. Looser coupling = harder programming, near-unlimited scaling. Real machines are <strong>loosely-coupled clusters of tightly-coupled nodes</strong>.</div>
+  <div class="src">Coupling &amp; memory organization: Rauber &amp; Rünger, 2nd ed., 2013; Culler, Singh &amp; Gupta, 1999.</div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -259,6 +266,7 @@ else           compute_chunk(rank); // branch by id
     </div>
   </div>
   <div class="callout"><span class="lbl">The programming model follows the memory model</span><span class="small">Shared address space &rarr; think in <strong>threads &amp; locks</strong>. Separate address spaces &rarr; think in <strong>send/receive</strong>. Getting this mapping right is half of parallel programming.</span></div>
+  <div class="src">Shared vs. distributed memory &amp; programming models: Culler, Singh &amp; Gupta, <em>Parallel Computer Architecture</em>, 1999.</div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -293,6 +301,7 @@ else           compute_chunk(rank); // branch by id
       <div class="src">One bus, one memory pool — the classic UMA machine.</div>
     </div>
   </div>
+  <div class="src">Bus-based SMP / UMA: Culler, Singh &amp; Gupta, 1999; Hennessy &amp; Patterson, <em>CAQA</em> 6e.</div>
   <aside class="notes">
     The single bus is the scaling wall for UMA. Every core snoops it; add cores and contention rises.
     This is exactly why real many-core and multi-socket systems moved to distributed (NUMA) memory with a
@@ -344,6 +353,7 @@ else           compute_chunk(rank); // branch by id
       <div class="src">NUMA: each PE owns local memory; all reachable, remote is slower.</div>
     </div>
   </div>
+  <div class="src">UMA / NUMA / CC-NUMA: Hennessy &amp; Patterson, <em>CAQA</em> 6e; Culler, Singh &amp; Gupta, 1999.</div>
   <aside class="notes">
     Fragment order tells the story: UMA first, then distribute the memory to get NUMA (scales), then note
     that distributed caches break the single-value illusion (coherence problem), and finally CC-NUMA fixes
@@ -390,6 +400,7 @@ else           compute_chunk(rank); // branch by id
       <div class="src">Private L1/L2 per core, shared L3 per socket.</div>
     </div>
   </div>
+  <div class="src">Power wall &amp; the shift to multicore/CMP: Hennessy &amp; Patterson, <em>CAQA</em> 6e.</div>
   <aside class="notes">
     Tie back to the power wall from Topic 1 (the "free lunch is over"). The CMP is the industry's answer:
     the transistor budget still grows, but it buys cores, not gigahertz. That is precisely why this course
@@ -417,6 +428,7 @@ else           compute_chunk(rank); // branch by id
       <p class="tiny muted">The exact numbers vary by CPU; the <em>ratios</em> are what matter for reasoning about locality.</p>
     </div>
   </div>
+  <div class="src">Cache-hierarchy structure &amp; latency ratios (illustrative): Hennessy &amp; Patterson, <em>CAQA</em> 6e.</div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -432,6 +444,7 @@ else           compute_chunk(rank); // branch by id
     <div class="callout takeaway"><span class="lbl">Nested parallelism</span><span class="small">SIMD lanes &sub; core &sub; socket &sub; node &sub; cluster. Each level has its own tool.</span></div>
   </div>
   <div class="callout"><span class="lbl">Two-level programming</span><span class="small"><strong>MPI across nodes</strong> (distributed memory) + <strong>OpenMP / CUDA within a node</strong> (shared memory / accelerator). This "MPI+X" hybrid is the dominant HPC pattern.</span></div>
+  <div class="src">Node/cluster hierarchy &amp; MPI+X: Rauber &amp; Rünger, 2nd ed., 2013.</div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -447,6 +460,7 @@ else           compute_chunk(rank); // branch by id
       <div class="callout takeaway"><span class="lbl">Full treatment: Topic 9</span><span class="small">Interconnection networks &mdash; topology, routing, and how they cap the scalability of your MPI program &mdash; are a whole later lecture. Keep them in mind as the "glue" of every loosely-coupled machine.</span></div>
     </div>
   </div>
+  <div class="src">Interconnect topology, latency &amp; bandwidth (full treatment in Topic 9): Culler, Singh &amp; Gupta, 1999.</div>
   <aside class="notes">
     Just plant the flag here. The point is that the memory-organization choice (distributed) forces a
     network, and the network's latency/bandwidth become first-order performance factors. We quantify
@@ -495,6 +509,7 @@ else           compute_chunk(rank); // branch by id
       <div class="src">One machine: MIMD + SIMD + SIMT, shared &amp; distributed memory.</div>
     </div>
   </div>
+  <div class="src">Composite modern HPC node (MIMD + SIMD + SIMT): Hennessy &amp; Patterson, <em>CAQA</em> 6e; Culler, Singh &amp; Gupta, 1999.</div>
   <aside class="notes">
     This closes Lecture 1. Everything so far assumed shared memory "just works." Lecture 2 pays that debt:
     the moment several caches hold copies of the same shared line, the hardware owes us a coherence and a
@@ -521,6 +536,7 @@ else           compute_chunk(rank); // branch by id
     </div>
   </div>
   <div class="callout warn"><span class="lbl">Scope of this lecture — introductory</span><span class="small">We build the <strong>architectural view</strong>: why each is needed and how it's provided at a high level. The detailed <strong>MESI</strong> protocol, snooping state machines, and cache internals are developed in <strong>Topic 6 (Cache &amp; Memory)</strong> &mdash; we won't duplicate them here.</span></div>
+  <div class="src">Coherence vs. consistency: Adve &amp; Gharachorloo, "Shared Memory Consistency Models: A Tutorial," <em>IEEE Computer</em> 29(12), 1996; Solihin, <em>Fundamentals of Parallel Multicore Architecture</em>.</div>
   <aside class="notes">
     Set expectations up front: this is the conceptual, architectural treatment. Students should leave able
     to state the coherence problem, the two coherence properties, the snooping-vs-directory distinction,
@@ -562,6 +578,7 @@ else           compute_chunk(rank); // branch by id
       <div class="src">Two cached copies, one written — now they diverge.</div>
     </div>
   </div>
+  <div class="src">The cache-coherence problem: Solihin, <em>Fundamentals of Parallel Multicore Architecture</em>; Culler, Singh &amp; Gupta, 1999.</div>
   <aside class="notes">
     This is the canonical failure from CSC 506 chap6: P1 and P2 both load sum=0, each writes back its own
     dirty value, and neither sees the other's update. Note it happens with both write-back and
@@ -578,6 +595,7 @@ else           compute_chunk(rank); // branch by id
   </div>
   <div class="callout warn"><span class="lbl">Why serialization matters</span><span class="small">If two cores write <code class="inline">x</code> and two other cores observe those writes in <strong>different orders</strong>, they'd settle on different final values of <code class="inline">x</code>. The system would be incoherent. Only writes need ordering; read-vs-read can be freely reordered.</span></div>
   <div class="callout takeaway"><span class="lbl">A coherence protocol guarantees both</span><span class="small">Doable in hardware or software, but software has very high overhead &mdash; so real machines do it in <strong>hardware</strong>. Two families of mechanism follow.</span></div>
+  <div class="src">Write propagation &amp; write serialization: Solihin, <em>Fundamentals of Parallel Multicore Architecture</em>; Hennessy &amp; Patterson, <em>CAQA</em> 6e.</div>
   <aside class="notes">
     Straight from CSC 506 chap6's "two properties" slide. Propagation = the new value gets out; serialization
     = everyone sees writes to a given address in one agreed order. A write must appear atomic and its
@@ -607,6 +625,7 @@ else           compute_chunk(rank); // branch by id
   </div>
   <div class="callout"><span class="lbl">Two ways to propagate a write</span><span class="small"><strong>Invalidate</strong> (kill other copies; next read re-fetches) is by far the common choice; <strong>update</strong> (push the new value into other copies) is rarer. Either satisfies write propagation.</span></div>
   <div class="callout warn"><span class="lbl">Protocol details &rarr; Topic 6</span><span class="small">The <strong>MESI</strong> states (Modified/Exclusive/Shared/Invalid) and their transitions are the <em>implementation</em> of snooping coherence &mdash; covered in Cache &amp; Memory, not repeated here.</span></div>
+  <div class="src">Snooping (MESI): Papamarcos &amp; Patel, "A Low-Overhead Coherence Solution for Multiprocessors with Private Cache Memories," ISCA 1984. Directory-based coherence: Censier &amp; Feautrier, <em>IEEE Trans. Computers</em> C-27(12), 1978.</div>
   <aside class="notes">
     Keep this conceptual. Snooping = broadcast, great for a bus, caps out at a few dozen cores. Directory =
     keep a list of sharers and message only them, which is what lets CC-NUMA scale to many sockets and what
@@ -628,6 +647,7 @@ else           compute_chunk(rank); // branch by id
   <div class="callout"><span class="lbl">Coherence is per-address</span>Cache coherence only governs propagation and ordering of accesses to a <strong>single</strong> memory location.</div>
   <p class="center q" style="font-size:1.2em;margin:.55em 0">Is there any need to order accesses to <strong>multiple, different</strong> data items?</p>
   <div class="callout takeaway"><span class="lbl">Yes</span>Programs rely on ordering <em>between distinct variables</em> (e.g. "set the data, <em>then</em> set the ready flag"). Guaranteeing that cross-address ordering is the job of the <strong>memory consistency model</strong>.</div>
+  <div class="src">Why a consistency model is needed across addresses: Adve &amp; Gharachorloo, <em>IEEE Computer</em> 29(12), 1996.</div>
   <aside class="notes">
     The pivot from coherence to consistency. Coherence never says anything about how a write to x orders
     against a write to y. That cross-variable ordering is what programs actually depend on, and it's a
@@ -659,6 +679,7 @@ S4: print datum;
       <div class="callout warn"><span class="lbl">The trap</span>Even if P0 <em>executes</em> S1 before S2, P1 does <strong>not necessarily see them in that order</strong> on a real multiprocessor &mdash; hardware &amp; compilers reorder independent accesses.</div>
     </div>
   </div>
+  <div class="src">Flag / producer-consumer ordering under a consistency model: Adve &amp; Gharachorloo, 1996; Solihin.</div>
   <aside class="notes">
     The producer/consumer flag is the canonical consistency example (CSC 506 chap6, common in DOACROSS /
     DOPIPE). Coherence is satisfied — each of datum and ready is individually coherent — yet the program
@@ -683,6 +704,7 @@ S4: print datum;
       </ul>
     </div>
   </div>
+  <div class="src">Sequential consistency: Lamport, "How to Make a Multiprocessor Computer That Correctly Executes Multiprocess Programs," <em>IEEE Trans. Computers</em> C-28(9), 1979. x86-TSO: Sewell et al., <em>CACM</em> 53(7), 2010.</div>
   <aside class="notes">
     SC is the mental model everyone assumes and almost no fast machine actually provides. The spectrum:
     SC (strongest) → x86-TSO → ARM/POWER weak. The weaker the model, the more reordering the hardware may
@@ -709,6 +731,7 @@ S4: print datum;
     </div>
   </div>
   <div class="callout warn"><span class="lbl">Fixing the flag idiom</span><span class="small">Publish <code class="inline">datum</code>, insert a <strong>release fence</strong>, then set <code class="inline">ready</code>; the consumer does an <strong>acquire</strong> load of <code class="inline">ready</code> before reading <code class="inline">datum</code>. The fences restore the order the relaxed model dropped.</span></div>
+  <div class="src">Fences, atomics &amp; language memory models: Adve &amp; Gharachorloo, 1996; Sewell et al., <em>CACM</em> 53(7), 2010.</div>
   <aside class="notes">
     Close the loop: relaxed models drop ordering for speed; fences and atomics let the programmer ask for
     exactly the ordering they need, where they need it. The practical takeaway for a CSC 548 student is
@@ -728,6 +751,7 @@ S4: print datum;
     <tr><td><strong>Where detailed</strong></td><td>Topic 6 (MESI mechanics)</td><td>here + language memory models</td></tr>
   </table>
   <div class="callout takeaway"><span class="lbl">One line</span><strong>Coherence keeps copies of a single location in agreement; consistency defines the visible ordering across different locations.</strong> Both are why unsynchronized shared-memory code is wrong.</div>
+  <div class="src">Solihin, <em>Fundamentals of Parallel Multicore Architecture</em>; Adve &amp; Gharachorloo, <em>IEEE Computer</em> 29(12), 1996.</div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -760,11 +784,21 @@ S4: print datum;
     Adapted from the CSC 548 <em>Topic 7 — Parallel Architectures</em> notes, expanding the hardware-landscape
     overview from the course introduction and reusing the coherence/consistency treatment from the CSC 506
     architecture courseware (Ch. 6&ndash;7).</div>
+  <p class="small" style="font-weight:700;margin-bottom:.15em">Textbooks</p>
   <ul class="small">
     <li>T. Rauber &amp; G. Rünger, <em>Parallel Programming: For Multicore and Cluster Systems</em>, 2nd ed., Springer, 2013 — Ch. 2, parallel architectures.</li>
-    <li>Hennessy &amp; Patterson, <em>Computer Architecture: A Quantitative Approach</em> — Flynn's taxonomy, multiprocessors, coherence &amp; consistency.</li>
-    <li>Y. Solihin, <em>Fundamentals of Parallel Multicore Architecture</em> — coherence, snooping/directory, consistency models (basis of the CSC 506 slides).</li>
-    <li>M. J. Flynn, "Some Computer Organizations and Their Effectiveness," <em>IEEE Trans. Computers</em>, 1972; L. Lamport, "How to Make a Multiprocessor Computer That Correctly Executes Multiprocess Programs," 1979.</li>
+    <li>J. L. Hennessy &amp; D. A. Patterson, <em>Computer Architecture: A Quantitative Approach</em>, 6th ed., Morgan Kaufmann, 2019 — Flynn's taxonomy, multiprocessors, coherence &amp; consistency.</li>
+    <li>D. E. Culler, J. P. Singh &amp; A. Gupta, <em>Parallel Computer Architecture: A Hardware/Software Approach</em>, Morgan Kaufmann, 1999 — classification, memory models, coherence.</li>
+    <li>Y. Solihin, <em>Fundamentals of Parallel Multicore Architecture</em>, CRC Press — coherence, snooping/directory, consistency models (basis of the CSC 506 slides).</li>
+  </ul>
+  <p class="small" style="font-weight:700;margin:.3em 0 .15em">Primary sources</p>
+  <ul class="small">
+    <li>M. J. Flynn, "Very High-Speed Computing Systems," <em>Proc. IEEE</em> 54(12):1901–1909, 1966 — origin of SISD/SIMD/MISD/MIMD; and "Some Computer Organizations and Their Effectiveness," <em>IEEE Trans. Computers</em> C-21(9), 1972.</li>
+    <li>L. B. Censier &amp; P. Feautrier, "A New Solution to Coherence Problems in Multicache Systems," <em>IEEE Trans. Computers</em> C-27(12), 1978 — directory-based coherence.</li>
+    <li>M. S. Papamarcos &amp; J. H. Patel, "A Low-Overhead Coherence Solution for Multiprocessors with Private Cache Memories," <em>ISCA</em> 1984 — the MESI snooping protocol.</li>
+    <li>L. Lamport, "How to Make a Multiprocessor Computer That Correctly Executes Multiprocess Programs," <em>IEEE Trans. Computers</em> C-28(9), 1979 — sequential consistency.</li>
+    <li>S. V. Adve &amp; K. Gharachorloo, "Shared Memory Consistency Models: A Tutorial," <em>IEEE Computer</em> 29(12):66–76, 1996.</li>
+    <li>P. Sewell, S. Sarkar, S. Owens, F. Z. Nardelli &amp; M. O. Myreen, "x86-TSO: A Rigorous and Usable Programmer's Model for x86 Multiprocessors," <em>CACM</em> 53(7), 2010.</li>
   </ul>
 </section>
 
