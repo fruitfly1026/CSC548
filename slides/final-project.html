@@ -23,7 +23,7 @@
   <div class="eyebrow">CSC 548 · Parallel Systems</div>
   <h1>Final Project</h1>
   <div class="sub">Topics &amp; guidelines</div>
-  <div class="meta">Instructor: Jiajia Li<br>Fall 2026<br>11/18/2026</div>
+  <div class="meta">Instructor: Jiajia Li<br>Fall 2026<br>09/09/2026</div>
   <aside class="notes">
     This deck lays out the final project: what is expected, the suggested topic areas, the deliverables and
     timeline (proposal, in-class presentation, final report in ACM format plus code), and practical tips for
@@ -88,10 +88,10 @@
   <div class="cols c3">
     <div class="callout"><span class="lbl">Language</span><span class="small">Restricted to <strong>C</strong> or <strong>C++</strong>.</span></div>
     <div class="callout"><span class="lbl">Parallel model</span><span class="small">No restriction — multithreading (OpenMP, Pthreads), GPU (CUDA, OpenCL), or distributed (MPI, Hadoop, Spark).</span></div>
-    <div class="callout"><span class="lbl">Machines</span><span class="small">Use <strong>ARC</strong> or <strong>Hazel</strong>. Mind the available resources.</span></div>
+    <div class="callout"><span class="lbl">Machines</span><span class="small">Not limited to ARC or Hazel — use any suitable machine (ARC, NCSU HPC / Hazel, a GPU box, …). Mind the available resources.</span></div>
   </div>
   <div class="callout warn"><span class="lbl">Pick the model that fits the problem</span>
-    Shared-memory loops → OpenMP / Pthreads. Massively data-parallel kernels → CUDA. Problem too big for one node → MPI. Match the tool to where the parallelism actually lives.</div>
+    Shared-memory loops → OpenMP / Pthreads.<br>Massively data-parallel kernels → CUDA.<br>Problem too big for one node → MPI.<br>Match the tool to where the parallelism actually lives.</div>
 </section>
 
 <!-- ==================================================================
@@ -139,6 +139,113 @@
 
 
 
+<section data-background-color="#ffffff">
+  <h2>Candidate Topics — Block-Sparse Tensor Contraction</h2>
+  <div class="cols">
+    <div>
+      <p class="small">The next five topics all build on <em>TIDES</em>, a just-accepted SC 2026 paper from the instructor's group on tiered block-sparse tensor contraction. Each takes the same kernel — block-sparse tensor contraction — to a different platform: multicore CPU, distributed nodes, AMD GPU, Intel GPU, and Tenstorrent.</p>
+      <div class="callout takeaway"><span class="lbl">Why pick one</span><span class="small">These are open, active research directions — a solid project here could grow into a publication. Ask the instructor for more information to start from.</span></div>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Reference</span>
+        <span class="small">Z. Li, S. H. R. Deverapalli, Y. Zhao, F. Mueller, K. Pierce, J. Li. "TIDES: Tiered Block-Sparse Tensor Contraction with Streaming Transpose on GPUs." <em>The International Conference for High Performance Computing, Networking, Storage, and Analysis (SC)</em>, 2026 (accepted).<br><br>Code: <a href="https://github.com/tensorworld/tides">github.com/tensorworld/tides</a><br>Datasets: <a href="https://tensorworld.github.io/TensorSuite/quantum-physics.html">TensorSuite — quantum physics</a></span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Candidate Topic — Block-Sparse Tensor Contraction on a Multicore CPU</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Tensor contraction generalizes matrix multiply to many-dimensional tensors. When the tensors are <em>block-sparse</em> — whole blocks vanish by symmetry or structure (quantum chemistry, DMRG / quantum many-body, some GNNs) — the contraction becomes a large batch of small dense GEMMs over the surviving blocks.</p>
+      <div class="callout"><span class="lbl">Node-level parallelism</span><span class="small">Parallelize across the cores of one CPU with OpenMP: spread the block-GEMMs over threads, vectorize (AVX, a tuned micro-kernel, or a BLAS call), and handle the load imbalance from uneven block sizes.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Build &amp; measure</span>
+        <span class="small">
+        &bull; a correct serial block-sparse TC baseline;<br>
+        &bull; a threaded version — static vs dynamic scheduling of blocks;<br>
+        &bull; thread scaling (1 &hellip; all cores), GFLOP/s vs machine peak, a roofline (it is memory-bound);<br>
+        &bull; how block size and sparsity pattern affect balance.</span></div>
+      <p class="tiny muted">Instructor's research area — ask for dataset and reference pointers.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Candidate Topic — Distributed Block-Sparse Tensor Contraction</h2>
+  <div class="cols">
+    <div>
+      <p class="small">The same block-sparse tensor contraction, but now too large for one node — distribute the tensors and the contraction across nodes with MPI. Each rank owns a subset of blocks and runs its local block-GEMMs; blocks must be exchanged so the contracted indices line up.</p>
+      <div class="callout"><span class="lbl">The hard parts</span><span class="small">Partitioning blocks to balance work, moving only the blocks a rank actually needs, and overlapping that communication with local GEMMs — the sparse structure makes the communication pattern irregular.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Build &amp; measure</span>
+        <span class="small">
+        &bull; a distributed block-sparse TC (start from a 1-D block distribution);<br>
+        &bull; messages and bytes per contraction — needs-only exchange vs broadcasting everything;<br>
+        &bull; strong and weak scaling across nodes;<br>
+        &bull; per-rank load imbalance vs the partitioning you chose.</span></div>
+      <p class="tiny muted">A natural step up from HW1's distributed SpMV: same partition / communicate / overlap ideas, richer structure.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Candidate Topic — Block-Sparse Tensor Contraction on an AMD GPU</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Port the block-sparse tensor contraction to an AMD GPU with <em>HIP / ROCm</em>. Each surviving block is a small dense GEMM, so the kernel is a large batch of small GEMMs — via rocBLAS batched/strided calls or a custom tile kernel.</p>
+      <div class="callout"><span class="lbl">GPU challenges</span><span class="small">Small GEMMs underuse the GPU: watch occupancy, keep the batch on-device, balance blocks across work-groups, and remember it is memory-bound.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Build &amp; measure</span>
+        <span class="small">
+        &bull; a HIP port of the batched block-GEMM;<br>
+        &bull; speedup vs the CPU baseline; achieved bandwidth vs an AMD-GPU roofline;<br>
+        &bull; profile with rocprof / Omniperf;<br>
+        &bull; effect of block size on occupancy and balance.</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Candidate Topic — Block-Sparse Tensor Contraction on an Intel GPU</h2>
+  <div class="cols">
+    <div>
+      <p class="small">The same batched block-GEMM on an Intel GPU (Xe), written in <em>SYCL / oneAPI (DPC++)</em>. Use oneMKL's batched GEMM, or a custom SYCL kernel, to run the surviving blocks.</p>
+      <div class="callout"><span class="lbl">GPU challenges</span><span class="small">Same small-GEMM inefficiency; map blocks to sub-groups / work-items, keep data resident, and balance uneven blocks across the Xe cores.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Build &amp; measure</span>
+        <span class="small">
+        &bull; a SYCL / oneAPI port (oneMKL batched GEMM as the baseline kernel);<br>
+        &bull; speedup vs CPU; achieved bandwidth vs an Intel-GPU roofline;<br>
+        &bull; profile with VTune / Advisor;<br>
+        &bull; compare portability and performance against the AMD / CUDA versions.</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Candidate Topic — Block-Sparse Tensor Contraction on Tenstorrent</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Map the block-sparse tensor contraction onto a <em>Tenstorrent</em> accelerator — a grid of Tensix cores over a NoC, programmed with tiles and circular buffers via TT-Metalium / TT-NN. Each block becomes one or more 32&times;32 tiles streamed through the compute engines.</p>
+      <div class="callout"><span class="lbl">Accelerator challenges</span><span class="small">Tile the blocks to the hardware tile size, place data and stream it over the NoC, and schedule the surviving blocks across the Tensix grid — the dataflow model is very different from a GPU.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Build &amp; measure</span>
+        <span class="small">
+        &bull; a TT-Metalium implementation of the batched block-GEMM;<br>
+        &bull; Tensix-grid utilization and NoC data movement;<br>
+        &bull; throughput vs a CPU / GPU baseline;<br>
+        &bull; how block size maps to tiles and affects efficiency.</span></div>
+      <p class="tiny muted">See the Topic 13 "Other GPUs &amp; AI Accelerators" deck for Tenstorrent background.</p>
+    </div>
+  </div>
+</section>
+
 <!-- ==================================================================
      MODULE 3 — DELIVERABLES & TIMELINE
      ================================================================== -->
@@ -149,31 +256,15 @@
 
 <section data-background-color="#ffffff">
   <h2>The Three Deliverables</h2>
-  <table style="font-size:.8em">
-    <tr><th>Deliverable</th><th>What it is</th><th>Weight</th></tr>
-    <tr><td class="hi">Proposal</td><td>1 page — problem, plan, method, machine</td><td>no grade</td></tr>
-    <tr><td class="hi">Presentation</td><td>5 min talk + 1 min Q&amp;A, in class</td><td>10%</td></tr>
-    <tr><td class="hi">Final Report + Code</td><td>4 pages (excl. references) + your code</td><td>20%</td></tr>
+  <table style="font-size:.74em">
+    <tr><th>Deliverable</th><th>What it is</th><th>Due (Fall 2026)</th><th>Weight</th></tr>
+    <tr><td class="hi">Proposal</td><td>1 page — problem, plan, method, machine</td><td>Sep 16, 11:59pm ET</td><td>no grade</td></tr>
+    <tr><td class="hi">Presentation</td><td>4 min talk + 30 sec Q&amp;A, in class</td><td>Nov 18 / 23 / 30</td><td>10%</td></tr>
+    <tr><td class="hi">Final Report + Code</td><td>4 pages min. (figs/tables incl., refs excl.) + code, ACM 2-column</td><td>Dec 7, 11:59pm ET</td><td>20%</td></tr>
   </table>
-  <div class="callout"><span class="lbl">Where to submit</span>
-    All artifacts — <strong>proposal, slides, final report + code</strong> — go through <strong>Moodle</strong>.</div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>Timeline (Spring 2025 reference)</h2>
   <div class="cols">
-    <div>
-      <table style="font-size:.82em">
-        <tr><th>Date</th><th>Milestone</th></tr>
-        <tr><td>02/23, 11:59pm ET</td><td>Proposal due (no grade)</td></tr>
-        <tr><td>04/11 &amp; 04/18, in class</td><td>Presentations</td></tr>
-        <tr><td>04/30, 11:59pm ET</td><td>Final report + code due</td></tr>
-      </table>
-      <p class="tiny muted">Dates shown are from the Sp2025 offering — confirm the Fall 2026 dates on the course page / Moodle.</p>
-    </div>
-    <div>
-      <div class="callout takeaway"><span class="lbl">Read the timeline backwards</span>The report needs results; results need a working parallel version; that needs a baseline. Start the baseline right after the proposal, not in April.</div>
-    </div>
+    <div class="callout"><span class="lbl">Where to submit</span>All artifacts — proposal, slides, final report + code — go through Moodle.</div>
+    <div class="callout takeaway"><span class="lbl">Read the timeline backwards</span>The report needs results; results need a working parallel version; that needs a baseline. Start the baseline right after the proposal.</div>
   </div>
 </section>
 
@@ -181,7 +272,7 @@
   <h2>Writing the Final Report</h2>
   <div class="cols">
     <div>
-      <div class="callout"><span class="lbl">Format</span>4 pages excluding references, <strong>ACM 2-column</strong> template. Submit the <strong>code</strong> alongside it.</div>
+      <div class="callout"><span class="lbl">Format</span>4 pages minimum (including figures/tables, excluding references), ACM 2-column template — LaTeX (Overleaf) or Word. Submit the code alongside it.</div>
       <p class="small">A typical structure: problem &amp; motivation → baseline &amp; method → parallel design → experimental setup → results (speedup / scaling) → analysis &amp; conclusion.</p>
     </div>
     <div>
@@ -213,7 +304,7 @@
       <p class="small">A project you can put a number on is a project you can defend. Avoid scopes where success is fuzzy ("it feels faster").</p>
     </div>
     <div>
-      <div class="callout warn"><span class="lbl">Scope realistically</span>One application, one clear hot spot, on ARC or Hazel. A small problem done thoroughly beats an ambitious one with no results.</div>
+      <div class="callout warn"><span class="lbl">Scope realistically</span>One application, one clear hot spot, on whatever machine fits. A small problem done thoroughly beats an ambitious one with no results.</div>
     </div>
   </div>
 </section>
@@ -293,11 +384,11 @@
   <h2>Final Project — Big Picture</h2>
   <div class="cols c3">
     <div class="callout"><span class="lbl">Choose</span>A real C/C++ workload to <strong>accelerate</strong> or a paper to <strong>reproduce</strong>.</div>
-    <div class="callout"><span class="lbl">Build</span>Baseline → profile → parallelize with OpenMP / CUDA / MPI on ARC or Hazel.</div>
+    <div class="callout"><span class="lbl">Build</span>Baseline → profile → parallelize with OpenMP / CUDA / MPI on a suitable machine.</div>
     <div class="callout"><span class="lbl">Measure</span>Speedup &amp; scaling; verify correctness at every step.</div>
   </div>
   <div class="cols">
-    <div class="callout"><span class="lbl">Deliver</span>1-pg proposal → 5-min talk (10%) → 4-pg ACM report + code (20%), all on Moodle.</div>
+    <div class="callout"><span class="lbl">Deliver</span>1-pg proposal → 4-min talk + 30 sec Q&amp;A (10%) → 4-pg ACM report + code (20%), all on Moodle.</div>
     <div class="callout takeaway"><span class="lbl">One sentence</span><strong>Pick something measurable, baseline it, profile it, parallelize the hot spot, and report honest speedup &amp; scaling.</strong></div>
   </div>
 </section>
@@ -306,10 +397,10 @@
 <section data-background-color="#f6f8fb">
   <h2>References</h2>
   <div class="callout"><span class="lbl">Course material</span>
-    Adapted from the CSC 548 <em>T3 — Final Project Topics</em> handout (Spring 2025). Topic areas, format, and timeline are the instructor's; Fall 2026 due dates should be confirmed on the course page / Moodle.</div>
+    Adapted from the CSC 548 <em>T3 — Final Project Topics</em> handout; deliverables, format, and Fall 2026 dates follow the course page.</div>
   <ul class="small">
     <li>ACM Primary Article Template (2-column) — <a href="https://www.acm.org/publications/proceedings-template">acm.org publications template</a>.</li>
-    <li>NCSU HPC — ARC &amp; Hazel cluster documentation (OIT / HPC).</li>
+    <li>NCSU HPC — ARC and campus HPC / Hazel documentation (OIT / HPC).</li>
   </ul>
 </section>
 
