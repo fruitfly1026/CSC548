@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSC 548 · The Roofline Model</title>
+
+<!-- reveal.js core (CDN) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/theme.css?v=13">
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================ TITLE ============================ -->
+<section class="title-slide" data-background-color="#ffffff">
+  <div class="eyebrow">CSC 548 · Parallel Systems</div>
+  <h1>The Roofline Model</h1>
+  <div class="sub">A visual bound on attainable performance</div>
+  <div class="meta">Instructor: Jiajia Li<br>Fall 2026<br>09/09/2026</div>
+  <aside class="notes">
+    The roofline model puts two hardware limits — peak compute and peak memory bandwidth — on one plot,
+    and uses a kernel's arithmetic intensity to say which limit binds it. This deck builds the model,
+    shows how to read and use it, adds the practical refinements (below-peak ceilings, the memory
+    hierarchy), and covers how to measure the numbers and which tools draw the plot for you.
+  </aside>
+</section>
+
+<!-- Agenda -->
+<section data-background-color="#ffffff">
+  <h2>Agenda</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">1 · The Model</span><span class="small">Arithmetic intensity, the two ceilings, the ridge point.</span></div>
+    <div class="callout"><span class="lbl">2 · Reading It</span><span class="small">Placing a kernel; memory- vs compute-bound; worked examples.</span></div>
+    <div class="callout"><span class="lbl">3 · Refinements</span><span class="small">Below-peak ceilings, the memory hierarchy, raising intensity.</span></div>
+    <div class="callout"><span class="lbl">4 · In Practice</span><span class="small">Getting π and β, counting flops/bytes, the tools.</span></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">One idea</span>
+    Attainable performance is the smaller of two roofs: what the cores can compute, and what the memory system can feed them.</div>
+</section>
+
+<!-- ==================================================================
+     MODULE 1 — THE MODEL
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 1</div>
+  <div class="mod-title">The Model</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Why a Roofline?</h2>
+  <div class="cols">
+    <div>
+      <p class="small">A kernel is limited either by how fast the cores can do arithmetic, or by how fast memory can supply operands. Peak GFLOP/s alone never tells you which.</p>
+      <div class="callout"><span class="lbl">The insight</span>Put both limits on one plot against a single kernel property — its <strong>arithmetic intensity</strong> — and the binding limit is obvious at a glance.</div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">What it gives you</span>
+        <span class="small">
+        &bull; an upper bound on performance for a given kernel;<br>
+        &bull; a verdict: memory-bound or compute-bound;<br>
+        &bull; the headroom left, and which optimization would move you.</span></div>
+      <p class="tiny muted">Williams, Waterman &amp; Patterson introduced it for multicore in 2009; it now covers CPUs, GPUs, and accelerators.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Arithmetic Intensity</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">Definition</span>Flops performed per byte moved from memory:
+        <div class="eq" style="margin-top:.3em">\( I \;=\; \dfrac{\text{FLOPs}}{\text{bytes moved}} \)</div></div>
+      <p class="small">The classic model counts bytes to and from <strong>DRAM</strong>. A high intensity means the data is reused many times once it is on chip. A low intensity means each byte is touched briefly, then discarded.</p>
+      <p class="tiny muted">Units: flop/byte. It is a property of the algorithm <em>and</em> its implementation, not of the machine.</p>
+    </div>
+    <div>
+      <table style="font-size:.8em">
+        <tr><th>Kernel</th><th>Bytes / flop</th><th>≈ I</th></tr>
+        <tr><td>DAXPY (`y=ax+y`)</td><td>high</td><td>~0.06</td></tr>
+        <tr><td class="hi">SpMV</td><td>high</td><td>~0.17</td></tr>
+        <tr><td>7-pt stencil</td><td>medium</td><td>~0.3–0.5</td></tr>
+        <tr><td>FFT</td><td>—</td><td>~O(log N)</td></tr>
+        <tr><td class="hi">Dense GEMM</td><td>low</td><td>~O(N)</td></tr>
+      </table>
+      <div class="src">Reuse turns bytes into many flops → higher I.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Two Ceilings: Compute and Bandwidth</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Peak compute · π</span><span class="small">The most FLOP/s the cores can retire: cores × SIMD width × FMA × frequency. A flat, intensity-independent ceiling.</span></div>
+    <div class="callout"><span class="lbl">Peak bandwidth · β</span><span class="small">The most bytes/s the memory system can deliver. It caps performance to <code class="inline">β · I</code> — the more intensity, the more compute β can sustain.</span></div>
+    <div class="callout takeaway"><span class="lbl">Combine them</span><span class="small">Whichever is smaller wins:
+      <div class="eq small" style="margin-top:.3em">\( P(I) = \min(\pi,\; \beta I) \)</div></span></div>
+  </div>
+  <div class="callout"><span class="lbl">Why β·I</span>
+    If a kernel moves one byte per <code class="inline">1/I</code> flops, then at bandwidth β bytes/s it can sustain at most <code class="inline">β·I</code> flops/s. That is the sloped roof.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The Roofline</h2>
+  <div class="cols w-64">
+    <div class="center">
+      <svg viewBox="0 0 480 300" class="chart" style="max-width:480px">
+        <!-- axes -->
+        <line x1="55" y1="250" x2="455" y2="250" class="axis"/>
+        <line x1="55" y1="250" x2="55" y2="30" class="axis"/>
+        <text x="255" y="278" text-anchor="middle" class="lbl">arithmetic intensity  I = flops / byte   (log)</text>
+        <text x="18" y="140" text-anchor="middle" class="lbl" transform="rotate(-90 18 140)">attainable GFLOP/s (log)</text>
+        <!-- bandwidth roof (diagonal) -->
+        <line x1="55" y1="250" x2="250" y2="80" stroke="#2563eb" stroke-width="3"/>
+        <text x="95" y="150" class="note" fill="#2563eb" transform="rotate(-41 95 150)">bandwidth roof  β·I</text>
+        <!-- compute roof (flat) -->
+        <line x1="250" y1="80" x2="455" y2="80" stroke="#CC0000" stroke-width="3"/>
+        <text x="360" y="70" text-anchor="middle" class="note" fill="#CC0000">compute roof  π</text>
+        <!-- ridge point -->
+        <circle cx="250" cy="80" r="4" fill="#16181d"/>
+        <text x="250" y="66" text-anchor="middle" class="note">ridge  I* = π/β</text>
+        <!-- memory-bound kernel -->
+        <line x1="150" y1="250" x2="150" y2="167" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 3"/>
+        <circle cx="150" cy="167" r="4" fill="#2563eb"/>
+        <text x="150" y="240" text-anchor="middle" class="note">memory-bound</text>
+        <!-- compute-bound kernel -->
+        <line x1="360" y1="250" x2="360" y2="80" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 3"/>
+        <circle cx="360" cy="80" r="4" fill="#CC0000"/>
+        <text x="360" y="240" text-anchor="middle" class="note">compute-bound</text>
+      </svg>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">The plot</span>Log–log axes. The sloped roof is <code class="inline">β·I</code>; the flat roof is <code class="inline">π</code>. They meet at the <strong>ridge point</strong>.</div>
+      <ul class="small">
+        <li>Left of the ridge: bandwidth binds you.</li>
+        <li>Right of the ridge: compute binds you.</li>
+        <li>A kernel sits at its intensity; its ceiling is the roof directly above.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Ridge Point &amp; the Verdict</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Ridge point</span>Where the two roofs meet:
+        <div class="eq small" style="margin-top:.3em">\( I^{*} \;=\; \dfrac{\pi}{\beta} \)</div>
+        The least intensity at which a kernel could still reach peak compute.</div>
+      <ul class="small">
+        <li><code class="inline">I &lt; I*</code> → <strong>memory-bound</strong>, ceiling <code class="inline">β·I</code>.</li>
+        <li><code class="inline">I &gt; I*</code> → <strong>compute-bound</strong>, ceiling <code class="inline">π</code>.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="callout warn"><span class="lbl">Ridge points keep rising</span>Modern hardware adds FLOP/s faster than bandwidth, so <code class="inline">I*</code> grows. Kernels that were compute-bound become memory-bound over time.</div>
+      <p class="tiny muted">A typical CPU ridge is around 5–15 flop/byte; a GPU with HBM can be higher still. Most sparse and stencil kernels sit far to the left of it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 2 — READING & USING IT
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 2</div>
+  <div class="mod-title">Reading &amp; Using It</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Placing a Kernel</h2>
+  <div class="cols">
+    <div>
+      <div class="callout takeaway"><span class="lbl">Three numbers</span>
+        <span class="small">
+        <strong>1.</strong> the kernel's intensity <code class="inline">I</code> (flops ÷ bytes);<br>
+        <strong>2.</strong> its measured performance (GFLOP/s);<br>
+        <strong>3.</strong> the machine's <code class="inline">π</code> and <code class="inline">β</code>.</span></div>
+      <p class="small">Drop a vertical line at <code class="inline">I</code>. Where it meets the roof is the ceiling. Plot your measured point below it; the gap is your headroom.</p>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">What the gap tells you</span><span class="small">
+        Close to the roof → near optimal for this intensity; to go faster you must <em>raise the intensity</em>.<br><br>
+        Far below the roof → the implementation is leaving performance on the table (poor bandwidth use or poor compute use).</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Worked Example: SpMV vs GEMM</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">SpMV</span>Two flops per nonzero, but each nonzero drags a value and an index and touches <code class="inline">x</code> irregularly.
+        <div class="eq small" style="margin-top:.3em">\( I \approx \dfrac{2}{12} \approx 0.17 \)</div>
+        Far left of the ridge → <strong>memory-bound</strong>. Ceiling is <code class="inline">β × 0.17</code>, not π.</div>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Dense GEMM</span>Each of the <code class="inline">O(N³)</code> flops reuses data that only costs <code class="inline">O(N²)</code> bytes, so intensity grows with the tile size.
+        <div class="eq small" style="margin-top:.3em">\( I \sim O(N) \)</div>
+        With blocking it crosses the ridge → <strong>compute-bound</strong>, ceiling π.</div>
+    </div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Same machine, opposite verdict</span>
+    The hardware is identical; intensity alone decides which roof each kernel lives under.</div>
+</section>
+
+<!-- ==================================================================
+     MODULE 3 — REFINEMENTS
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 3</div>
+  <div class="mod-title">Refinements</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Below-Peak Compute Ceilings</h2>
+  <div class="cols w-64">
+    <div class="center">
+      <svg viewBox="0 0 480 300" class="chart" style="max-width:480px">
+        <line x1="55" y1="250" x2="455" y2="250" class="axis"/>
+        <line x1="55" y1="250" x2="55" y2="30" class="axis"/>
+        <text x="255" y="278" text-anchor="middle" class="lbl">arithmetic intensity (log)</text>
+        <!-- diagonal bandwidth roof up to peak ridge -->
+        <line x1="55" y1="250" x2="375" y2="80" stroke="#2563eb" stroke-width="3"/>
+        <!-- peak -->
+        <line x1="375" y1="80" x2="455" y2="80" stroke="#CC0000" stroke-width="3"/>
+        <text x="415" y="72" text-anchor="middle" class="note" fill="#CC0000">peak (SIMD+FMA)</text>
+        <!-- no-FMA ceiling -->
+        <line x1="299" y1="120" x2="455" y2="120" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="410" y="114" text-anchor="middle" class="note" fill="#d97706">no FMA (½ peak)</text>
+        <!-- scalar ceiling -->
+        <line x1="224" y1="160" x2="455" y2="160" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="405" y="154" text-anchor="middle" class="note" fill="#7c3aed">scalar (no SIMD)</text>
+      </svg>
+    </div>
+    <div>
+      <p class="small">Peak assumes every trick is used: full-width SIMD and fused multiply–add. Drop one and the compute roof drops with it.</p>
+      <ul class="small">
+        <li>No FMA → about half of peak.</li>
+        <li>No vectorization → the scalar ceiling, lower still.</li>
+        <li>Poor ILP or thread imbalance → lower again.</li>
+      </ul>
+      <div class="callout"><span class="lbl">Reading them</span>These stacked ceilings tell a <em>compute-bound</em> kernel which missing feature is capping it.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Bandwidth Ceilings &amp; the Memory Hierarchy</h2>
+  <div class="cols">
+    <div>
+      <p class="small">There is not one bandwidth but several — one per level of the hierarchy. Each level gives its own sloped roof.</p>
+      <ul class="small">
+        <li>DRAM / HBM: highest capacity, lowest bandwidth → shallowest roof.</li>
+        <li>L2, L1: less capacity, more bandwidth → steeper roofs.</li>
+      </ul>
+      <div class="callout"><span class="lbl">Cache-aware roofline</span>Measure intensity against a chosen level's traffic. A kernel that fits in cache rides the steeper cache roof, not the DRAM one.</div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Why it matters</span><span class="small">The DRAM roofline can look pessimistic for a cache-resident kernel, and optimistic for one that streams. Pick the level whose traffic actually dominates, and say which one you used.</span></div>
+      <p class="tiny muted">Two common variants: the classic (DRAM-traffic) roofline and the cache-aware roofline (CARM), which fixes intensity to the L1/core interface.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Raising Arithmetic Intensity</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Blocking / tiling</span>Reuse a tile of data many times while it is on chip. Fewer trips to DRAM per flop → higher <code class="inline">I</code>.</div>
+      <div class="callout"><span class="lbl">Loop fusion</span>Do several operations in one pass over the data, instead of streaming it once per operation.</div>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Better data structures</span>Layouts that improve reuse and locality (blocked/ELL sparse formats, structure-of-arrays) move bytes less often.</div>
+      <div class="callout warn"><span class="lbl">The move on the plot</span>Raising <code class="inline">I</code> slides the kernel <em>right</em> along the bandwidth roof — toward and past the ridge, where compute finally becomes the limit.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Which Ceiling to Attack</h2>
+  <div class="cols w-64">
+    <div class="center">
+      <svg viewBox="0 0 480 300" class="chart" style="max-width:480px">
+        <line x1="55" y1="250" x2="455" y2="250" class="axis"/>
+        <line x1="55" y1="250" x2="55" y2="30" class="axis"/>
+        <!-- roofs -->
+        <line x1="55" y1="250" x2="250" y2="80" stroke="#2563eb" stroke-width="2.5"/>
+        <line x1="250" y1="80" x2="455" y2="80" stroke="#CC0000" stroke-width="2.5"/>
+        <circle cx="250" cy="80" r="3.5" fill="#16181d"/>
+        <text x="250" y="66" text-anchor="middle" class="note">ridge</text>
+        <!-- kernel point below the bandwidth roof -->
+        <circle cx="150" cy="210" r="5" fill="#16a34a"/>
+        <text x="150" y="228" text-anchor="middle" class="note" fill="#16a34a">your kernel</text>
+        <!-- up arrow to bandwidth roof -->
+        <line x1="150" y1="205" x2="150" y2="172" stroke="#16a34a" stroke-width="2" marker-end="url(#a1)"/>
+        <text x="158" y="150" class="note" fill="#16a34a">use β better</text>
+        <!-- right arrow (raise AI) -->
+        <line x1="163" y1="210" x2="300" y2="140" stroke="#7c3aed" stroke-width="2" marker-end="url(#a1)"/>
+        <text x="250" y="200" class="note" fill="#7c3aed">raise I (tile / fuse)</text>
+        <defs><marker id="a1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#334155"/></marker></defs>
+      </svg>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Two directions</span>
+        <span class="small">
+        <strong>Up</strong> to the roof — better use of the current limit (prefetch, unit-stride, NUMA placement, vectorize).<br><br>
+        <strong>Right</strong> along the roof — raise intensity so a higher roof applies (tiling, fusion, reuse).</span></div>
+      <p class="tiny muted">If you are already on the bandwidth roof, only raising I helps. If far below it, fix the implementation first.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================
+     MODULE 4 — IN PRACTICE
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 4</div>
+  <div class="mod-title">In Practice</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Getting π and β</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Peak compute π</span><span class="small">Theoretical: cores × SIMD lanes × 2 (FMA) × frequency. Or measured with a compute-bound micro-benchmark / LINPACK.</span></div>
+      <div class="callout"><span class="lbl">Peak bandwidth β</span><span class="small">Rarely the spec number. Measure the <em>achievable</em> value with the STREAM benchmark; expect 60–85% of the datasheet peak.</span></div>
+    </div>
+    <div>
+      <div class="callout takeaway"><span class="lbl">Empirical Roofline Toolkit</span><span class="small">ERT (LBNL) sweeps intensity with micro-kernels and draws the machine's real roofs — compute and every bandwidth level — for you.</span></div>
+      <p class="tiny muted">Always draw the roof from <em>achievable</em> peaks. Datasheet peaks make every kernel look worse than it is.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Counting Flops and Bytes Honestly</h2>
+  <div class="cols">
+    <div>
+      <div class="callout warn"><span class="lbl">Which bytes?</span>Intensity depends on what you count. <em>Algorithmic</em> bytes (the minimum traffic) give an optimistic point; <em>measured</em> DRAM traffic (from counters) gives the real one.</div>
+      <p class="small">Caches, redundant loads, and write-allocate all change the byte count. The gap between algorithmic and measured intensity is itself a locality diagnostic.</p>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Flops</span><span class="small">Count useful flops, consistently in the precision you run (FP64 / FP32 / FP16). Do not count masked-off or speculative work.</span></div>
+      <div class="callout"><span class="lbl">Bytes</span><span class="small">Prefer hardware counters (DRAM read+write) over hand estimates for the measured point.</span></div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Tools That Draw It</h2>
+  <table style="font-size:.8em">
+    <tr><th>Tool</th><th>Target</th><th>What it gives</th></tr>
+    <tr><td class="hi">Intel Advisor</td><td>CPU / Intel GPU</td><td>Automated roofline from a real run; cache-aware and multiple ceilings.</td></tr>
+    <tr><td class="hi">NVIDIA Nsight Compute</td><td>NVIDIA GPU</td><td>Per-kernel roofline (`ncu`), with the memory hierarchy.</td></tr>
+    <tr><td>LIKWID</td><td>CPU</td><td>`likwid-perfctr` counters for flops and memory traffic to compute intensity.</td></tr>
+    <tr><td>Empirical Roofline Toolkit</td><td>CPU / GPU</td><td>Measures the machine's roofs (compute + bandwidth levels).</td></tr>
+    <tr><td>rocprof / Omniperf</td><td>AMD GPU</td><td>Counters and a roofline view for ROCm kernels.</td></tr>
+  </table>
+  <p class="tiny muted center">Most of these read the CPU/GPU performance counters underneath to place the measured point automatically.</p>
+</section>
+
+<!-- ===== BIG PICTURE ===== -->
+<section data-background-color="#ffffff">
+  <h2>Roofline — Big Picture</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Model</span><code class="inline">P = min(π, β·I)</code>; the ridge <code class="inline">I* = π/β</code> splits memory- from compute-bound.</div>
+    <div class="callout"><span class="lbl">Read</span>Place the kernel at its intensity; the roof above is the ceiling; the gap is headroom.</div>
+    <div class="callout"><span class="lbl">Refine</span>Below-peak compute ceilings and per-level bandwidth roofs sharpen the diagnosis.</div>
+  </div>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Act</span>Far below the roof → fix the implementation. On the roof → raise intensity by tiling and fusion.</div>
+    <div class="callout takeaway"><span class="lbl">One sentence</span>Find your intensity, find the roof above it, and either climb to that roof or move right to a higher one.</div>
+  </div>
+</section>
+
+<!-- ===== REFERENCES ===== -->
+<section data-background-color="#f6f8fb">
+  <h2>References</h2>
+  <ul class="small">
+    <li>S. Williams, A. Waterman &amp; D. Patterson. "Roofline: An Insightful Visual Performance Model for Multicore Architectures." <em>Communications of the ACM</em>, 2009.</li>
+    <li>A. Ilic, F. Pratas &amp; L. Sousa. "Cache-Aware Roofline Model: Upgrading the Loft." <em>IEEE Computer Architecture Letters</em>, 2014.</li>
+    <li>Empirical Roofline Toolkit (ERT) — Berkeley Lab CRD / NERSC.</li>
+    <li>Intel Advisor and NVIDIA Nsight Compute roofline documentation.</li>
+  </ul>
+  <div class="callout"><span class="lbl">In this course</span>The roofline also appears in the <em>Performance Analysis</em> topic and in HW1, where you place your SpMV against the node's roofline.</div>
+</section>
+
+</div>
+
+<!-- deck-level fixed footer -->
+<div class="deck-footer"><span class="tag">CSC 548</span><span class="sep">·</span>The Roofline Model</div>
+</div>
+
+<!-- reveal.js core + plugins -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/math/math.js"></script>
+<script>
+  Reveal.initialize({
+    width: 1280, height: 720, margin: 0.04,
+    minScale: 0.2, maxScale: 1.6,
+    center: false,
+    hash: true, slideNumber: 'c/t', history: true,
+    transition: 'slide', transitionSpeed: 'fast',
+    plugins: [ RevealNotes, RevealHighlight, RevealMath.KaTeX ],
+    katex: { delimiters: [
+      {left:'\\(', right:'\\)', display:false},
+      {left:'$$', right:'$$', display:true}
+    ]},
+  });
+</script>
+<script>
+/* Auto-fit: shrink any slide whose content would exceed 720px. */
+(function(){
+  function fit(s){ if(!s) return;
+    s.style.setProperty('--nc-fit','1');
+    var h=s.scrollHeight;
+    if(h>724){ var k=Math.max(0.6, Math.min(1, 720/h));
+      s.style.setProperty('--nc-fit', k.toFixed(3)); }
+  }
+  if(window.Reveal){
+    Reveal.on('ready', function(e){ fit(e.currentSlide); });
+    Reveal.on('slidechanged', function(e){ fit(e.currentSlide); });
+    try{ if(Reveal.isReady && Reveal.isReady()) fit(Reveal.getCurrentSlide()); }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>
