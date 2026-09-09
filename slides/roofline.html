@@ -72,13 +72,13 @@
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>Arithmetic Intensity</h2>
+  <h2>Arithmetic (Operational) Intensity</h2>
   <div class="cols w-64">
     <div>
       <div class="callout"><span class="lbl">Definition</span>Flops performed per byte moved from memory:
         <div class="eq" style="margin-top:.3em">\( I \;=\; \dfrac{\text{FLOPs}}{\text{bytes moved}} \)</div></div>
       <p class="small">The classic model counts bytes to and from <strong>DRAM</strong>. A high intensity means the data is reused many times once it is on chip. A low intensity means each byte is touched briefly, then discarded.</p>
-      <p class="tiny muted">Units: flop/byte. It is a property of the algorithm <em>and</em> its implementation, not of the machine.</p>
+      <p class="tiny muted">Units: flop/byte; the original roofline paper calls it <em>operational intensity</em>. The algorithm and its implementation set it — the machine does not.</p>
     </div>
     <div>
       <table style="font-size:.8em">
