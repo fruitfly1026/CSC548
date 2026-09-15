@@ -36,23 +36,181 @@
 <section data-background-color="#ffffff">
   <h2>Agenda</h2>
   <div class="cols c3">
-    <div class="callout"><span class="lbl">1 · SMPs &amp; Threads</span><span class="small">Shared-memory hardware, the thread abstraction, pthreads.</span></div>
-    <div class="callout"><span class="lbl">2 · Synchronization</span><span class="small">Races, mutexes, condition variables, producer/consumer.</span></div>
-    <div class="callout"><span class="lbl">3 · OpenMP Basics</span><span class="small">Fork-join, pragmas, parallel regions.</span></div>
-    <div class="callout"><span class="lbl">4 · Work-Sharing</span><span class="small"><code class="inline">for</code>, schedules, <code class="inline">sections</code>.</span></div>
-    <div class="callout"><span class="lbl">5 · Data Environment</span><span class="small">Scope clauses &amp; reduction.</span></div>
-    <div class="callout"><span class="lbl">6 · Sync Constructs</span><span class="small">critical, atomic, barrier, single…</span></div>
-    <div class="callout"><span class="lbl">7 · Tasks &amp; Advanced</span><span class="small">tasks, collapse, SIMD, runtime.</span></div>
-    <div class="callout"><span class="lbl">8 · Worked Example</span><span class="small">Computing &pi; — three ways to parallelize.</span></div>
+    <div class="callout"><span class="lbl">1 · Finding Parallelism</span><span class="small">Dependences &amp; the four primitives → directives.</span></div>
+    <div class="callout"><span class="lbl">2 · SMPs &amp; Threads</span><span class="small">Shared-memory hardware, the thread abstraction, pthreads.</span></div>
+    <div class="callout"><span class="lbl">3 · Synchronization</span><span class="small">Races, mutexes, condition variables, producer/consumer.</span></div>
+    <div class="callout"><span class="lbl">4 · OpenMP Basics</span><span class="small">Fork-join, pragmas, parallel regions.</span></div>
+    <div class="callout"><span class="lbl">5 · Work-Sharing</span><span class="small"><code class="inline">for</code>, schedules, <code class="inline">sections</code>.</span></div>
+    <div class="callout"><span class="lbl">6 · Data Environment</span><span class="small">Scope clauses &amp; reduction.</span></div>
+    <div class="callout"><span class="lbl">7 · Sync Constructs</span><span class="small">critical, atomic, barrier, single…</span></div>
+    <div class="callout"><span class="lbl">8 · Tasks &amp; Advanced</span><span class="small">tasks, collapse, SIMD, runtime.</span></div>
+    <div class="callout"><span class="lbl">9 · Worked Example</span><span class="small">Computing &pi; — three ways to parallelize.</span></div>
     <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">OpenMP lets a sequential program evolve <em>incrementally</em> into a parallel one. <span class="muted">(Two lectures.)</span></span></div>
   </div>
 </section>
 
 <!-- ==================================================================
-     MODULE 1 — SMPs & THREADS
+     MODULE 1 — FINDING PARALLELISM: DEPENDENCES & THE FOUR PRIMITIVES
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 1</div>
+  <div class="mod-title">Finding Parallelism: Dependences &amp; the Four Primitives</div>
+  <div class="objectives" style="margin-top:1em;">
+    <h4>By the end you can…</h4>
+    <ul>
+      <li>Identify the dependences that decide whether a loop is safe to parallelize</li>
+      <li>Recognize <strong>DOALL</strong>, <strong>DOACROSS</strong>, <strong>function</strong>, and <strong>DOPIPE</strong> parallelism</li>
+      <li>Map each of the four to the OpenMP directive that expresses it</li>
+    </ul>
+  </div>
+</section>
+
+<!-- Dependence analysis in one slide -->
+<section data-background-color="#ffffff">
+  <h2>Dependence Analysis in One Slide</h2>
+  <p class="small">A directive only parallelizes what is already independent. A dependence forces an order between two statements — reorder them and the result changes. There are three kinds:</p>
+  <div class="symkey">
+    <span><strong>true</strong> — write → later read (RAW)</span>
+    <span><strong>anti</strong> — read → later write (WAR)</span>
+    <span><strong>output</strong> — write → later write (WAW)</span>
+  </div>
+  <div class="cols w-64">
+    <div>
+      <div class="code-label">Trace each variable: who writes, who reads, in what order</div>
+      <pre><code class="language-c" data-trim>
+S1: x = 2;
+S2: y = x;
+S3: y = x + z;
+S4: z = 6;
+</code></pre>
+      <p class="tiny muted">Anti and output are <em>name</em> dependences — they exist only because a storage location is reused, not because real data flows. Renaming or privatizing the variable removes them.</p>
+    </div>
+    <div>
+      <table>
+        <tr><th>Pair</th><th>Type</th><th>Why</th></tr>
+        <tr><td>S1 → S2</td><td>true</td><td>S1 writes <code class="inline">x</code>, S2 reads it</td></tr>
+        <tr><td>S1 → S3</td><td>true</td><td>S1 writes <code class="inline">x</code>, S3 reads it</td></tr>
+        <tr><td>S3 → S4</td><td>anti</td><td>S3 reads <code class="inline">z</code>, S4 writes it</td></tr>
+        <tr><td>S2 → S3</td><td>output</td><td>both write <code class="inline">y</code></td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">In a loop</span>
+    A dependence that crosses iterations is <strong>loop-carried</strong> (e.g. <code class="inline">a[i]=a[i-1]+1</code>) — this is what blocks parallelism; one inside a single iteration is loop-independent and harmless. A loop level with <strong>no loop-carried dependence is fully parallel.</strong></div>
+</section>
+
+<!-- Which loop carries the dependence -->
+<section data-background-color="#ffffff">
+  <h2>Which Loop Carries the Dependence?</h2>
+  <p class="small">In a loop nest, look at each subscript to see which index moves the dependence across iterations. Compare the two nests below — same shape, one subscript apart.</p>
+  <div class="cols">
+    <div>
+      <div class="code-label">Carried on the <code class="inline">j</code> loop</div>
+      <pre><code class="language-c" data-trim>
+for (i = 1; i &lt; n; i++)
+  for (j = 1; j &lt; n; j++)
+    S: a[i][j] = a[i][j-1] + 1;
+</code></pre>
+      <p class="small"><code class="inline">a[i][j]</code> reads <code class="inline">a[i][j-1]</code> — the previous <code class="inline">j</code>, same <code class="inline">i</code>. The dependence runs along a row, so it is carried by <code class="inline">j</code>. Different <code class="inline">i</code> rows never interact → the outer <code class="inline">i</code> loop is parallel.</p>
+    </div>
+    <div>
+      <div class="code-label">Carried on the <code class="inline">i</code> loop</div>
+      <pre><code class="language-c" data-trim>
+for (i = 1; i &lt; n; i++)
+  for (j = 1; j &lt; n; j++)
+    S: a[i][j] = a[i-1][j] + 1;
+</code></pre>
+      <p class="small"><code class="inline">a[i][j]</code> reads <code class="inline">a[i-1][j]</code> — the previous <code class="inline">i</code>, same <code class="inline">j</code>. Now the dependence runs down a column, carried by <code class="inline">i</code>. Different <code class="inline">j</code> columns never interact → the inner <code class="inline">j</code> loop is parallel.</p>
+    </div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">The whole game</span>
+    The parallel loop is <strong>not always the innermost</strong> — it is whichever level carries no dependence. Finding that level is the entire job of dependence analysis, and it is exactly the level you hand to <code class="inline">omp for</code>.</div>
+</section>
+
+<!-- Four primitives -> directives -->
+<section data-background-color="#ffffff">
+  <h2>Four Primitives → OpenMP Directives</h2>
+  <p class="small">Once you know the dependences, the shape of the parallelism — and the directive — follows. We meet each directive in detail later in the deck.</p>
+  <table>
+    <tr><th>Primitive</th><th>What runs in parallel</th><th>OpenMP directive</th></tr>
+    <tr><td><strong>DOALL</strong></td><td>independent loop iterations</td><td><code class="inline">#pragma omp for</code></td></tr>
+    <tr><td><strong>DOACROSS</strong></td><td>dependent iterations, overlapped &amp; sync-guarded</td><td><code class="inline">omp for ordered(1)</code> + <code class="inline">ordered depend(sink:/source:)</code></td></tr>
+    <tr><td><strong>Function</strong></td><td>independent code blocks</td><td><code class="inline">#pragma omp sections</code> / <code class="inline">omp task</code></td></tr>
+    <tr><td><strong>DOPIPE</strong></td><td>dependent statements, software-pipelined</td><td><code class="inline">omp task depend(out:/in:)</code></td></tr>
+  </table>
+  <div class="callout takeaway"><span class="lbl">Only one scales with the data</span>
+    <strong>DOALL</strong>'s degree grows with the iteration count — reach for it first. Function and DOPIPE are capped by the number of blocks or pipeline stages you write; DOACROSS is capped by how much independent work can be hoisted off the carried chain. Layer the others on when DOALL alone doesn't fill the machine.</div>
+</section>
+
+<!-- DOALL & DOACROSS -->
+<section data-background-color="#ffffff">
+  <h2>DOALL &amp; DOACROSS</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">DOALL — no carried dependence</div>
+      <pre><code class="language-c" data-trim>
+#pragma omp parallel for
+for (i = 1; i &lt;= n; i++)
+  a[i] = b[i] * c[i];     // iterations never touch
+</code></pre>
+      <p class="small">Every iteration is independent, so the directive is just <code class="inline">omp for</code>.</p>
+    </div>
+    <div>
+      <div class="code-label">DOACROSS — carried dep, overlapped</div>
+      <pre><code class="language-c" data-trim>
+#pragma omp parallel for ordered(1)
+for (i = 1; i &lt;= N; i++) {
+  temp = b[i] * c[i];               // independent -&gt; parallel
+  #pragma omp ordered depend(sink: i-1)
+  a[i] = a[i-1] + temp;             // carried dep -&gt; serialized
+  #pragma omp ordered depend(source:)
+}
+</code></pre>
+      <p class="small">Only the carried statement is serialized; the independent <code class="inline">b[i]*c[i]</code> overlaps across iterations.</p>
+    </div>
+  </div>
+  <div class="callout"><span class="lbl">Note</span><span class="small">OpenMP 4.5 (2015) added the doacross loop, so DOACROSS <em>can</em> now be written with directives — older texts predate it. 5.2 renames the clauses to <code class="inline">doacross(sink:/source:)</code> but the 4.5 form above still compiles. <span class="src">[OpenMP 4.5 / 5.2 specification]</span></span></div>
+</section>
+
+<!-- Function parallelism & DOPIPE -->
+<section data-background-color="#ffffff">
+  <h2>Function Parallelism &amp; DOPIPE</h2>
+  <div class="cols">
+    <div>
+      <div class="code-label">Function — independent blocks → <code class="inline">sections</code></div>
+      <pre><code class="language-c" data-trim>
+#pragma omp parallel sections
+{
+  #pragma omp section
+    task_A();          // distinct code
+  #pragma omp section
+    task_B();          // runs concurrently
+}
+</code></pre>
+      <p class="small">Each block runs once, on its own thread. Degree is fixed at the number of sections — it does not grow with the data.</p>
+    </div>
+    <div>
+      <div class="code-label">DOPIPE — pipelined stages → <code class="inline">task depend</code></div>
+      <pre><code class="language-c" data-trim>
+for (i = 2; i &lt;= N; i++) {
+  #pragma omp task depend(out: a[i])
+  a[i] = a[i-1] + b[i];      // stage 1: serial chain
+  #pragma omp task depend(in: a[i])
+  c[i] = c[i] + a[i];        // stage 2: one step behind
+}
+</code></pre>
+      <p class="small">Stage 2 consumes <code class="inline">a[i]</code> as soon as stage 1 produces it — the runtime overlaps the two stages like a hardware pipeline.</p>
+    </div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">When code analysis is too pessimistic</span>
+    These four read the loop as written. Some algorithms allow reordering the work itself — e.g. red-black coloring turns a serial 5-point stencil sweep into two fully parallel DOALL half-sweeps. Changing the algorithm can expose parallelism no directive on the original loop could.</div>
+</section>
+
+<!-- ==================================================================
+     MODULE 2 — SMPs & THREADS
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 2</div>
   <div class="mod-title">Shared-Memory Processors &amp; Threads</div>
 </section>
 
@@ -127,10 +285,10 @@
 </section>
 
 <!-- ==================================================================
-     MODULE 2 — PTHREADS & SYNCHRONIZATION
+     MODULE 3 — PTHREADS & SYNCHRONIZATION
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Module 2</div>
+  <div class="mod-num">Module 3</div>
   <div class="mod-title">pthreads &amp; Synchronization</div>
 </section>
 
@@ -249,10 +407,10 @@ unlock(&amp;m);
 
 
 <!-- ==================================================================
-     MODULE 3 — OpenMP BASICS
+     MODULE 4 — OpenMP BASICS
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Module 3</div>
+  <div class="mod-num">Module 4</div>
   <div class="mod-title">OpenMP Basics — Fork-Join</div>
 </section>
 
@@ -382,10 +540,10 @@ void whoami() {
 </section>
 
 <!-- ==================================================================
-     MODULE 4 — WORK-SHARING
+     MODULE 5 — WORK-SHARING
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Module 4</div>
+  <div class="mod-num">Module 5</div>
   <div class="mod-title">Work-Sharing Constructs</div>
 </section>
 
@@ -462,10 +620,10 @@ for (i=0; i&lt;MAX; i++)
 </section>
 
 <!-- ==================================================================
-     MODULE 5 — DATA ENVIRONMENT
+     MODULE 6 — DATA ENVIRONMENT
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Module 5</div>
+  <div class="mod-num">Module 6</div>
   <div class="mod-title">Data Environment</div>
 </section>
 
@@ -577,10 +735,10 @@ for (i = 0; i &lt; n; i++) a[i] *= 2;
 </section>
 
 <!-- ==================================================================
-     MODULE 6 — SYNCHRONIZATION CONSTRUCTS
+     MODULE 7 — SYNCHRONIZATION CONSTRUCTS
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Module 6</div>
+  <div class="mod-num">Module 7</div>
   <div class="mod-title">Synchronization Constructs</div>
 </section>
 
@@ -644,10 +802,10 @@ sum[id] += 4.0/(1.0+x*x);
 </section>
 
 <!-- ==================================================================
-     MODULE 7 — TASKS & ADVANCED
+     MODULE 8 — TASKS & ADVANCED
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Module 7</div>
+  <div class="mod-num">Module 8</div>
   <div class="mod-title">Tasks &amp; Advanced Features</div>
 </section>
 
@@ -725,10 +883,10 @@ for (k=0; k&lt;N; k++)
 </section>
 
 <!-- ==================================================================
-     MODULE 8 — WORKED EXAMPLE: COMPUTING PI
+     MODULE 9 — WORKED EXAMPLE: COMPUTING PI
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Module 8</div>
+  <div class="mod-num">Module 9</div>
   <div class="mod-title">Worked Example &mdash; Computing &pi;</div>
 </section>
 
