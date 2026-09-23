@@ -38,9 +38,9 @@
   <h2>Agenda</h2>
   <div class="cols c3">
     <div class="callout"><span class="lbl">1 · Hierarchy &amp; Locality</span><span class="small">The memory wall, the latency/bandwidth gap, temporal &amp; spatial locality.</span></div>
-    <div class="callout"><span class="lbl">2 · Cache Basics</span><span class="small">Lines, associativity, the 3 C's, AMAT — just enough.</span></div>
+    <div class="callout"><span class="lbl">2 · Cache Basics</span><span class="small">Lines, associativity, the C's of misses, multi-level AMAT — just enough.</span></div>
     <div class="callout"><span class="lbl">3 · Multicore Concerns</span><span class="small">Coherence, <strong>false sharing</strong>, NUMA &amp; first-touch.</span></div>
-    <div class="callout"><span class="lbl">4 · Programmer Takeaways</span><span class="small">Loop transforms, tiling, AoS vs SoA, padding — cache-friendly code.</span></div>
+    <div class="callout"><span class="lbl">4 · Programmer Takeaways</span><span class="small">Loop transforms, tiling, AoS vs SoA, padding, streaming stores — cache-friendly code.</span></div>
     <div class="callout"><span class="lbl">5 · Case Study</span><span class="small">Matrix multiply: naïve &rarr; tiled &rarr; the &radic;(M/3) limit &rarr; BLAS.</span></div>
     <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">You can't change the hardware, but how you <em>access</em> memory often decides your speed more than your FLOPs. <span class="muted">(Two lectures.)</span></span></div>
   </div>
@@ -177,36 +177,42 @@ for (i = 0; i &lt; N; i++)
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>The 3 C's of Misses</h2>
-  <div class="cols c3">
-    <div class="callout"><span class="lbl">Compulsory</span><span class="small">First-ever touch of a line — "cold miss." Unavoidable; prefetching can hide it.</span></div>
-    <div class="callout"><span class="lbl">Capacity</span><span class="small">Working set &gt; cache size — lines get evicted before reuse. Fix by <strong>blocking/tiling</strong>.</span></div>
-    <div class="callout"><span class="lbl">Conflict</span><span class="small">Too many hot lines map to the same set, even though the cache isn't full. Fix by <strong>padding</strong> / more associativity.</span></div>
-  </div>
+  <h2>The 3 C's of Misses — Plus One for Multicore</h2>
+  <p class="small">Classifying a miss tells you which fix applies. The classic three occur on a single core; a fourth, <strong>coherence</strong>, appears once threads share data.</p>
+  <table>
+    <tr><th>Miss</th><th>Cause</th><th>What you do in code</th></tr>
+    <tr><td>Compulsory</td><td>first-ever touch of a line (cold miss)</td><td>unavoidable — hide it with prefetching; use every byte of each line you load (contiguous access)</td></tr>
+    <tr><td>Capacity</td><td>working set larger than the cache; lines evicted before reuse</td><td>shrink the working set: blocking / tiling, loop fusion</td></tr>
+    <tr><td>Conflict</td><td>too many hot lines map to the same set, though the cache isn't full</td><td>pad arrays, avoid power-of-two strides, change the layout</td></tr>
+    <tr><td>Coherence</td><td>another core wrote the line and invalidated your copy</td><td>avoid writing shared data in hot loops; pad per-thread data apart (false sharing, Module 3)</td></tr>
+  </table>
   <div class="callout warn"><span class="lbl">Why a programmer cares</span>
-    You can't remove compulsory misses, but <strong>capacity</strong> and <strong>conflict</strong> misses are largely under your control — they're created (or avoided) by how you size, lay out, and traverse your data.</div>
+    Only compulsory misses are truly unavoidable; the other three come from how you size, lay out, traverse, and share your data. <span class="small">Context switches also pollute the cache — pin threads and don't oversubscribe cores.</span></div>
 </section>
 
 <section data-background-color="#ffffff">
   <h2>AMAT — Does a Miss Rate Matter?</h2>
   <div class="cols">
     <div>
-      <div class="callout"><span class="lbl">Average Memory Access Time</span>
-        <span class="eq small">\( \text{AMAT} = t_{hit} + \text{(miss rate)} \times t_{penalty} \)</span></div>
-      <p class="small">The miss <em>penalty</em> dominates: even a small miss rate hurts when the penalty is 100s of cycles.</p>
-      <div class="callout takeaway"><span class="lbl">Lesson</span>Reducing the miss <strong>rate</strong> (via locality) pays off precisely because the miss <strong>penalty</strong> is so large.</div>
+      <div class="callout"><span class="lbl">One level</span>
+        <span class="eq small">\( \text{AMAT} = t_{hit} + \text{MR} \times t_{penalty} \)</span></div>
+      <div class="callout"><span class="lbl">Multi-level</span>
+        <span class="eq small">\( \text{AMAT} = t_{L1} + \text{MR}_{L1} \left( t_{L2} + \text{MR}_{L2}\, t_{mem} \right) \)</span>
+        <span class="tiny">You pay a lower level only when the level above misses, so the miss rates multiply.</span></div>
+      <div class="callout takeaway"><span class="lbl">Lesson</span>The accesses that go all the way to DRAM dominate. Keeping the working set inside the cache — L2 or the last-level cache — is what pays.</div>
     </div>
     <div>
-      <div class="code-label">Worked example</div>
+      <div class="code-label">Worked example — what an L2 buys</div>
       <pre><code class="language-c" data-trim>
-t_hit     = 1 cycle
-miss_rate = 5% = 0.05
-penalty   = 200 cycles
+t_L1  = 1,   MR_L1 = 5%
+t_L2  = 10,  MR_L2 = 20%
+t_mem = 200
 
-AMAT = 1 + 0.05 * 200
-     = 1 + 10 = 11 cycles
+no L2:   1 + 0.05 * 200             = 11
+with L2: 1 + 0.05 * (10 + 0.2 * 200)
+       = 1 + 0.05 * 50              = 3.5
 </code></pre>
-      <p class="tiny muted">A 5% miss rate turns a 1-cycle access into 11 cycles on average — an 11x slowdown driven entirely by misses.</p>
+      <p class="tiny muted">A 5% L1 miss rate alone makes the average access 11× a hit. With the L2, it drops to 3.5 cycles — and 2 of those 3.5 (0.05 × 0.2 × 200) are the DRAM trips.</p>
     </div>
   </div>
 </section>
@@ -516,6 +522,35 @@ float b[DIM];
 </code></pre>
       <p class="tiny muted">Same trick (padding to a line boundary) fixes both <strong>conflict misses</strong> and <strong>false sharing</strong> — it just separates things that shouldn't share a line.</p>
     </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Streaming Writes: Skip the Read-for-Ownership</h2>
+  <p class="small">A hidden cost of writing to memory: caches are normally <strong>write-allocate</strong>, so a write miss first fetches the whole line — a <strong>read-for-ownership (RFO)</strong> — even when you are about to overwrite every byte.</p>
+  <div class="cols">
+    <div>
+      <div class="code-label">Write-only loop — pays for reads it never uses</div>
+      <pre><code class="language-c" data-trim>
+for (i = 0; i &lt; N; i++)
+  a[i] = 0.0f;   // each miss RFOs the line
+                 // a[] is read in, then overwritten
+</code></pre>
+      <p class="tiny muted">Traffic ≈ read <code class="inline">N</code> + write <code class="inline">N</code> = <strong>2N</strong> — half of it wasted on data you discard.</p>
+    </div>
+    <div>
+      <div class="code-label">Non-temporal store — bypass the cache</div>
+      <pre><code class="language-c" data-trim>
+for (i = 0; i &lt; N; i += 8)
+  _mm256_stream_ps(&amp;a[i], v);  // no RFO, no pollution
+// also: memset, __builtin_nontemporal_store
+</code></pre>
+      <p class="tiny muted">Writes straight to memory: traffic ≈ <strong>N</strong>, and it does not evict useful data from the cache.</p>
+    </div>
+  </div>
+  <div class="cols">
+    <div class="callout ok"><span class="lbl">Use when</span><span class="small">The region is large, write-only, and won't be reread soon — output buffers, array initialization, big <code class="inline">memcpy</code>/<code class="inline">memset</code>. Up to 2× less memory traffic.</span></div>
+    <div class="callout warn"><span class="lbl">Avoid when</span><span class="small">You'll read the data back soon — a streaming store skips the cache, so that later read is a guaranteed miss.</span></div>
   </div>
 </section>
 
