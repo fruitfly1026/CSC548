@@ -38,7 +38,7 @@
   <h2>Agenda</h2>
   <div class="cols c3">
     <div class="callout"><span class="lbl">1 · Hierarchy &amp; Locality</span><span class="small">The memory wall, the latency/bandwidth gap, temporal &amp; spatial locality.</span></div>
-    <div class="callout"><span class="lbl">2 · Cache Basics</span><span class="small">Lines, associativity, the C's of misses, multi-level AMAT — just enough.</span></div>
+    <div class="callout"><span class="lbl">2 · Cache Basics</span><span class="small">Lines, associativity, address lookup, replacement &amp; write policies, the C's of misses, AMAT — just enough.</span></div>
     <div class="callout"><span class="lbl">3 · Multicore Concerns</span><span class="small">Coherence, <strong>false sharing</strong>, NUMA &amp; first-touch.</span></div>
     <div class="callout"><span class="lbl">4 · Programmer Takeaways</span><span class="small">Loop transforms, tiling, AoS vs SoA, padding, streaming stores — cache-friendly code.</span></div>
     <div class="callout"><span class="lbl">5 · Case Study</span><span class="small">Matrix multiply: naïve &rarr; tiled &rarr; the &radic;(M/3) limit &rarr; BLAS.</span></div>
@@ -172,6 +172,102 @@ for (i = 0; i &lt; N; i++)
         <text x="200" y="120" text-anchor="middle" class="note">a "set" = 2 slots</text>
       </svg>
       <div class="src">More ways → fewer conflict misses.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Address breakdown -->
+<section data-background-color="#ffffff">
+  <h2>Anatomy of an Address: Tag · Index · Offset</h2>
+  <div class="cols w-64">
+    <div>
+      <svg viewBox="0 0 380 110" class="chart">
+        <text x="190" y="18" text-anchor="middle" class="note">memory address (high bits → low bits)</text>
+        <rect x="20"  y="28" width="160" height="40" fill="#dbeafe" stroke="#3b82f6"/><text x="100" y="53" text-anchor="middle" class="lbl">Tag</text>
+        <rect x="180" y="28" width="120" height="40" fill="#fef3c7" stroke="#f59e0b"/><text x="240" y="53" text-anchor="middle" class="lbl">Index</text>
+        <rect x="300" y="28" width="60"  height="40" fill="#dcfce7" stroke="#22c55e"/><text x="330" y="53" text-anchor="middle" class="lbl">Offset</text>
+        <text x="100" y="88" text-anchor="middle" class="note">identifies the block</text>
+        <text x="240" y="88" text-anchor="middle" class="note">selects the set</text>
+        <text x="330" y="88" text-anchor="middle" class="note">byte in line</text>
+      </svg>
+      <div class="eq">\( \text{set} = \text{block address} \bmod \text{numSets} \)</div>
+      <p class="small">With a power-of-two number of sets, the modulo is free: the index is just the bits above the offset.</p>
+    </div>
+    <div>
+      <div class="code-label">Example — a typical L1D</div>
+      <pre><code class="language-c" data-trim>
+32 KiB, 8-way, 64 B lines
+lines = 32768 / 64 = 512
+sets  = 512 / 8    = 64
+
+offset = log2(64) = 6 bits  [5:0]
+index  = log2(64) = 6 bits  [11:6]
+tag    = the remaining high bits
+</code></pre>
+      <div class="callout warn"><span class="lbl">Why you care</span><span class="small">Addresses exactly 4 KiB (\(2^{12}\)) apart have identical index bits, so they land in the same set. Touch 9+ such hot lines in an 8-way cache and they evict each other — the power-of-two conflict that padding fixes.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- Locating a block -->
+<section data-background-color="#ffffff">
+  <h2>A Cache Lookup, Step by Step</h2>
+  <div class="cols w-64">
+    <div class="center">
+      <svg viewBox="0 0 320 210" class="chart">
+        <rect x="10" y="10" width="300" height="30" fill="#dbeafe" stroke="#3b82f6"/>
+        <text x="60"  y="30" text-anchor="middle" class="lbl">Tag</text>
+        <text x="170" y="30" text-anchor="middle" class="lbl">Index</text>
+        <text x="280" y="30" text-anchor="middle" class="lbl">Off</text>
+        <line x1="170" y1="40" x2="170" y2="60" class="axis"/>
+        <text x="230" y="56" class="note">① index → set</text>
+        <g fill="#fff" stroke="#64748b">
+          <rect x="60" y="62" width="60" height="28"/><rect x="120" y="62" width="60" height="28"/>
+          <rect x="190" y="62" width="60" height="28"/><rect x="250" y="62" width="60" height="28"/>
+        </g>
+        <text x="90"  y="80" text-anchor="middle" class="lbl">tag</text>
+        <text x="150" y="80" text-anchor="middle" class="lbl">tag</text>
+        <text x="220" y="80" text-anchor="middle" class="lbl">data</text>
+        <text x="280" y="80" text-anchor="middle" class="lbl">data</text>
+        <text x="4" y="80" class="note">② tags</text>
+        <circle cx="90" cy="120" r="14" fill="#fee2e2" stroke="#CC0000"/><text x="90" y="124" text-anchor="middle" class="lbl">=?</text>
+        <circle cx="150" cy="120" r="14" fill="#fee2e2" stroke="#CC0000"/><text x="150" y="124" text-anchor="middle" class="lbl">=?</text>
+        <line x1="90" y1="90" x2="90" y2="106" class="axis"/>
+        <line x1="150" y1="90" x2="150" y2="106" class="axis"/>
+        <text x="175" y="124" class="note">③ compare → hit / miss</text>
+        <text x="20" y="160" class="note">④ pick the way that hit · ⑤ offset selects the byte</text>
+        <text x="20" y="184" class="note">⑥ return the data to the core</text>
+      </svg>
+    </div>
+    <div>
+      <ol class="small">
+        <li>The index bits select one set</li>
+        <li>Read the tags of every way in that set (in parallel)</li>
+        <li>Compare each stored tag with the address tag — a match is a hit, none is a miss</li>
+        <li>On a hit, take the data from the way that matched</li>
+        <li>The offset picks the requested bytes within the line</li>
+        <li>Return them to the core</li>
+      </ol>
+      <div class="callout"><span class="lbl">On a miss</span><span class="small">Fetch the whole line from the next level, choose a victim in the set (replacement policy), and install the line.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- Replacement and write policies -->
+<section data-background-color="#ffffff">
+  <h2>Replacement &amp; Write Policies</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Which line in a full set gets evicted?</p>
+      <div class="callout"><span class="lbl">LRU</span><span class="small">Evict the least recently used line. Works well, but costly to track exactly at high associativity.</span></div>
+      <div class="callout"><span class="lbl">Pseudo-LRU</span><span class="small">A small tree of bits approximates LRU. What most real caches use.</span></div>
+      <div class="callout warn"><span class="lbl">LRU's weak spot</span><span class="small">Loop over a working set just larger than the cache: each line is evicted right before it is needed again, so every access misses.</span></div>
+    </div>
+    <div>
+      <p class="small">When does a write reach the next level?</p>
+      <div class="callout"><span class="lbl">Write-back</span><span class="small">Only when the dirty line is evicted — many writes, one transfer. Typical for L2 and beyond.</span></div>
+      <div class="callout"><span class="lbl">Write-through</span><span class="small">On every write — simple, keeps the next level current, but uses more bandwidth.</span></div>
+      <div class="callout"><span class="lbl">Write-allocate</span><span class="small">A write miss first brings the line into the cache (the usual choice). This is the hidden read that streaming stores avoid (Module 4).</span></div>
     </div>
   </div>
 </section>
