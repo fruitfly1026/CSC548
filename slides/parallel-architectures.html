@@ -25,9 +25,9 @@
   <div class="sub">Cache coherence &amp; memory consistency — what shared memory promises your threads</div>
   <div class="meta">Instructor: Jiajia Li<br>Fall 2026</div>
   <aside class="notes">
-    Two lectures. Lecture 1 is cache coherence on a bus-based multiprocessor: the coherence problem, snooping,
+    Two parts. Part 1 is cache coherence on a bus-based multiprocessor: the coherence problem, snooping,
     and the protocol family MSI, MESI, MOESI and Dragon, ending with coherence misses and directories.
-    Lecture 2 is memory consistency: sequential consistency, the relaxed models (PC, WO, RC), and the fences
+    Part 2 is memory consistency: sequential consistency, the relaxed models (PC, WO, RC), and the fences
     and acquire/release operations a programmer uses to get ordering back. Condensed from CSC 506
     Lecture 10 (bus-based coherence) and Chapter 10 (memory consistency models).
   </aside>
@@ -35,12 +35,12 @@
 
 <!-- Agenda -->
 <section data-background-color="#ffffff">
-  <h2>Agenda — Two Lectures</h2>
+  <h2>Agenda</h2>
   <div class="cols">
-    <div class="callout"><span class="lbl">Lecture 1 · 09/30 — Cache Coherence</span><span class="small">
+    <div class="callout"><span class="lbl">1 · Cache Coherence</span><span class="small">
       The coherence problem, write propagation &amp; serialization, snooping on a bus, the protocol family
       (write-through, MSI, MESI, MOESI, Dragon), coherence misses and false sharing, and directories.</span></div>
-    <div class="callout"><span class="lbl">Lecture 2 · 10/05 — Memory Consistency</span><span class="small">
+    <div class="callout"><span class="lbl">2 · Memory Consistency</span><span class="small">
       Program order &amp; atomicity, sequential consistency, relaxed models (PC, WO, RC), fences,
       acquire/release, and language-level models (C++11 atomics, OpenMP).</span></div>
   </div>
@@ -48,10 +48,10 @@
 </section>
 
 <!-- ############################################################
-     LECTURE 1 — CACHE COHERENCE
+     PART 1 — CACHE COHERENCE
      ############################################################ -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Lecture 1 · 09/30</div>
+  <div class="mod-num">Part 1</div>
   <div class="mod-title">Cache Coherence</div>
 </section>
 
@@ -528,9 +528,9 @@ Print sum;
   </div>
 </section>
 
-<!-- Lecture 1 summary -->
+<!-- Part 1 summary -->
 <section data-background-color="#ffffff">
-  <h2>Lecture 1 — Protocols at a Glance</h2>
+  <h2>Coherence Protocols at a Glance</h2>
   <table class="small">
     <tr><th>Protocol</th><th>States</th><th>On a write</th><th>Key idea</th></tr>
     <tr><td>Write-through</td><td>V, I</td><td>invalidate</td><td>simplest; every write uses the bus</td></tr>
@@ -544,10 +544,10 @@ Print sum;
 </section>
 
 <!-- ############################################################
-     LECTURE 2 — MEMORY CONSISTENCY
+     PART 2 — MEMORY CONSISTENCY
      ############################################################ -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Lecture 2 · 10/05</div>
+  <div class="mod-num">Part 2</div>
   <div class="mod-title">Memory Consistency</div>
 </section>
 
@@ -557,14 +557,14 @@ Print sum;
   <div class="cols">
     <div class="callout"><span class="lbl">Cache coherence</span>
       Orders the writes to a single memory location.<br>
-      <span class="small">Needed only in systems with caches. (Lecture 1.)</span></div>
+      <span class="small">Needed only in systems with caches. (Part 1.)</span></div>
     <div class="callout warn"><span class="lbl">Memory consistency</span>
       Orders reads and writes across all memory locations.<br>
       <span class="small">Matters in systems with or without caches.</span></div>
   </div>
   <div class="callout takeaway"><span class="lbl">Why we need a consistency model</span>
     Per-location coherence is not enough. A program's correctness can depend on how a write to <code class="inline">A</code> is ordered relative to a write to <code class="inline">B</code>. The consistency model is the contract that says which orderings across locations the hardware guarantees.</div>
-  <div class="callout"><span class="lbl">The question for this lecture</span>A core finishes loads and stores out of order for speed. How much of that reordering may a program observe — and how do we rein it in when we need to?</div>
+  <div class="callout"><span class="lbl">The question for this part</span>A core finishes loads and stores out of order for speed. How much of that reordering may a program observe — and how do we rein it in when we need to?</div>
 </section>
 
 <!-- Program order -->
