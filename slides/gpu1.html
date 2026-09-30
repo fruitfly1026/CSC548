@@ -29,8 +29,9 @@
   <div class="meta">Instructor: Jiajia Li<br>Fall 2026<br>10/07/2026</div>
   <aside class="notes">
     This session is the CUDA programming model. We trace the history of GPU computing, define
-    heterogeneous host/device terms, write our first kernels, build the grid/block/thread hierarchy
-    with the indexing math, walk the CUDA memory model and transfer API, and finish with a matrix
+    heterogeneous host/device terms, write our first kernels, cover function qualifiers and built-in
+    types, build the grid/block/thread hierarchy, see how the SM schedules warps, walk the CUDA memory
+    model and transfer API, synchronize threads with __syncthreads(), and finish with a matrix
     multiply from CPU triple-loop to a naive single-block GPU kernel.
   </aside>
 </section>
@@ -38,22 +39,18 @@
 <!-- Agenda -->
 <section data-background-color="#ffffff">
   <h2>Agenda</h2>
-  <div class="cols c3">
-    <div class="callout"><span class="lbl">1 · History</span><strong>GPGPU &amp; APIs</strong><br>
-      <span class="small">From graphics coprocessor to general-purpose compute; CUDA, OpenCL, Vulkan, Metal, WebGPU.</span></div>
-    <div class="callout"><span class="lbl">2 · Heterogeneous</span><strong>Host &amp; Device</strong><br>
-      <span class="small">CPU vs. GPU, separate memories, what a CUDA program looks like, what a kernel is.</span></div>
-    <div class="callout"><span class="lbl">3 · Kernels</span><strong>First CUDA Code</strong><br>
-      <span class="small"><code class="inline">__global__</code>, <code class="inline">threadIdx</code>, execution configuration, program lifecycle.</span></div>
-  </div>
-  <div class="cols c3">
-    <div class="callout"><span class="lbl">4 · Hierarchy</span><strong>Grid / Block / Thread</strong><br>
-      <span class="small">1D/2D/3D blocks, thread-ID formulas, indexing across blocks, automatic scalability.</span></div>
-    <div class="callout"><span class="lbl">5 · Memory</span><strong>Transfers</strong><br>
-      <span class="small">CUDA memory model, <code class="inline">cudaMalloc</code>/<code class="inline">cudaFree</code>, <code class="inline">cudaMemcpy</code> directions.</span></div>
-    <div class="callout"><span class="lbl">6 · Matmul</span><strong>P = M · N</strong><br>
-      <span class="small">CPU triple loop → 3-step GPU port → naive kernel → performance discussion.</span></div>
-  </div>
+  <table class="small">
+    <tr><th>Part</th><th>Topic</th><th>Covers</th></tr>
+    <tr><td>1</td><td>History — GPGPU &amp; APIs</td><td>From graphics coprocessor to general-purpose compute; CUDA, OpenCL, Vulkan, Metal, WebGPU.</td></tr>
+    <tr><td>2</td><td>Heterogeneous — Host &amp; Device</td><td>CPU vs. GPU, separate memories, what a CUDA program and a kernel are.</td></tr>
+    <tr><td>3</td><td>Kernels — First CUDA Code</td><td><code class="inline">__global__</code>, <code class="inline">threadIdx</code>, execution configuration, program lifecycle.</td></tr>
+    <tr><td>4</td><td>Built-ins — Functions &amp; Types</td><td>Function qualifiers, device-function constraints, math functions &amp; intrinsics, vector types.</td></tr>
+    <tr><td>5</td><td>Hierarchy — Grid / Block / Thread</td><td>1D/2D/3D blocks, thread-ID formulas, indexing across blocks, automatic scalability.</td></tr>
+    <tr><td>6</td><td>Scheduling — Warps &amp; the SM</td><td>SM architecture, warps, zero-overhead scheduling, branch divergence.</td></tr>
+    <tr><td>7</td><td>Memory — Model &amp; Transfers</td><td>Registers, local, shared, global, constant; variable qualifiers; <code class="inline">cudaMalloc</code>, <code class="inline">cudaMemcpy</code>.</td></tr>
+    <tr><td>8</td><td>Sync — Synchronizing Threads</td><td><code class="inline">__syncthreads()</code> barrier, walkthrough, conditional-barrier deadlock.</td></tr>
+    <tr><td>9</td><td>Matmul — P = M · N</td><td>CPU triple loop → 3-step GPU port → naive kernel → performance discussion.</td></tr>
+  </table>
 </section>
 
 <!-- ==================================================================
@@ -182,10 +179,99 @@ int main() {
 </section>
 
 <!-- ==================================================================
-     PART 4 — THREAD HIERARCHY
+     PART 4 — BUILT-INS & FUNCTIONS
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 4</div>
+  <div class="mod-title">Built-in Variables &amp; Functions</div>
+</section>
+
+<!-- Function qualifiers -->
+<section data-background-color="#ffffff">
+  <h2>Function Type Qualifiers</h2>
+  <div class="symkey">
+    <span><strong>exec</strong> where the function runs</span>
+    <span><strong>call</strong> where it can be called from</span>
+  </div>
+  <table>
+    <tr><th>Qualifier</th><th>Executed on</th><th>Callable from</th><th>Notes</th></tr>
+    <tr><td><code class="inline">__global__</code></td><td>device</td><td>host</td><td>a <strong>kernel</strong>; must return <code class="inline">void</code></td></tr>
+    <tr><td><code class="inline">__device__</code></td><td>device</td><td>device</td><td><strong>inlined</strong> by default</td></tr>
+    <tr><td><code class="inline">__host__</code></td><td>host</td><td>host</td><td>the default if no qualifier</td></tr>
+  </table>
+  <div class="cols">
+    <div class="callout ok"><span class="lbl">Legal</span><code class="inline">__host__ __device__</code> together → compiled for <strong>both</strong> host and device.</div>
+    <div class="callout warn"><span class="lbl">Illegal</span><code class="inline">__global__ __host__</code> together is <strong>not allowed</strong>.</div>
+  </div>
+</section>
+
+<!-- Device/global constraints -->
+<section data-background-color="#ffffff">
+  <h2>Device &amp; Global Function Constraints</h2>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Allowed on the device</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li>Recursion on the <strong>device</strong> is OK (except very old G80)</li>
+        <li><strong>Dynamic parallelism</strong> (a <code class="inline">__global__</code> launching itself) requires compute capability <strong>≥ 3.5</strong></li>
+      </ul></div>
+    <div class="callout ok"><span class="lbl">Myth-busting — these ARE allowed</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li><strong>Static</strong> <code class="inline">__shared__</code> / <code class="inline">__device__</code> variables <strong>are permitted</strong> in device code</li>
+        <li>Device-side <code class="inline">malloc()</code> / <code class="inline">free()</code> <strong>are supported</strong> from inside a kernel (compute capability ≥ 2.x)</li>
+      </ul></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Real constraints</span>
+    A kernel must return <code class="inline">void</code> and take no variable arguments. The old "no static variables, no <code class="inline">malloc</code>" rule is <strong>outdated</strong> — but thousands of threads still share the SM's tiny on-chip state, so device heap and deep recursion cost resources: use them deliberately.</div>
+  <div class="src">CUDA C++ Programming Guide — Variable Memory Space Specifiers; Dynamic Global Memory Allocation and Operations.</div>
+</section>
+
+<!-- Math functions & intrinsics -->
+<section data-background-color="#ffffff">
+  <h2>Math Functions &amp; Intrinsics</h2>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Standard math (double / float overloads)</span>
+      <p class="small" style="margin:.3em 0">Host &amp; device, IEEE-accurate:</p>
+      <p class="small"><code class="inline">sqrt rsqrt exp log sin cos tan sincos asin acos atan2 trunc ceil floor</code></p>
+      <span class="tiny muted">A <code class="inline">float</code> and a <code class="inline">double</code> overload exist for each.</span></div>
+    <div class="callout ok"><span class="lbl">Intrinsics — device only</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li><strong>Faster</strong>, but <strong>less accurate</strong></li>
+        <li>Prefixed with <code class="inline">__</code></li>
+        <li>e.g. <code class="inline">__expf</code>, <code class="inline">__sinf</code>, <code class="inline">__logf</code>, <code class="inline">__cosf</code></li>
+      </ul>
+      <span class="tiny muted">Use when speed matters and a few ulp of error is acceptable.</span></div>
+  </div>
+</section>
+
+<!-- Vector types -->
+<section data-background-color="#ffffff">
+  <h2>Built-in Vector Types</h2>
+  <p class="small">Component types <code class="inline">char/uchar</code>, <code class="inline">short</code>, <code class="inline">int</code>, <code class="inline">long</code>, <code class="inline">float</code> come in widths <strong>1–4</strong>; plus <code class="inline">double1</code>/<code class="inline">double2</code>.</p>
+  <div class="cols">
+    <div>
+      <div class="code-label">CUDA C — constructors &amp; access</div>
+      <pre><code class="language-cpp" data-trim>
+int2   i2 = make_int2(1, 2);
+float4 f4 = make_float4(1, 2, 3, 4);
+
+// access by component name:
+i2.x; i2.y;
+f4.x; f4.y; f4.z; f4.w;     // NOT .r .g .b .a
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Access</span>Components are named <code class="inline">.x .y .z .w</code> — <strong>not</strong> the color names <code class="inline">.r .g .b .a</code>.</div>
+      <div class="callout ok"><span class="lbl">Why use them</span>A <code class="inline">float4</code> is <strong>faster</strong> than a <code class="inline">float[4]</code> — one aligned 16-byte load instead of four scalar loads.</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================================================================
+     PART 5 — THREAD HIERARCHY
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Part 5</div>
   <div class="mod-title">The Thread Hierarchy</div>
 </section>
 
@@ -400,10 +486,167 @@ dim3 blocks(N / threadsPerBlock.x,
 </section>
 
 <!-- ==================================================================
-     PART 5 — MEMORY MODEL & TRANSFERS
+     PART 6 — SCHEDULING THREADS (WARPS & SM ARCHITECTURE)
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part 5</div>
+  <div class="mod-num">Part 6</div>
+  <div class="mod-title">Scheduling Threads — Warps &amp; the SM</div>
+</section>
+
+<!-- SM architecture intro -->
+<section data-background-color="#ffffff">
+  <h2>The Streaming Multiprocessor (SM)</h2>
+  <div class="symkey">
+    <span><strong>SM</strong> streaming multiprocessor</span>
+    <span><strong>SP</strong> streaming processor (CUDA core)</span>
+  </div>
+  <div class="cols">
+    <div class="callout"><span class="lbl">A GPU is an array of SMs</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li>Each SM contains many <strong>streaming processors (SPs)</strong></li>
+        <li>One or more <strong>warp schedulers</strong></li>
+        <li><strong>Shared memory / L1</strong> and a register file, all on-chip</li>
+      </ul>
+      <span class="tiny muted">Blocks are assigned to SMs; threads run as warps.</span></div>
+    <div class="center">
+      <svg viewBox="0 0 280 190" class="chart" style="max-width:330px">
+        <rect x="6" y="6" width="268" height="178" rx="12" fill="#f8fafc" stroke="var(--line)"/>
+        <text x="140" y="24" text-anchor="middle" class="note">One SM</text>
+        <g fill="#fbbf24" stroke="#d97706">
+          <rect x="22" y="38" width="44" height="34" rx="5"/><rect x="72" y="38" width="44" height="34" rx="5"/>
+          <rect x="122" y="38" width="44" height="34" rx="5"/><rect x="172" y="38" width="44" height="34" rx="5"/>
+          <rect x="222" y="38" width="40" height="34" rx="5"/>
+        </g>
+        <text x="140" y="60" text-anchor="middle" class="lbl" style="fill:#7c2d12">SP SP SP SP …</text>
+        <rect x="22" y="84" width="240" height="28" rx="5" fill="#ede9fe" stroke="#8b5cf6"/>
+        <text x="142" y="102" text-anchor="middle" class="lbl">warp scheduler(s)</text>
+        <rect x="22" y="122" width="240" height="28" rx="5" fill="#dcfce7" stroke="#22c55e"/>
+        <text x="142" y="140" text-anchor="middle" class="lbl">shared memory / L1 + register file</text>
+        <text x="142" y="172" text-anchor="middle" class="tiny" style="fill:var(--muted)">on-chip, shared by all resident blocks</text>
+      </svg>
+    </div>
+  </div>
+  <div class="src">UIUC ECE498/AL &amp; NVIDIA CUDA C Programming Guide.</div>
+</section>
+
+<!-- Warp -->
+<section data-background-color="#ffffff">
+  <h2>The Warp — Unit of Scheduling</h2>
+  <div class="symkey"><span><strong>warp</strong> = 32 threads</span><span><code class="inline">warpSize</code> built-in</span></div>
+  <div class="cols">
+    <div class="callout"><span class="lbl">What a warp is</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li><strong>32 threads</strong> from one block, with <strong>consecutive</strong> <code class="inline">threadIdx</code></li>
+        <li>Run on the <strong>same SM</strong></li>
+        <li>The <strong>unit of thread scheduling</strong> — hardware schedules warps, not threads</li>
+      </ul></div>
+    <div class="callout ok"><span class="lbl">Zero-overhead warp scheduling</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li>Warps whose next instruction's <strong>operands are ready</strong> are eligible; stalled warps are simply skipped — no save/restore cost</li>
+        <li>Eligible warps selected by <strong>priority</strong></li>
+        <li>A modern SM has <strong>4 warp schedulers</strong>, so up to <strong>4 warps</strong> issue per cycle (not just one)</li>
+        <li>All <strong>32 threads</strong> of a warp share one instruction stream (SIMT)</li>
+      </ul></div>
+  </div>
+  <div class="src">4 schedulers/SM: NVIDIA A100 &amp; H100 Tensor Core GPU Architecture whitepapers (SM diagram). CUDA C++ Programming Guide — Hardware Implementation.</div>
+</section>
+
+<!-- Warp scheduling timeline -->
+<section data-background-color="#ffffff">
+  <h2>Interleaving Warps Hides Latency</h2>
+  <p class="small">When a warp stalls on a long-latency op (e.g. a global load), the scheduler switches to another <strong>ready</strong> warp — for <strong>free</strong>. The SM stays busy.</p>
+  <div class="center">
+    <svg viewBox="0 0 640 200" class="chart" style="max-width:740px">
+      <text x="10" y="20" class="lbl">time →</text>
+      <!-- lanes -->
+      <text x="8" y="52" class="lbl">W0</text>
+      <text x="8" y="92" class="lbl">W1</text>
+      <text x="8" y="132" class="lbl">W2</text>
+      <text x="8" y="172" class="lbl">W3</text>
+      <!-- W0 -->
+      <rect x="40" y="38" width="70" height="20" rx="3" fill="#fbbf24" stroke="#d97706"/>
+      <rect x="112" y="38" width="180" height="20" rx="3" fill="#fee2e2" stroke="#ef4444"/>
+      <rect x="294" y="38" width="70" height="20" rx="3" fill="#fbbf24" stroke="#d97706"/>
+      <!-- W1 -->
+      <rect x="112" y="78" width="70" height="20" rx="3" fill="#fbbf24" stroke="#d97706"/>
+      <rect x="184" y="78" width="180" height="20" rx="3" fill="#fee2e2" stroke="#ef4444"/>
+      <!-- W2 -->
+      <rect x="184" y="118" width="70" height="20" rx="3" fill="#fbbf24" stroke="#d97706"/>
+      <rect x="256" y="118" width="180" height="20" rx="3" fill="#fee2e2" stroke="#ef4444"/>
+      <!-- W3 -->
+      <rect x="256" y="158" width="70" height="20" rx="3" fill="#fbbf24" stroke="#d97706"/>
+      <rect x="328" y="158" width="180" height="20" rx="3" fill="#fee2e2" stroke="#ef4444"/>
+      <text x="450" y="52" class="tiny" style="fill:#7c2d12">compute (issued)</text>
+      <rect x="430" y="42" width="14" height="12" fill="#fbbf24" stroke="#d97706"/>
+      <text x="450" y="92" class="tiny" style="fill:#991b1b">stall (memory latency)</text>
+      <rect x="430" y="82" width="14" height="12" fill="#fee2e2" stroke="#ef4444"/>
+    </svg>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Key idea</span>GPUs <strong>hide</strong> latency with parallelism instead of <strong>reducing</strong> it with caches.</div>
+  <div class="src">UIUC ECE498/AL.</div>
+</section>
+
+<!-- Branch divergence -->
+<section data-background-color="#ffffff">
+  <h2>Branch Divergence</h2>
+  <p class="small">A warp executes in <strong>SIMT</strong> lockstep. If threads take <strong>different branches</strong>, the hardware runs <strong>both paths</strong> with lane <strong>masking</strong>. <span class="muted">Pre-Volta the 32 threads literally shared <em>one</em> program counter; Volta+ gives each thread its <strong>own</strong> PC (Independent Thread Scheduling) — but a warp still issues one instruction at a time, so divergent paths are still serialized.</span></p>
+  <div class="cols">
+    <div>
+      <div class="code-label">divergent branch in a warp</div>
+      <pre><code class="language-cpp" data-trim>
+if (threadIdx.x &lt; 16) {
+    // path A — lanes 0..15 active,
+    //          lanes 16..31 masked off
+    x = doA();
+} else {
+    // path B — lanes 16..31 active,
+    //          lanes 0..15 masked off
+    x = doB();
+}
+</code></pre>
+    </div>
+    <div>
+      <div class="callout warn"><span class="lbl">Cost</span>Not all ALUs do useful work while a path runs — the masked lanes idle.</div>
+      <div class="callout"><span class="lbl">Worst case</span>A fully divergent warp serializes its distinct paths, so throughput falls toward the fraction of lanes active on each path — potentially a large slowdown.</div>
+      <span class="tiny muted">No divergence cost if all 32 lanes take the same branch. We revisit divergence as an optimization lever in Session 2.</span>
+    </div>
+  </div>
+  <div class="src">SIMT execution &amp; Independent Thread Scheduling: CUDA C++ Programming Guide — Hardware Implementation (SIMT Architecture); NVIDIA V100 (Volta) Architecture whitepaper.</div>
+</section>
+
+<!-- Exercises: warps & dispatch -->
+<section data-background-color="#ffffff">
+  <h2>In-class: Counting Warps</h2>
+  <div class="callout"><span class="lbl">Q1</span>A block has <strong>1024 threads</strong> (the max per block). How many warps?
+    <div class="fragment" style="margin-top:.4em"><strong>A:</strong> \( 1024 / 32 = 32 \) warps.</div></div>
+  <div class="callout"><span class="lbl">Q2</span><strong>3 blocks × 256 threads</strong> — how many warps?
+    <div class="fragment" style="margin-top:.4em"><strong>A:</strong> \( 3 \times 256 / 32 = 24 \) warps.</div></div>
+  <div class="callout"><span class="lbl">Q3</span>How long to issue one warp?
+    <div class="fragment" style="margin-top:.4em"><strong>A (modern):</strong> A dispatch unit issues <strong>32 threads/clock</strong>, so a whole warp issues in <strong>one cycle</strong>. <span class="muted">(historical, G80: only 8 SPs → 8 threads/cycle → 4 cycles per warp.)</span></div></div>
+  <div class="src">Max 1024 threads/block, warp = 32: CUDA C++ Programming Guide — Compute Capabilities. 32 threads/clock dispatch: NVIDIA A100/H100 whitepapers (SM diagram).</div>
+</section>
+
+<!-- Exercise: latency hiding -->
+<section data-background-color="#ffffff">
+  <h2>In-class: Warps to Hide Latency</h2>
+  <div class="callout"><span class="lbl">Setup <span class="muted">(illustrative, G80-era timing)</span></span>A kernel has <strong>1 global read (200 cycles)</strong> followed by <strong>4 non-dependent mul/add</strong> ops. How many warps are needed to hide the read latency?</div>
+  <div class="fragment">
+    <div class="callout ok"><span class="lbl">Work it out</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li>Assume each op takes 4 dispatch cycles → 4 ops = \( 4 \times 4 = 16 \) cycles of independent work per warp</li>
+        <li>We must cover \( 200 \) cycles: \( 200 / 16 = 12.5 \)</li>
+        <li>Round up: \( \lceil 12.5 \rceil = \) <strong>13 warps</strong></li>
+      </ul></div>
+  </div>
+  <p class="tiny muted">The exact cycle counts are illustrative (G80). The principle is current: enough independent warps must be resident to cover memory latency — this is why occupancy matters.</p>
+</section>
+
+
+<!-- ==================================================================
+     PART 7 — MEMORY MODEL & TRANSFERS
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Part 7</div>
   <div class="mod-title">CUDA Memory Model &amp; Transfers</div>
 </section>
 
@@ -461,6 +704,99 @@ dim3 blocks(N / threadsPerBlock.x,
   </div>
   <div class="src">Figure adapted from UIUC ECE498AL / NVIDIA CUDA C Programming Guide.</div>
 </section>
+
+<!-- Registers -->
+<section data-background-color="#ffffff">
+  <h2>Registers</h2>
+  <p class="small"><strong>Per-thread</strong>, fast <strong>on-chip</strong>. The register file is split across all resident threads — so register use caps occupancy.</p>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Modern budget (CC 7.0–9.0)</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li><strong>65,536</strong> (64K) 32-bit registers per SM</li>
+        <li>Up to <strong>255</strong> registers per thread</li>
+        <li>At 2048 resident threads/SM → \( 65536/2048 = 32 \) regs/thread for full occupancy</li>
+      </ul></div>
+    <div class="callout warn"><span class="lbl">Occupancy trade-off <span class="muted">(historical, G80)</span></span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li>G80: 768 thread slots &amp; 8K regs → 10 regs/thread</li>
+        <li>11 regs × 256-thread block → 2 blocks → 512 threads → 16 warps</li>
+        <li>Same effect today: more regs/thread → fewer resident warps → <strong>less latency hiding</strong></li>
+      </ul></div>
+  </div>
+  <div class="callout ok"><span class="lbl">Special registers</span><code class="inline">threadIdx</code> · <code class="inline">blockIdx</code> · <code class="inline">blockDim</code> · <code class="inline">gridDim</code></div>
+  <div class="src">64K regs/SM, 255 regs/thread: CUDA C++ Programming Guide — Compute Capabilities. 2048 resident threads/SM (e.g. A100): NVIDIA A100 whitepaper.</div>
+</section>
+
+<!-- Local memory -->
+<section data-background-color="#ffffff">
+  <h2>Local Memory</h2>
+  <div class="cols">
+    <div class="callout"><span class="lbl">What it is</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li>Register / array <strong>spill</strong> space</li>
+        <li>Physically lives in <strong>global memory</strong> (off-chip)</li>
+        <li>Addressing resolved by the <strong>compiler</strong></li>
+        <li>Stores are <strong>cached in L1</strong> on SM 2.x+</li>
+      </ul></div>
+    <div class="callout warn"><span class="lbl">Performance</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li>Hurts via extra <strong>memory traffic</strong> + <strong>instruction count</strong></li>
+        <li>But L1-contained spills are <strong>not always bad</strong></li>
+      </ul></div>
+  </div>
+</section>
+
+<!-- Shared memory -->
+<section data-background-color="#ffffff">
+  <h2>Shared Memory</h2>
+  <p class="small"><strong>Per-block</strong>, fast <strong>on-chip</strong>, full-speed <strong>random access</strong> — the programmer-managed scratchpad. It shares a physical block with L1 (192 KB/SM on A100, 256 KB/SM on H100).</p>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Modern budget</span>Configurable shared memory per SM: up to <strong>164 KB</strong> (Ampere A100) / <strong>228 KB</strong> (Hopper H100). Above 48 KB/block requires an explicit opt-in.</div>
+    <div class="callout ok"><span class="lbl">Occupancy example</span>If each block uses <strong>50 KB</strong> on A100 → \( \lfloor 164/50 \rfloor = 3 \) blocks per SM (shared memory is the limiter).</div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">This is the lever</span>Shared memory is what makes <strong>tiled matmul</strong> (Session 2) fast — threads in a block cooperatively stage data on-chip.</div>
+  <div class="src">Shared memory/SM (up to 164 KB CC 8.0 / 228 KB CC 9.0), 48 KB opt-in threshold: CUDA C++ Programming Guide — Compute Capabilities. 192/256 KB combined L1+shared: NVIDIA A100 &amp; H100 whitepapers.</div>
+</section>
+
+<!-- Global & constant memory -->
+<section data-background-color="#ffffff">
+  <h2>Global &amp; Constant Memory</h2>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Global memory</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li><strong>Long latency</strong> — 100s of cycles, off-chip HBM</li>
+        <li>A100 (HBM2) <strong>1.55 TB/s</strong>, 40 GB; H100 (HBM3) <strong>&gt; 3 TB/s</strong>, 80 GB</li>
+        <li>Cached through L2 (40 MB A100 / 50 MB H100) and L1</li>
+      </ul></div>
+    <div class="callout ok"><span class="lbl">Constant memory</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li><strong>Short latency / high bandwidth</strong> when all threads read the <strong>same</strong> location</li>
+        <li>Cached</li>
+        <li>Total <strong>64 KB</strong></li>
+      </ul></div>
+  </div>
+  <div class="src">Bandwidth/capacity: NVIDIA A100 (1555 GB/s, 40 MB L2) &amp; H100 (&gt;3 TB/s, 50 MB L2) whitepapers. 64 KB constant memory: CUDA C++ Programming Guide — Compute Capabilities.</div>
+</section>
+
+<!-- Variable qualifier table -->
+<section data-background-color="#ffffff">
+  <h2>Variable Type Qualifiers</h2>
+  <table style="font-size:.82em">
+    <tr><th>Declaration</th><th>Memory</th><th>Scope</th><th>Lifetime</th></tr>
+    <tr><td>automatic scalars</td><td>register</td><td>thread</td><td>kernel</td></tr>
+    <tr><td>automatic arrays</td><td>local</td><td>thread</td><td>kernel</td></tr>
+    <tr><td><code class="inline">__shared__</code></td><td>shared</td><td>block</td><td>kernel</td></tr>
+    <tr><td><code class="inline">__device__</code></td><td>global</td><td>grid</td><td>application</td></tr>
+    <tr><td><code class="inline">__constant__</code></td><td>constant</td><td>grid</td><td>application</td></tr>
+  </table>
+  <div class="callout"><span class="lbl">Constants</span><code class="inline">__constant__</code> vars are declared <strong>outside</strong> any function; the host fills them with <code class="inline">cudaMemcpyToSymbol</code> / <code class="inline">cudaMemcpyFromSymbol</code>.</div>
+  <div class="code-label">CUDA C — constant memory</div>
+  <pre><code class="language-cpp" data-trim>
+__constant__ float constData[256];          // file scope
+cudaMemcpyToSymbol(constData, data, sizeof(data));
+</code></pre>
+</section>
+
 
 <!-- Allocation API -->
 <section data-background-color="#ffffff">
@@ -525,10 +861,95 @@ cudaMemcpy(hostPtr, devicePtr, size,
 </section>
 
 <!-- ==================================================================
-     PART 6 — MATRIX MULTIPLY
+     PART 8 — SYNCHRONIZING THREADS
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part 6</div>
+  <div class="mod-num">Part 8</div>
+  <div class="mod-title">Synchronizing Threads</div>
+</section>
+
+<!-- __syncthreads() -->
+<section data-background-color="#ffffff">
+  <h2><code class="inline">__syncthreads()</code> — Block Barrier</h2>
+  <p class="small">A <strong>barrier within a block</strong>: a thread waits until <strong>all</strong> threads in the block reach the call before any continues.</p>
+  <div class="cols">
+    <div>
+      <div class="code-label">classic barrier pattern</div>
+      <pre><code class="language-cpp" data-trim>
+Mds[i] = Md[j];      // each thread loads
+__syncthreads();     // wait for ALL loads
+func(Mds[i], Mds[i+1]);   // now safe to read
+                          // a neighbor's value
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Use it when</span>Threads in a block <strong>produce</strong> data (into shared memory) that <strong>other</strong> threads in the same block will <strong>consume</strong>.</div>
+      <div class="callout ok"><span class="lbl">Guarantee</span>After the barrier, every shared-memory write made before it is <strong>visible</strong> to all threads in the block.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Walkthrough -->
+<section data-background-color="#ffffff">
+  <h2>Barrier Walkthrough</h2>
+  <p class="small">Warps reach the barrier at different times; <strong>all</strong> continue only once the <strong>last</strong> warp arrives.</p>
+  <div class="center">
+    <svg viewBox="0 0 600 180" class="chart" style="max-width:700px">
+      <text x="10" y="18" class="lbl">time →</text>
+      <line x1="360" y1="28" x2="360" y2="160" stroke="#ef4444" stroke-width="2" stroke-dasharray="5 3"/>
+      <text x="360" y="176" text-anchor="middle" class="tiny" style="fill:#991b1b">__syncthreads()</text>
+      <!-- warps arriving -->
+      <text x="8" y="50" class="lbl">W0</text><rect x="40" y="38" width="220" height="16" rx="3" fill="#fbbf24" stroke="#d97706"/>
+      <rect x="262" y="38" width="96" height="16" rx="3" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="8" y="80" class="lbl">W1</text><rect x="40" y="68" width="300" height="16" rx="3" fill="#fbbf24" stroke="#d97706"/>
+      <rect x="342" y="68" width="16" height="16" rx="3" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="8" y="110" class="lbl">W2</text><rect x="40" y="98" width="160" height="16" rx="3" fill="#fbbf24" stroke="#d97706"/>
+      <rect x="202" y="98" width="156" height="16" rx="3" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="8" y="140" class="lbl">W3</text><rect x="40" y="128" width="318" height="16" rx="3" fill="#fbbf24" stroke="#d97706"/>
+      <!-- after barrier -->
+      <rect x="362" y="38" width="120" height="106" rx="4" fill="#dcfce7" stroke="#22c55e"/>
+      <text x="422" y="96" text-anchor="middle" class="tiny">all continue</text>
+    </svg>
+  </div>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Same execution time helps</span>Threads doing similar work reach the barrier together → little waiting.</div>
+    <div class="callout"><span class="lbl">Only within a block</span>Cross-block sync would break <strong>transparent scalability</strong> — blocks must run in any order, on any number of SMs.</div>
+  </div>
+</section>
+
+<!-- Deadlock hazard -->
+<section data-background-color="#ffffff">
+  <h2>Hazard: Conditional Barriers Deadlock</h2>
+  <p class="small">A barrier requires <strong>every</strong> thread in the block to reach it. Putting it inside a branch that only <strong>some</strong> threads take → the rest never arrive → <strong>hang</strong>.</p>
+  <div class="cols">
+    <div>
+      <div class="code-label">deadlock — barrier in only one branch</div>
+      <pre><code class="language-cpp" data-trim>
+if (cond) {
+    __syncthreads();   // BAD: only some
+}                      // threads reach it
+</code></pre>
+    </div>
+    <div>
+      <div class="code-label">fix — a barrier in BOTH branches</div>
+      <pre><code class="language-cpp" data-trim>
+if (cond) {
+    __syncthreads();   // all threads
+} else {
+    __syncthreads();   // reach a barrier
+}
+</code></pre>
+    </div>
+  </div>
+  <div class="callout warn"><span class="lbl">Rule</span>Either <strong>all</strong> threads in the block execute a given <code class="inline">__syncthreads()</code>, or none do.</div>
+</section>
+
+
+<!-- ==================================================================
+     PART 9 — MATRIX MULTIPLY
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Part 9</div>
   <div class="mod-title">Matrix Multiply: P = M · N</div>
 </section>
 
@@ -664,7 +1085,7 @@ MatrixMultiplyKernel&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;(devM, devN, devP, wi
     <li>API timeline: NVIDIA CUDA; Khronos (OpenCL, WebGL, Vulkan/SPIR-V, WebGPU); Apple Metal; Microsoft DXR.</li>
     <li>Pedagogy/figures adapted from <strong>CIS 565</strong> (UPenn) &amp; <strong>UIUC ECE498/AL</strong>.</li>
   </ul>
-  <div class="callout takeaway"><span class="lbl">Next session (Session 2 of 2)</span>The GPU execution &amp; memory hierarchy, synchronization, many-block tiled matrix multiply with shared memory, and a full performance-optimization module. <span class="small">Session 3 is an in-class lab.</span></div>
+  <div class="callout takeaway"><span class="lbl">Next session (Session 2 of 2)</span>Many-block tiled matrix multiply with shared memory, then a full performance-optimization module: reduction &amp; divergence, coalescing, bank conflicts, occupancy, prefetching, unrolling, and granularity. <span class="small">Session 3 is an in-class lab.</span></div>
 </section>
 
 </div>
