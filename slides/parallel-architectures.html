@@ -823,7 +823,7 @@ S2: ... = b;   S4: ... = a;
     <div>
       <h3>What SC requires</h3>
       <ul class="small">
-        <li>The compiler must not reorder memory accesses (e.g. <code class="inline">volatile</code> on critical variables)</li>
+        <li>The compiler must not reorder memory accesses</li>
         <li>The core exposes accesses to the cache one at a time, in program order</li>
         <li>A load completes when it reads the cache; a store completes when its invalidation is posted on the bus</li>
       </ul>
@@ -1033,7 +1033,7 @@ lwsync               cmp r, 0 ; beq loop
 st  ready, 1         isync
                      ld  ..., datum
 </code></pre>
-      <p class="small"><code class="inline">lwsync</code> on the post side keeps <code class="inline">datum</code> ahead of <code class="inline">ready</code>; <code class="inline">isync</code> on the wait side acts as an acquire fence, so <code class="inline">datum</code> isn't read too soon.</p>
+      <p class="small"><code class="inline">lwsync</code> on the post side keeps <code class="inline">datum</code> ahead of <code class="inline">ready</code>; on the wait side, the branch that depends on the loaded <code class="inline">ready</code> plus <code class="inline">isync</code> acts as an acquire, so <code class="inline">datum</code> isn't read too soon.</p>
     </div>
     <div>
       <div class="code-label">IA-64 — labeled accesses</div>
@@ -1052,7 +1052,7 @@ st.rel   ready, 1            cmp r, 0 ; beq loop
 <!-- Language-level -->
 <section data-background-color="#ffffff">
   <h2>What You Actually Write: Language-Level Models</h2>
-  <p class="small">Java, C, and C++ (since 2011) define the memory model themselves. You mark the synchronizing accesses; the compiler emits the fences the hardware needs.</p>
+  <p class="small">Java (since 2004) and C/C++ (since 2011) define the memory model themselves. You mark the synchronizing accesses; the compiler emits the fences the hardware needs.</p>
   <div class="cols">
     <div>
       <div class="code-label">C++11 — post–wait with acquire/release</div>
@@ -1071,10 +1071,10 @@ use(datum);   // guaranteed to see 5
     </div>
     <div>
       <div class="callout"><span class="lbl">The rules</span><span class="small">Atomics default to <code class="inline">memory_order_seq_cst</code> (SC). A data race on a plain variable is undefined behavior — so the post–wait flag must be an atomic, not a plain <code class="inline">int</code>.</span></div>
-      <div class="callout"><span class="lbl">OpenMP (Topic 4)</span><span class="small"><code class="inline">#pragma omp flush</code> is OpenMP's fence. Since OpenMP 5.0, <code class="inline">atomic</code> and <code class="inline">flush</code> take memory-order clauses such as <code class="inline">seq_cst</code>, <code class="inline">acquire</code>, and <code class="inline">release</code>.</span></div>
+      <div class="callout"><span class="lbl">OpenMP (Topic 4)</span><span class="small"><code class="inline">#pragma omp flush</code> is OpenMP's fence. <code class="inline">atomic</code> has taken <code class="inline">seq_cst</code> since OpenMP 4.0; OpenMP 5.0 added <code class="inline">acquire</code>, <code class="inline">release</code>, and <code class="inline">acq_rel</code> to both <code class="inline">atomic</code> and <code class="inline">flush</code>.</span></div>
     </div>
   </div>
-  <div class="src">Java Memory Model: Manson, Pugh &amp; Adve, POPL 2005. C++11: ISO/IEC 14882:2011. OpenMP 5.0 specification, 2018.</div>
+  <div class="src">Java Memory Model: Manson, Pugh &amp; Adve, POPL 2005. C++11: ISO/IEC 14882:2011. OpenMP 4.0 (2013) and 5.0 (2018) specifications.</div>
 </section>
 
 <!-- Fence insertion -->
@@ -1173,7 +1173,7 @@ Rd F
     <div class="callout"><span class="lbl">Consistency</span>Orders accesses across locations. SC matches intuition; PC, WO, and RC relax it for speed.</div>
     <div class="callout"><span class="lbl">Your side of the contract</span>Synchronize with locks, atomics, or acquire/release. Don't build flags out of plain variables.</div>
   </div>
-  <div class="callout takeaway"><span class="lbl">One sentence</span>Hardware keeps each cache line coherent, but it only keeps your accesses in order at the synchronization points you mark.</div>
+  <div class="callout takeaway"><span class="lbl">One sentence</span>Hardware keeps each cache line coherent, but a relaxed machine keeps your accesses in order only at the synchronization points you mark.</div>
   <p class="center muted small">The four orderings — LD→LD, LD→ST, ST→LD, ST→ST — and which ones a model keeps are the whole story of consistency.</p>
 </section>
 
