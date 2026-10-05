@@ -75,7 +75,7 @@ Print sum;
     </div>
     <div>
       <p>Suppose <code class="inline">a[0] = 3</code> and <code class="inline">a[1] = 7</code>. Will it print <code class="inline">sum = 10</code>?</p>
-      <div class="callout warn"><span class="lbl">Not necessarily</span>With write-back caches, each core can hold its own private copy of <code class="inline">sum</code>. The lock gives mutual exclusion, but it does not by itself make the caches agree.</div>
+      <div class="callout warn"><span class="lbl">Not necessarily</span>Without a coherence protocol, and with write-back caches, each core can hold its own private copy of <code class="inline">sum</code>. The lock gives mutual exclusion, but it does not by itself make the caches agree.</div>
       <p class="small">Making the caches agree is the hardware's job — the <strong>cache coherence</strong> protocol.</p>
     </div>
   </div>
@@ -276,7 +276,7 @@ Print sum;
         <path d="M182,58 C212,95 235,140 252,172" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#pa-amb)"/>
         <text x="248" y="110" text-anchor="middle" class="tiny" style="fill:#CC0000">BusRdX /</text><text x="248" y="121" text-anchor="middle" class="tiny" style="fill:#CC0000">Flush</text>
         <path d="M85,210 C150,232 210,232 240,214" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#pa-amb)"/>
-        <text x="160" y="246" text-anchor="middle" class="tiny" style="fill:#CC0000">BusRdX / -</text>
+        <text x="160" y="246" text-anchor="middle" class="tiny" style="fill:#CC0000">BusRdX, BusUpgr / -</text>
         <path d="M28,182 C-6,158 4,222 32,218" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#pa-amb)"/>
         <text x="14" y="248" text-anchor="middle" class="tiny">BusRd/-</text>
       </svg>
@@ -286,7 +286,7 @@ Print sum;
       <ul class="small">
         <li><strong>M → S</strong> on snooped <code class="inline">BusRd</code>: Flush (intervention — a peer wants to read)</li>
         <li><strong>M → I</strong> on snooped <code class="inline">BusRdX</code>: Flush and give up the line</li>
-        <li><strong>S → I</strong> on snooped <code class="inline">BusRdX</code>: invalidate</li>
+        <li><strong>S → I</strong> on snooped <code class="inline">BusRdX</code> or <code class="inline">BusUpgr</code>: invalidate</li>
         <li><strong>S</strong> stays S on snooped <code class="inline">BusRd</code></li>
       </ul>
       <div class="callout"><span class="lbl">Memory's role</span>When a cache Flushes, the memory controller cancels its own read — the dirty owner supplies the freshest data, and memory is updated too.</div>
@@ -307,7 +307,7 @@ Print sum;
     <tr><td>R3</td><td>S</td><td>–</td><td class="hi">S</td><td>–</td><td>–</td><td>1</td></tr>
     <tr><td>R2</td><td>S</td><td class="hi">S</td><td>S</td><td>BusRd</td><td>Mem</td><td>40</td></tr>
   </table>
-  <div class="callout"><span class="lbl">Cost model</span>Hit, no bus = 1 cycle · bus transaction, data from a peer cache = 20 · bus transaction, data from memory = 40. <span class="small">Ri / Wi = read / write by processor Pi.</span></div>
+  <div class="callout"><span class="lbl">Cost model</span>Hit, no bus = 1 cycle · bus transaction, data from a peer cache = 20 · bus transaction, data from memory = 40. <span class="small">Ri / Wi = read / write by processor Pi. This example uses <code class="inline">BusRdX</code> for S → M; with <code class="inline">BusUpgr</code>, W1 and W3 would cost 20.</span></div>
 </section>
 
 <!-- MESI -->
@@ -464,6 +464,106 @@ Print sum;
   </div>
 </section>
 
+<!-- MOESI state diagram -->
+<section data-background-color="#ffffff">
+  <h2>MOESI — Processor-Initiated Transitions</h2>
+  <div class="cols w-64">
+    <div class="center">
+      <svg viewBox="0 0 420 318" class="chart" style="max-width:496px">
+        <defs><marker id="aop2563eb" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/></marker><marker id="aop475569" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#475569"/></marker><marker id="aopCC0000" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#CC0000"/></marker><marker id="aopca8a04" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#ca8a04"/></marker><marker id="aopea580c" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#ea580c"/></marker></defs>
+        <circle cx="150" cy="95" r="28" fill="#fee2e2" stroke="#CC0000" stroke-width="2.5"/><text x="150" y="101" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#b91c1c">M</text>
+        <circle cx="330" cy="95" r="28" fill="#fef9c3" stroke="#ca8a04" stroke-width="2.5"/><text x="330" y="101" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#a16207">E</text>
+        <circle cx="150" cy="245" r="28" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/><text x="150" y="251" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#1d4ed8">S</text>
+        <circle cx="330" cy="245" r="28" fill="#f1f5f9" stroke="#64748b" stroke-width="2.5"/><text x="330" y="251" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#475569">I</text>
+        <circle cx="60" cy="195" r="28" fill="#ffedd5" stroke="#ea580c" stroke-width="2.5"/><text x="60" y="201" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#c2410c">O</text>
+        <path d="M140,69 C112,37 188,37 160,69" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#aop475569)"/>
+        <text x="150" y="20" text-anchor="middle" class="tiny">PrRd/&#8211;</text>
+        <text x="150" y="31" text-anchor="middle" class="tiny">PrWr/&#8211;</text>
+        <path d="M320,69 C292,37 368,37 340,69" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#aop475569)"/>
+        <text x="330" y="31" text-anchor="middle" class="tiny">PrRd/&#8211;</text>
+        <path d="M302.0,95.0 L180.0,95.0" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#aopCC0000)"/>
+        <text x="240" y="87" text-anchor="middle" class="tiny" style="fill:#CC0000">PrWr/&#8211;</text>
+        <path d="M308.5,227.1 L173.0,114.2" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#aopCC0000)"/>
+        <text x="255" y="160" text-anchor="start" class="tiny" style="fill:#CC0000">PrWr/BusRdX</text>
+        <path d="M330.0,217.0 L330.0,125.0" fill="none" stroke="#ca8a04" stroke-width="2" marker-end="url(#aopca8a04)"/>
+        <text x="338" y="168" text-anchor="start" class="tiny" style="fill:#ca8a04">PrRd/</text>
+        <text x="338" y="179" text-anchor="start" class="tiny" style="fill:#ca8a04">BusRd(!C)</text>
+        <path d="M150.0,217.0 L150.0,125.0" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#aopCC0000)"/>
+        <text x="158" y="168" text-anchor="start" class="tiny" style="fill:#CC0000">PrWr/</text>
+        <text x="158" y="179" text-anchor="start" class="tiny" style="fill:#CC0000">BusUpgr</text>
+        <path d="M302.0,245.0 L180.0,245.0" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#aop2563eb)"/>
+        <text x="240" y="262" text-anchor="middle" class="tiny" style="fill:#2563eb">PrRd/BusRd(C)</text>
+        <path d="M140,271 C112,303 188,303 160,271" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#aop475569)"/>
+        <text x="116" y="300" text-anchor="end" class="tiny">PrRd/&#8211;</text>
+        <path d="M78.7,174.2 L129.9,117.3" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#aopea580c)"/>
+        <text x="100" y="132" text-anchor="end" class="tiny" style="fill:#ea580c">PrWr/</text>
+        <text x="100" y="143" text-anchor="end" class="tiny" style="fill:#ea580c">BusUpgr</text>
+        <path d="M34,185 C2,157 2,233 34,205" fill="none" stroke="#ea580c" stroke-width="1.6" marker-end="url(#aopea580c)"/>
+        <text x="34" y="240" text-anchor="middle" class="tiny" style="fill:#ea580c">PrRd/&#8211;</text>
+      </svg>
+      <div class="src">MOESI state diagrams after Solihin, Fig. 8.7. O = dirty + shared: the owner supplies data and owes the write-back.</div>
+    </div>
+    <div>
+      <ul class="small">
+        <li><strong>I, E, S, M</strong> behave exactly as in MESI</li>
+        <li><strong>O → O</strong> on <code class="inline">PrRd</code>: read hit, no bus</li>
+        <li><strong>O → M</strong> on <code class="inline">PrWr</code> → <code class="inline">BusUpgr</code>: invalidate the other sharers, then write</li>
+      </ul>
+      <div class="callout small"><span class="lbl">The key</span>When a dirty block is shared, <strong>one</strong> cache acts as the <strong>owner</strong> of the block. The O state marks that cache.</div>
+    </div>
+  </div>
+</section>
+
+<!-- MOESI bus-initiated diagram -->
+<section data-background-color="#ffffff">
+  <h2>MOESI — Bus-Initiated (Snooped) Transitions</h2>
+  <div class="cols w-64">
+    <div class="center">
+      <svg viewBox="0 0 450 345" class="chart" style="max-width:531px">
+        <defs><marker id="aob16a34a" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#16a34a"/></marker><marker id="aob475569" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#475569"/></marker><marker id="aobCC0000" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#CC0000"/></marker><marker id="aobea580c" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#ea580c"/></marker></defs>
+        <circle cx="150" cy="95" r="28" fill="#fee2e2" stroke="#CC0000" stroke-width="2.5"/><text x="150" y="101" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#b91c1c">M</text>
+        <circle cx="330" cy="95" r="28" fill="#fef9c3" stroke="#ca8a04" stroke-width="2.5"/><text x="330" y="101" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#a16207">E</text>
+        <circle cx="150" cy="245" r="28" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/><text x="150" y="251" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#1d4ed8">S</text>
+        <circle cx="330" cy="245" r="28" fill="#f1f5f9" stroke="#64748b" stroke-width="2.5"/><text x="330" y="251" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#475569">I</text>
+        <circle cx="60" cy="195" r="28" fill="#ffedd5" stroke="#ea580c" stroke-width="2.5"/><text x="60" y="201" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#c2410c">O</text>
+        <path d="M131.3,115.8 L80.1,172.7" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#aobea580c)"/>
+        <text x="100" y="132" text-anchor="end" class="tiny" style="fill:#ea580c">BusRd/</text>
+        <text x="100" y="143" text-anchor="end" class="tiny" style="fill:#ea580c">Flush</text>
+        <path d="M34,185 C2,157 2,233 34,205" fill="none" stroke="#ea580c" stroke-width="1.6" marker-end="url(#aobea580c)"/>
+        <text x="34" y="240" text-anchor="middle" class="tiny" style="fill:#ea580c">BusRd/Flush</text>
+        <path d="M66,222 C90,345 330,345 322,275" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#aobea580c)"/>
+        <text x="205" y="340" text-anchor="middle" class="tiny" style="fill:#ea580c">BusRdX/Flush &#183; BusUpgr/&#8211;</text>
+        <path d="M176,82 C240,40 300,120 308,222" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#aobCC0000)"/>
+        <text x="226" y="58" text-anchor="middle" class="tiny" style="fill:#CC0000">BusRdX/Flush</text>
+        <path d="M308.5,112.9 L173.0,225.8" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#aob16a34a)"/>
+        <text x="255" y="147" text-anchor="end" class="tiny" style="fill:#16a34a">BusRd/FlushOpt</text>
+        <path d="M330.0,123.0 L330.0,215.0" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#aobCC0000)"/>
+        <text x="338" y="168" text-anchor="start" class="tiny" style="fill:#CC0000">BusRdX/</text>
+        <text x="338" y="179" text-anchor="start" class="tiny" style="fill:#CC0000">FlushOpt</text>
+        <path d="M178.0,245.0 L300.0,245.0" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#aobCC0000)"/>
+        <text x="240" y="262" text-anchor="middle" class="tiny" style="fill:#CC0000">BusRdX/&#8211;</text>
+        <text x="240" y="273" text-anchor="middle" class="tiny" style="fill:#CC0000">BusUpgr/&#8211;</text>
+        <path d="M140,219 C112,187 188,187 160,219" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#aob475569)"/>
+        <text x="150" y="170" text-anchor="middle" class="tiny">BusRd/&#8211;</text>
+        <path d="M356,235 C388,207 388,283 356,255" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#aob475569)"/>
+        <text x="394" y="238" text-anchor="start" class="tiny">BusRd/&#8211;</text>
+        <text x="394" y="249" text-anchor="start" class="tiny">BusRdX/&#8211;</text>
+        <text x="394" y="260" text-anchor="start" class="tiny">BusUpgr/&#8211;</text>
+      </svg>
+      <div class="src">MOESI state diagrams after Solihin, Fig. 8.7. O = dirty + shared: the owner supplies data and owes the write-back.</div>
+    </div>
+    <div>
+      <ul class="small">
+        <li><strong>M → O</strong> on snooped <code class="inline">BusRd</code> → <strong>Flush</strong>: stay dirty and become the owner; memory is <em>not</em> updated</li>
+        <li><strong>O → O</strong> on snooped <code class="inline">BusRd</code> → <strong>Flush</strong>: the owner supplies the block</li>
+        <li><strong>O → I</strong> on <code class="inline">BusRdX</code> → <strong>Flush</strong>, or on <code class="inline">BusUpgr</code></li>
+        <li><strong>S</strong> no longer answers: <code class="inline">BusRd/–</code>, <code class="inline">BusRdX/–</code> (MESI's S used <code class="inline">FlushOpt</code>)</li>
+      </ul>
+      <div class="callout small"><span class="lbl">Eviction rule</span>Other caches can evict the block <strong>silently</strong>. The owner must <strong>write it back</strong> to memory.</div>
+    </div>
+  </div>
+</section>
+
 <!-- Dragon -->
 <section data-background-color="#ffffff">
   <h2>Dragon — Update Instead of Invalidate</h2>
@@ -609,7 +709,7 @@ Print sum;
         <tr><td>line size</td><td>decrease</td><td class="hi">increase</td></tr>
         <tr><td>associativity</td><td>unclear</td><td>unclear</td></tr>
       </table>
-      <p class="small">A bigger cache keeps more shared lines resident, so fewer sharing misses are hidden by eviction. A bigger line brings more useful data per true-sharing miss, but packs more unrelated items together — more false sharing.</p>
+      <p class="small">In a small cache, a line is often evicted before another core invalidates it, so the miss counts as a capacity miss. A bigger cache keeps it long enough to be invalidated, so the same miss shows up as a sharing miss. A bigger line brings more useful data per true-sharing miss, but packs more unrelated items together — more false sharing.</p>
     </div>
   </div>
 </section>
@@ -770,21 +870,21 @@ S2: xReady = 1;  S4: y = x + 4;          S7: z = x * y;
       <div class="code-label">init a = b = 0</div>
       <pre><code class="language-c" data-trim>
 // P0        // P1
-S1: a = 1;   S3: ... = b;
-S2: b = 1;   S4: ... = a;
+S1: a = 1;   S3: r1 = b;
+S2: b = 1;   S4: r2 = a;
 </code></pre>
       <p class="tiny muted">No synchronization, so several outcomes are legal. Under SC, S1 → S2 and S3 → S4 always hold.</p>
     </div>
     <div>
       <table>
-        <tr><th>Interleaving</th><th>(a, b) read by P1</th></tr>
+        <tr><th>Interleaving</th><th>(r1, r2)</th></tr>
         <tr><td>S1 S2 S3 S4</td><td>1, 1</td></tr>
         <tr><td>S3 S4 S1 S2</td><td>0, 0</td></tr>
-        <tr><td>S1 S3 S2 S4</td><td>1, 0</td></tr>
-        <tr><td class="hi">any SC order</td><td class="hi">0, 1 is impossible</td></tr>
+        <tr><td>S1 S3 S2 S4</td><td>0, 1</td></tr>
+        <tr><td class="hi">any SC order</td><td class="hi">1, 0 is impossible</td></tr>
       </table>
-      <p class="small">(a, b) = (0, 1) needs S4 before S1 (to read a = 0) and S2 before S3 (to read b = 1). With program order that is a cycle.</p>
-      <div class="callout warn"><span class="lbl">On a non-SC machine</span><span class="small">(0, 1) appears if the two writes (S1, S2) or the two reads (S3, S4) get reordered. A forbidden outcome is the fingerprint of a reordering.</span></div>
+      <p class="small">(r1, r2) = (1, 0) needs S2 before S3 (r1 = b = 1) and S4 before S1 (r2 = a = 0). With program order that is a cycle.</p>
+      <div class="callout warn"><span class="lbl">On a non-SC machine</span><span class="small">(1, 0) appears if the two writes (S1, S2) or the two reads (S3, S4) get reordered. A forbidden outcome is the fingerprint of a reordering.</span></div>
     </div>
   </div>
 </section>
@@ -798,19 +898,19 @@ S2: b = 1;   S4: ... = a;
       <pre><code class="language-c" data-trim>
 // P0          // P1
 S1: a = 1;     S3: b = 1;
-S2: ... = b;   S4: ... = a;
+S2: r1 = b;    S4: r2 = a;
 </code></pre>
       <p class="tiny muted">Each thread writes one flag, then reads the other's.</p>
     </div>
     <div>
       <table>
-        <tr><th>Interleaving</th><th>(b read by P0, a read by P1)</th></tr>
+        <tr><th>Interleaving</th><th>(r1, r2)</th></tr>
         <tr><td>S1 S2 S3 S4</td><td>0, 1</td></tr>
         <tr><td>S3 S4 S1 S2</td><td>1, 0</td></tr>
         <tr><td>S1 S3 S2 S4</td><td>1, 1</td></tr>
         <tr><td class="hi">any SC order</td><td class="hi">0, 0 is impossible</td></tr>
       </table>
-      <div class="callout warn"><span class="lbl">But real machines produce (0, 0)</span>On x86 and ARM, each core parks its store in a store buffer and reads the other flag's old value. The store → load order is broken — exactly the order the next relaxed model gives up.</div>
+      <div class="callout warn"><span class="lbl">But real machines produce (r1, r2) = (0, 0)</span>On x86 and ARM, each core parks its store in a store buffer and reads the other flag's old value. The store → load order is broken — exactly the order the next relaxed model gives up.</div>
     </div>
   </div>
   <div class="src">x86-TSO and the (0,0) outcome: Sewell et al., "x86-TSO: A Rigorous and Usable Programmer's Model for x86 Multiprocessors," CACM 2010.</div>
@@ -857,21 +957,6 @@ S2: ... = b;   S4: ... = a;
       <div class="callout warn"><span class="lbl">If you roll your own synchronization</span>Without fences, a relaxed machine does not guarantee your flag or lock works. Thread libraries already contain the right fences.</div>
     </div>
   </div>
-</section>
-
-<!-- Four orderings -->
-<section data-background-color="#ffffff">
-  <h2>The Four Orderings — What Each Model Keeps</h2>
-  <p class="small">Every access pair is one of four kinds. A consistency model is defined by which of them it preserves between ordinary accesses.</p>
-  <table class="small">
-    <tr><th>Model</th><th>LD→LD</th><th>LD→ST</th><th>ST→LD</th><th>ST→ST</th><th>Ordering enforced at</th></tr>
-    <tr><td>SC</td><td>kept</td><td>kept</td><td>kept</td><td>kept</td><td>every access</td></tr>
-    <tr><td>PC</td><td>kept</td><td>kept</td><td class="hi">relaxed</td><td>kept</td><td>every access except ST→LD</td></tr>
-    <tr><td>WO</td><td>relaxed</td><td>relaxed</td><td>relaxed</td><td>relaxed</td><td>synchronization points (full fence)</td></tr>
-    <tr><td>RC</td><td>relaxed</td><td>relaxed</td><td>relaxed</td><td>relaxed</td><td>acquire (one way) and release (one way)</td></tr>
-  </table>
-  <div class="callout takeaway"><span class="lbl">The tension</span>Each step down the table allows more overlap and more speed, and moves more of the ordering job to the programmer.</div>
-  <p class="tiny muted">x86 also relaxes only store → load, like PC. POWER and ARM are much weaker and rely on fences and acquire/release.</p>
 </section>
 
 <!-- PC -->
@@ -938,7 +1023,6 @@ if (flag2 == 0) ...    if (flag1 == 0) ...
 <!-- RC -->
 <section data-background-color="#ffffff">
   <h2>Release Consistency (RC): Acquire &amp; Release</h2>
-  <p class="small">RC splits synchronization into two kinds, because they need ordering in opposite directions.</p>
   <div class="cols">
     <div>
       <div class="callout"><span class="lbl">Acquire — e.g. lock, wait()</span>Later accesses wait until the acquire completes, so nothing in the critical section runs before the lock is held.</div>
@@ -1020,6 +1104,21 @@ unlock(L1); // release  unlock(L1); // release
   <div class="callout"><span class="lbl">Lazy release consistency</span><span class="small">RC pushes new values out at each release. LRC waits until a processor acquires and sends them only to that processor — a win when messages are expensive, as in software shared memory.</span></div>
 </section>
 
+<!-- Four orderings -->
+<section data-background-color="#ffffff">
+  <h2>Recap: The Four Orderings — What Each Model Keeps</h2>
+  <p class="small">Every access pair is one of four kinds. Each model we just saw is defined by which of them it preserves between ordinary accesses.</p>
+  <table class="small">
+    <tr><th>Model</th><th>LD→LD</th><th>LD→ST</th><th>ST→LD</th><th>ST→ST</th><th>Ordering enforced at</th></tr>
+    <tr><td>SC</td><td>kept</td><td>kept</td><td>kept</td><td>kept</td><td>every access</td></tr>
+    <tr><td>PC</td><td>kept</td><td>kept</td><td class="hi">relaxed</td><td>kept</td><td>every access except ST→LD</td></tr>
+    <tr><td>WO</td><td>relaxed</td><td>relaxed</td><td>relaxed</td><td>relaxed</td><td>synchronization points (full fence)</td></tr>
+    <tr><td>RC</td><td>relaxed</td><td>relaxed</td><td>relaxed</td><td>relaxed</td><td>acquire (one way) and release (one way)</td></tr>
+  </table>
+  <div class="callout takeaway"><span class="lbl">The tension</span>Each step down the table allows more overlap and more speed, and moves more of the ordering job to the programmer.</div>
+  <p class="tiny muted">x86 also relaxes only store → load, like PC. POWER and ARM are much weaker and rely on fences and acquire/release.</p>
+</section>
+
 <!-- Fences in ISAs -->
 <section data-background-color="#ffffff">
   <h2>Fences in Real ISAs</h2>
@@ -1046,7 +1145,8 @@ st.rel   ready, 1            cmp r, 0 ; beq loop
       <p class="small">With per-access labels, the release store (<code class="inline">st.rel</code>) and acquire load (<code class="inline">ld.acq</code>) are enough — no separate fence instruction. This is RC built into the ISA.</p>
     </div>
   </div>
-  <div class="src">PowerPC sequence: IBM Power ISA / PowerPC Architecture Book.</div>
+  <p class="small">Today's equivalent of IA-64's labels: ARMv8 <code class="inline">LDAR</code> (load-acquire) and <code class="inline">STLR</code> (store-release).</p>
+  <div class="src">PowerPC sequence: IBM Power ISA / PowerPC Architecture Book. ARMv8: Arm Architecture Reference Manual for A-profile.</div>
 </section>
 
 <!-- Language-level -->
@@ -1158,7 +1258,7 @@ Rd F
       </table>
     </div>
     <div>
-      <p class="small">Same program as the previous slide. Hit = 1 cycle, miss = 10, the cache starts empty, and at most one access issues per cycle. Each cell is the access's [start, finish] cycle.</p>
+      <p class="small">Same program as the previous slide. Hit = 1 cycle, miss = 10, the cache starts empty, and at most one access issues per cycle. Each cell is the access's [start, finish] cycle. Under WO, <code class="inline">Wr B</code> still waits for <code class="inline">Rd B</code> because they touch the same address.</p>
       <div class="callout takeaway"><span class="lbl">The payoff</span>SC finishes at cycle 62, PC at 53, WO at 34. More relaxation means more overlap — close to 2× here.</div>
       <p class="tiny muted">Illustrative cycle counts constructed for teaching.</p>
     </div>
