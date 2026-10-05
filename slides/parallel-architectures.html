@@ -327,7 +327,6 @@ Print sum;
     <div>
       <div class="callout"><span class="lbl">I → E or I → S?</span>On a read miss, other caches answer a wired-OR bus signal <code class="inline">C</code> ("copy exists"). No copy → enter E; otherwise enter S.</div>
       <div class="callout takeaway"><span class="lbl">The payoff</span><strong>E → M</strong> on a write is silent — no bus transaction. A read-then-write to a private line now costs one transaction, not two.</div>
-      <div class="callout"><span class="lbl">Flush vs. FlushOpt</span><span class="small">A snooped M line must Flush. E and S lines may optionally supply data (FlushOpt), betting a peer cache beats memory.</span></div>
     </div>
   </div>
   <div class="src">Illinois MESI: M. Papamarcos &amp; J. Patel, ISCA 1984.</div>
@@ -370,7 +369,49 @@ Print sum;
         <li><strong>S → M</strong> on <code class="inline">PrWr</code>: <code class="inline">BusUpgr</code></li>
         <li><strong>I → M</strong> on <code class="inline">PrWr</code>: <code class="inline">BusRdX</code></li>
       </ul>
-      <p class="small">Snooped side, same idea as MSI: a peer's <code class="inline">BusRd</code> downgrades M/E → S; a peer's <code class="inline">BusRdX</code> or <code class="inline">BusUpgr</code> invalidates M/E/S → I.</p>
+    </div>
+  </div>
+</section>
+
+<!-- MESI bus-initiated diagram -->
+<section data-background-color="#ffffff">
+  <h2>MESI — Bus-Initiated (Snooped) Transitions</h2>
+  <div class="cols w-64">
+    <div class="center">
+      <svg viewBox="0 0 400 318" class="chart" style="max-width:472px">
+        <defs><marker id="apb16a34a" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#16a34a"/></marker><marker id="apb475569" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#475569"/></marker><marker id="apbCC0000" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#CC0000"/></marker></defs>
+        <circle cx="100" cy="95" r="28" fill="#fee2e2" stroke="#CC0000" stroke-width="2.5"/><text x="100" y="101" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#b91c1c">M</text>
+        <circle cx="280" cy="95" r="28" fill="#fef9c3" stroke="#ca8a04" stroke-width="2.5"/><text x="280" y="101" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#a16207">E</text>
+        <circle cx="100" cy="245" r="28" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/><text x="100" y="251" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#1d4ed8">S</text>
+        <circle cx="280" cy="245" r="28" fill="#f1f5f9" stroke="#64748b" stroke-width="2.5"/><text x="280" y="251" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#475569">I</text>
+        <path d="M100.0,123.0 L100.0,215.0" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#apb16a34a)"/>
+        <text x="92" y="168" text-anchor="end" class="tiny" style="fill:#16a34a">BusRd/</text>
+        <text x="92" y="179" text-anchor="end" class="tiny" style="fill:#16a34a">Flush</text>
+        <path d="M126,82 C190,40 250,120 258,222" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#apbCC0000)"/>
+        <text x="178" y="58" text-anchor="middle" class="tiny" style="fill:#CC0000">BusRdX/Flush</text>
+        <path d="M258.5,112.9 L123.0,225.8" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#apb16a34a)"/>
+        <text x="205" y="147" text-anchor="end" class="tiny" style="fill:#16a34a">BusRd/FlushOpt</text>
+        <path d="M280.0,123.0 L280.0,215.0" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#apbCC0000)"/>
+        <text x="288" y="168" text-anchor="start" class="tiny" style="fill:#CC0000">BusRdX/</text>
+        <text x="288" y="179" text-anchor="start" class="tiny" style="fill:#CC0000">FlushOpt</text>
+        <path d="M128.0,245.0 L250.0,245.0" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#apbCC0000)"/>
+        <text x="190" y="262" text-anchor="middle" class="tiny" style="fill:#CC0000">BusRdX/FlushOpt</text>
+        <text x="190" y="273" text-anchor="middle" class="tiny" style="fill:#CC0000">BusUpgr/&#8211;</text>
+        <path d="M90,271 C62,303 138,303 110,271" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#apb475569)"/>
+        <text x="134" y="304" text-anchor="start" class="tiny">BusRd/FlushOpt</text>
+        <path d="M306,235 C338,207 338,283 306,255" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#apb475569)"/>
+        <text x="344" y="238" text-anchor="start" class="tiny">BusRd/&#8211;</text>
+        <text x="344" y="249" text-anchor="start" class="tiny">BusRdX/&#8211;</text>
+        <text x="344" y="260" text-anchor="start" class="tiny">BusUpgr/&#8211;</text>
+      </svg>
+    </div>
+    <div>
+      <ul class="small">
+        <li><strong>M → S</strong> / <strong>E → S</strong> on snooped <code class="inline">BusRd</code> (a peer reads; downgrade)</li>
+        <li><strong>M → I</strong> / <strong>E → I</strong> / <strong>S → I</strong> on snooped <code class="inline">BusRdX</code> or <code class="inline">BusUpgr</code> (invalidate)</li>
+        <li>M must <strong>Flush</strong> (it's the only valid copy); E/S may use the optional <strong>FlushOpt</strong></li>
+      </ul>
+      <div class="callout small"><span class="lbl">Flush vs. FlushOpt</span><strong>Flush</strong> is mandatory (correctness). <strong>FlushOpt</strong> is optional — only for performance, betting that a peer cache is faster than memory. That premise is not always true.</div>
     </div>
   </div>
 </section>
