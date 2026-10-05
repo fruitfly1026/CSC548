@@ -1017,7 +1017,7 @@ unlock(L1); // release  unlock(L1); // release
       <p class="small">The update to <code class="inline">sum</code> is performed before <code class="inline">unlock</code>; the consumer's <code class="inline">lock</code> completes before it reads <code class="inline">sum</code>.</p>
     </div>
   </div>
-  <div class="callout"><span class="lbl">Lazy release consistency</span><span class="small">New values aren't needed until someone acquires. LRC sends them in one batch at the acquire instead of at each write — a win when many small messages are expensive, as in software shared memory.</span></div>
+  <div class="callout"><span class="lbl">Lazy release consistency</span><span class="small">RC pushes new values out at each release. LRC waits until a processor acquires and sends them only to that processor — a win when messages are expensive, as in software shared memory.</span></div>
 </section>
 
 <!-- Fences in ISAs -->
