@@ -486,6 +486,97 @@ Print sum;
   </div>
 </section>
 
+<!-- Dragon processor-initiated -->
+<section data-background-color="#ffffff">
+  <h2>Dragon — Processor-Initiated Transitions</h2>
+  <div class="cols w-64">
+    <div class="center">
+      <svg viewBox="0 0 420 325" class="chart" style="max-width:496px">
+        <defs><marker id="adp2563eb" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/></marker><marker id="adp475569" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#475569"/></marker><marker id="adpCC0000" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#CC0000"/></marker><marker id="adpca8a04" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#ca8a04"/></marker><marker id="adpea580c" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#ea580c"/></marker></defs>
+        <circle cx="110" cy="110" r="28" fill="#fef9c3" stroke="#ca8a04" stroke-width="2.5"/><text x="110" y="116" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#a16207">E</text>
+        <circle cx="300" cy="110" r="28" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/><text x="300" y="115" text-anchor="middle" style="font-weight:800;font-size:13px;fill:#1d4ed8">Sc</text>
+        <circle cx="110" cy="260" r="28" fill="#ffedd5" stroke="#ea580c" stroke-width="2.5"/><text x="110" y="265" text-anchor="middle" style="font-weight:800;font-size:13px;fill:#c2410c">Sm</text>
+        <circle cx="300" cy="260" r="28" fill="#fee2e2" stroke="#CC0000" stroke-width="2.5"/><text x="300" y="266" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#b91c1c">M</text>
+        <path d="M100,84 C72,52 148,52 120,84" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#adp475569)"/>
+        <text x="110" y="45" text-anchor="middle" class="tiny">PrRd/&#8211;</text>
+        <path d="M290,84 C262,52 338,52 310,84" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#adp475569)"/>
+        <text x="300" y="45" text-anchor="middle" class="tiny">PrRd/&#8211;</text>
+        <path d="M14,110 L80.0,110.0" fill="none" stroke="#ca8a04" stroke-width="2" marker-end="url(#adpca8a04)"/>
+        <text x="8" y="150" text-anchor="start" class="tiny" style="fill:#ca8a04">PrRdMiss/BusRd(!C)</text>
+        <path d="M406,110 L330.0,110.0" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#adp2563eb)"/>
+        <text x="412" y="150" text-anchor="end" class="tiny" style="fill:#2563eb">PrRdMiss/BusRd(C)</text>
+        <path d="M278.0,127.4 L133.5,241.4" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#adpea580c)"/>
+        <text x="240" y="132" text-anchor="end" class="tiny" style="fill:#ea580c">PrWr/BusUpd(C)</text>
+        <path d="M132.0,127.4 L276.5,241.4" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#adpCC0000)"/>
+        <text x="245" y="198" text-anchor="start" class="tiny" style="fill:#CC0000">PrWr/&#8211;</text>
+        <path d="M300.0,138.0 L300.0,230.0" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#adpCC0000)"/>
+        <text x="308" y="185" text-anchor="start" class="tiny" style="fill:#CC0000">PrWr/BusUpd(!C)</text>
+        <path d="M138.0,260.0 L270.0,260.0" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#adpCC0000)"/>
+        <text x="205" y="278" text-anchor="middle" class="tiny" style="fill:#CC0000">PrWr/BusUpd(!C)</text>
+        <path d="M14,260 L80.0,260.0" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#adpea580c)"/>
+        <text x="6" y="212" text-anchor="start" class="tiny" style="fill:#ea580c">PrWrMiss/</text>
+        <text x="6" y="223" text-anchor="start" class="tiny" style="fill:#ea580c">(BusRd(C);BusUpd)</text>
+        <path d="M406,260 L330.0,260.0" fill="none" stroke="#CC0000" stroke-width="2" marker-end="url(#adpCC0000)"/>
+        <text x="412" y="222" text-anchor="end" class="tiny" style="fill:#CC0000">PrWrMiss/BusRd(!C)</text>
+        <path d="M100,286 C72,318 148,318 120,286" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#adp475569)"/>
+        <text x="76" y="300" text-anchor="end" class="tiny">PrRd/&#8211;</text>
+        <text x="76" y="311" text-anchor="end" class="tiny">PrWr/BusUpd(C)</text>
+        <path d="M290,286 C262,318 338,318 310,286" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#adp475569)"/>
+        <text x="336" y="300" text-anchor="start" class="tiny">PrRd/&#8211;</text>
+        <text x="336" y="311" text-anchor="start" class="tiny">PrWr/&#8211;</text>
+      </svg>
+      <div class="src">No Invalid state. Writes broadcast a word via BusUpd.</div>
+    </div>
+    <div>
+      <ul class="small">
+        <li><strong>PrRdMiss</strong> → <code class="inline">BusRd</code>: enter <strong>E</strong> if no copy (<code class="inline">!C</code>), else <strong>Sc</strong></li>
+        <li><strong>PrWrMiss</strong> → <code class="inline">BusRd(C); BusUpd</code> → <strong>Sm</strong> if shared; <code class="inline">BusRd(!C)</code> → <strong>M</strong> if not</li>
+        <li><strong>E → M</strong> on <code class="inline">PrWr</code>: silent</li>
+        <li><strong>Sc → Sm</strong> / <strong>Sm → Sm</strong> on <code class="inline">PrWr</code> → <code class="inline">BusUpd(C)</code> when others share</li>
+        <li>When <code class="inline">BusUpd(!C)</code> (no one shares) → go to <strong>M</strong></li>
+      </ul>
+      <div class="callout small"><span class="lbl">Key difference</span>A write <strong>updates</strong> peers in place — peers never get invalidated, so subsequent peer reads still <em>hit</em>.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Dragon bus-initiated -->
+<section data-background-color="#ffffff">
+  <h2>Dragon — Bus-Initiated (Snooped) Transitions</h2>
+  <div class="cols w-64">
+    <div class="center">
+      <svg viewBox="0 0 420 320" class="chart" style="max-width:496px">
+        <defs><marker id="adb16a34a" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#16a34a"/></marker><marker id="adb2563eb" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/></marker><marker id="adb7c3aed" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#7c3aed"/></marker></defs>
+        <circle cx="110" cy="110" r="28" fill="#fef9c3" stroke="#ca8a04" stroke-width="2.5"/><text x="110" y="116" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#a16207">E</text>
+        <circle cx="300" cy="110" r="28" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/><text x="300" y="115" text-anchor="middle" style="font-weight:800;font-size:13px;fill:#1d4ed8">Sc</text>
+        <circle cx="110" cy="260" r="28" fill="#ffedd5" stroke="#ea580c" stroke-width="2.5"/><text x="110" y="265" text-anchor="middle" style="font-weight:800;font-size:13px;fill:#c2410c">Sm</text>
+        <circle cx="300" cy="260" r="28" fill="#fee2e2" stroke="#CC0000" stroke-width="2.5"/><text x="300" y="266" text-anchor="middle" style="font-weight:800;font-size:16px;fill:#b91c1c">M</text>
+        <path d="M138.0,110.0 L270.0,110.0" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#adb2563eb)"/>
+        <text x="205" y="101" text-anchor="middle" class="tiny" style="fill:#2563eb">BusRd/&#8211;</text>
+        <path d="M290,84 C262,52 338,52 310,84" fill="none" stroke="#7c3aed" stroke-width="1.6" marker-end="url(#adb7c3aed)"/>
+        <text x="336" y="56" text-anchor="start" class="tiny" style="fill:#7c3aed">BusRd/&#8211;</text>
+        <text x="336" y="67" text-anchor="start" class="tiny" style="fill:#7c3aed">BusUpd/Update</text>
+        <path d="M132.0,242.6 L276.5,128.6" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#adb7c3aed)"/>
+        <text x="200" y="180" text-anchor="end" class="tiny" style="fill:#7c3aed">BusUpd/Update</text>
+        <path d="M272.0,260.0 L140.0,260.0" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#adb16a34a)"/>
+        <text x="205" y="251" text-anchor="middle" class="tiny" style="fill:#16a34a">BusRd/Flush</text>
+        <path d="M100,286 C72,318 148,318 120,286" fill="none" stroke="#16a34a" stroke-width="1.6" marker-end="url(#adb16a34a)"/>
+        <text x="76" y="305" text-anchor="end" class="tiny" style="fill:#16a34a">BusRd/Flush</text>
+      </svg>
+      <div class="src">BusUpd updates copies in place; owner (Sm/M) supplies via Flush.</div>
+    </div>
+    <div>
+      <ul class="small">
+        <li><strong>E → Sc</strong> / <strong>M → Sm</strong> on snooped <code class="inline">BusRd</code> (a peer read arrives; M Flushes and becomes owner)</li>
+        <li><strong>BusUpd / Update</strong>: any sharer applies the written word in place — no invalidation</li>
+        <li>A peer's write (<code class="inline">BusUpd</code>) makes the current <strong>Sm → Sc</strong> (ownership moves)</li>
+        <li><strong>Sm</strong> supplies data on snooped reads (cache-to-cache)</li>
+      </ul>
+      <div class="callout small"><span class="lbl">Contrast</span>vs. MSI/MESI a peer write here is a <strong>BusUpd</strong> (no invalidate) — what would have been a coherence <em>miss</em> becomes a hit.</div>
+    </div>
+  </div>
+</section>
+
 <!-- Dragon example -->
 <section data-background-color="#ffffff">
   <h2>Dragon Worked Example</h2>
