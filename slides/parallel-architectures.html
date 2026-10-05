@@ -941,24 +941,53 @@ if (flag2 == 0) ...    if (flag1 == 0) ...
   <p class="small">RC splits synchronization into two kinds, because they need ordering in opposite directions.</p>
   <div class="cols">
     <div>
-      <div class="callout"><span class="lbl">Acquire — e.g. lock, wait()</span>No access after the acquire may run until the acquire completes. It blocks upward migration, so nothing in the critical section runs before the lock is held.</div>
+      <div class="callout"><span class="lbl">Acquire — e.g. lock, wait()</span>Later accesses wait until the acquire completes, so nothing in the critical section runs before the lock is held.</div>
     </div>
     <div>
-      <div class="callout"><span class="lbl">Release — e.g. unlock, post()</span>Every access before the release must be performed first. It blocks downward migration, so the critical section's writes are visible before the lock is freed.</div>
+      <div class="callout"><span class="lbl">Release — e.g. unlock, post()</span>Earlier accesses must finish before the release, so the critical section's writes are visible before the lock is freed.</div>
     </div>
   </div>
   <div class="center">
-    <svg viewBox="0 0 520 96" class="chart" style="max-width:560px">
-      <line x1="40" y1="48" x2="200" y2="48" stroke="#94a3b8" stroke-width="1"/>
-      <rect x="95" y="38" width="60" height="20" rx="4" fill="#dcfce7" stroke="#22c55e"/><text x="125" y="52" text-anchor="middle" class="lbl">acquire</text>
-      <path d="M125,38 L125,16" stroke="#16a34a" stroke-width="2.5" marker-end="url(#pa-up)"/>
-      <defs><marker id="pa-up" markerWidth="9" markerHeight="9" refX="4.5" refY="2" orient="auto"><path d="M0,9 L4.5,0 L9,9 z" fill="#16a34a"/></marker></defs>
-      <text x="160" y="24" class="note" style="fill:#16a34a">no upward migration</text>
-      <line x1="320" y1="48" x2="480" y2="48" stroke="#94a3b8" stroke-width="1"/>
-      <rect x="375" y="38" width="60" height="20" rx="4" fill="#fee2e2" stroke="#CC0000"/><text x="405" y="52" text-anchor="middle" class="lbl">release</text>
-      <path d="M405,58 L405,82" stroke="#CC0000" stroke-width="2.5" marker-end="url(#pa-dn)"/>
-      <defs><marker id="pa-dn" markerWidth="9" markerHeight="9" refX="4.5" refY="7" orient="auto"><path d="M0,0 L4.5,9 L9,0 z" fill="#CC0000"/></marker></defs>
-      <text x="318" y="92" class="note" style="fill:#CC0000">no downward migration</text>
+    <svg viewBox="0 0 640 250" class="chart" style="max-width:640px">
+      <defs>
+        <marker id="rc-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#16a34a"/></marker>
+        <marker id="rc-po" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/></marker>
+      </defs>
+      <!-- program order -->
+      <line x1="320" y1="40" x2="320" y2="190" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#rc-po)"/>
+      <text x="310" y="115" text-anchor="middle" style="font-size:14px;fill:#64748b" transform="rotate(-90 310 115)" >program order</text>
+      <!-- ACQUIRE panel -->
+      <text x="165" y="20" text-anchor="middle" style="font-size:18px;font-weight:700;fill:#1f2937">acquire — lock(), wait()</text>
+      <line x1="35" y1="115" x2="295" y2="115" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <rect x="115" y="102" width="100" height="26" rx="5" fill="#f1f5f9" stroke="#475569"/>
+      <text x="165" y="120" text-anchor="middle" style="font-size:18px;font-weight:700;fill:#1f2937">acquire</text>
+      <rect x="45" y="38" width="64" height="24" rx="4" fill="#dbeafe" stroke="#3b82f6"/>
+      <text x="77" y="55" text-anchor="middle" style="font-size:15px;fill:#1e3a8a">ld / st</text>
+      <line x1="77" y1="62" x2="77" y2="178" stroke="#16a34a" stroke-width="2.5" marker-end="url(#rc-ok)"/>
+      <text x="92" y="165" style="font-size:22px;fill:#16a34a;font-weight:800">✓</text>
+      <rect x="221" y="168" width="64" height="24" rx="4" fill="#dbeafe" stroke="#3b82f6"/>
+      <text x="253" y="185" text-anchor="middle" style="font-size:15px;fill:#1e3a8a">ld / st</text>
+      <line x1="253" y1="168" x2="253" y2="122" stroke="#CC0000" stroke-width="2.5"/>
+      <line x1="241" y1="122" x2="265" y2="122" stroke="#CC0000" stroke-width="3.5"/>
+      <text x="268" y="152" style="font-size:22px;fill:#CC0000;font-weight:800">✗</text>
+      <text x="165" y="222" text-anchor="middle" style="font-size:16px;fill:#16a34a;font-weight:600">✓ an earlier ld/st may move below it</text>
+      <text x="165" y="240" text-anchor="middle" style="font-size:16px;fill:#CC0000;font-weight:600">✗ a later ld/st cannot move above it</text>
+      <!-- RELEASE panel -->
+      <text x="475" y="20" text-anchor="middle" style="font-size:18px;font-weight:700;fill:#1f2937">release — unlock(), post()</text>
+      <line x1="345" y1="115" x2="605" y2="115" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <rect x="425" y="102" width="100" height="26" rx="5" fill="#f1f5f9" stroke="#475569"/>
+      <text x="475" y="120" text-anchor="middle" style="font-size:18px;font-weight:700;fill:#1f2937">release</text>
+      <rect x="355" y="38" width="64" height="24" rx="4" fill="#dbeafe" stroke="#3b82f6"/>
+      <text x="387" y="55" text-anchor="middle" style="font-size:15px;fill:#1e3a8a">ld / st</text>
+      <line x1="387" y1="62" x2="387" y2="108" stroke="#CC0000" stroke-width="2.5"/>
+      <line x1="375" y1="108" x2="399" y2="108" stroke="#CC0000" stroke-width="3.5"/>
+      <text x="402" y="90" style="font-size:22px;fill:#CC0000;font-weight:800">✗</text>
+      <rect x="531" y="168" width="64" height="24" rx="4" fill="#dbeafe" stroke="#3b82f6"/>
+      <text x="563" y="185" text-anchor="middle" style="font-size:15px;fill:#1e3a8a">ld / st</text>
+      <line x1="563" y1="168" x2="563" y2="52" stroke="#16a34a" stroke-width="2.5" marker-end="url(#rc-ok)"/>
+      <text x="578" y="80" style="font-size:22px;fill:#16a34a;font-weight:800">✓</text>
+      <text x="475" y="222" text-anchor="middle" style="font-size:16px;fill:#16a34a;font-weight:600">✓ a later ld/st may move above it</text>
+      <text x="475" y="240" text-anchor="middle" style="font-size:16px;fill:#CC0000;font-weight:600">✗ an earlier ld/st cannot move below it</text>
     </svg>
   </div>
   <div class="callout takeaway"><span class="lbl">Why it beats WO</span>A full fence blocks both directions; acquire and release each block only one. Accesses outside a critical section may move into it, so more work overlaps.</div>
