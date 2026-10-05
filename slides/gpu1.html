@@ -385,8 +385,7 @@ int main() {
   </div>
   <div class="cols">
     <div>
-      <p class="small">All threads of a block reside on <strong>one SM</strong> (streaming multiprocessor) and share that SM's on-chip resources — which is why there is a hardware <strong>cap</strong> on threads per block.</p>
-      <table>
+      <table class="small">
         <tr><th>Limit — all current GPUs</th><th>Value</th></tr>
         <tr><td>Max threads / block</td><td><strong>1024</strong></td></tr>
         <tr><td>Warp size</td><td><strong>32</strong> threads</td></tr>
@@ -395,8 +394,8 @@ int main() {
       </table>
     </div>
     <div>
-      <div class="callout"><span class="lbl">Why a cap?</span>All threads in a block live on a single <strong>SM</strong> and share its registers and shared memory — a finite resource; threads execute in <strong>warps</strong> of 32. On an <strong>A100</strong> SM: 64 FP32 cores + 192&nbsp;KB L1/shared. On an <strong>H100</strong> SM: 128 cores + 256&nbsp;KB.</div>
-      <div class="callout takeaway"><span class="lbl">Consequence</span>One 1024-thread block is not enough for big data. We need <strong>many blocks</strong>, addressed with <code class="inline">blockIdx</code> and <code class="inline">blockDim</code>.</div>
+      <div class="callout"><span class="lbl">Why a cap?</span><span class="small">All threads in a block live on a single <strong>SM</strong> and share its registers and shared memory — a finite resource; threads execute in <strong>warps</strong> of 32. On an <strong>A100</strong> SM: 64 FP32 cores + 192&nbsp;KB L1/shared. On an <strong>H100</strong> SM: 128 cores + 256&nbsp;KB.</span></div>
+      <div class="callout takeaway"><span class="lbl">Consequence</span><span class="small">One 1024-thread block is not enough for big data. We need <strong>many blocks</strong>, addressed with <code class="inline">blockIdx</code> and <code class="inline">blockDim</code>.</span></div>
     </div>
   </div>
   <div class="src">Limits: NVIDIA CUDA C++ Programming Guide — Compute Capabilities, "Technical Specifications per Compute Capability" (1024 threads/block, warp 32, block dims 1024·1024·64, 2048 resident threads/SM for CC 8.0/9.0). SM figures: NVIDIA A100 (Ampere GA100) &amp; H100 (Hopper GH100) architecture white papers.</div>
@@ -434,6 +433,8 @@ dim3 blocks(N / threadsPerBlock.x,
 <section data-background-color="#ffffff">
   <h2>Worked Example: N = 32</h2>
   <p class="small">16×16 threads per block, a 2×2 grid of blocks, so <code class="inline">blockDim = 16</code>. Take the x dimension: <code class="inline">i = blockIdx.x*blockDim.x + threadIdx.x</code>.</p>
+  <div class="cols">
+  <div>
   <table>
     <tr><th>term</th><th>range</th></tr>
     <tr><td><code class="inline">blockIdx.x</code></td><td>0 … 1</td></tr>
@@ -441,8 +442,12 @@ dim3 blocks(N / threadsPerBlock.x,
     <tr><td><code class="inline">threadIdx.x</code></td><td>0 … 15</td></tr>
     <tr><td><code class="inline">i = blockIdx.x·16 + threadIdx.x</code></td><td>= [0,1]·16 + [0,15]</td></tr>
   </table>
+  </div>
+  <div>
   <div class="callout"><span class="lbl">min</span><code class="inline">i</code><sub>min</sub> = 0·16 + 0 = <strong>0</strong></div>
   <div class="callout ok fragment"><span class="lbl">max</span><code class="inline">i</code><sub>max</sub> = 1·16 + 15 = <strong>31</strong> &nbsp;→&nbsp; <code class="inline">i</code> ranges 0…31, exactly covering N = 32. The same holds for <code class="inline">j</code>.</div>
+  </div>
+  </div>
   <div class="src">Indexing identity <code class="inline">i = blockIdx.x·blockDim.x + threadIdx.x</code>: NVIDIA CUDA C++ Programming Guide — Programming Model: Thread Hierarchy. (16 and 2×2 are an illustrative launch config, not a hardware limit.)</div>
 </section>
 
@@ -589,7 +594,7 @@ dim3 blocks(N / threadsPerBlock.x,
 <!-- Branch divergence -->
 <section data-background-color="#ffffff">
   <h2>Branch Divergence</h2>
-  <p class="small">A warp executes in <strong>SIMT</strong> lockstep. If threads take <strong>different branches</strong>, the hardware runs <strong>both paths</strong> with lane <strong>masking</strong>. <span class="muted">Pre-Volta the 32 threads literally shared <em>one</em> program counter; Volta+ gives each thread its <strong>own</strong> PC (Independent Thread Scheduling) — but a warp still issues one instruction at a time, so divergent paths are still serialized.</span></p>
+  <p class="small">A warp executes in <strong>SIMT</strong> lockstep. If threads take <strong>different branches</strong>, the hardware runs <strong>both paths</strong> with lane <strong>masking</strong>.</p>
   <div class="cols">
     <div>
       <div class="code-label">divergent branch in a warp</div>
@@ -606,23 +611,25 @@ if (threadIdx.x &lt; 16) {
 </code></pre>
     </div>
     <div>
-      <div class="callout warn"><span class="lbl">Cost</span>Not all ALUs do useful work while a path runs — the masked lanes idle.</div>
-      <div class="callout"><span class="lbl">Worst case</span>A fully divergent warp serializes its distinct paths, so throughput falls toward the fraction of lanes active on each path — potentially a large slowdown.</div>
-      <span class="tiny muted">No divergence cost if all 32 lanes take the same branch. We revisit divergence as an optimization lever in Session 2.</span>
+      <div class="callout warn"><span class="lbl">Cost</span><span class="small">The masked lanes idle while each path runs. No cost if all 32 lanes take the same branch.</span></div>
+      <div class="callout"><span class="lbl">Worst case</span><span class="small">A fully divergent warp serializes its distinct paths, so throughput falls toward the fraction of lanes active on each path — potentially a large slowdown.</span></div>
     </div>
   </div>
+  <p class="tiny muted">Pre-Volta the 32 threads shared one program counter; Volta+ gives each thread its own PC (Independent Thread Scheduling), but a warp still issues one instruction at a time, so divergent paths are still serialized. We revisit divergence as an optimization lever in Session 2.</p>
   <div class="src">SIMT execution &amp; Independent Thread Scheduling: CUDA C++ Programming Guide — Hardware Implementation (SIMT Architecture); NVIDIA V100 (Volta) Architecture whitepaper.</div>
 </section>
 
 <!-- Exercises: warps & dispatch -->
 <section data-background-color="#ffffff">
   <h2>In-class: Counting Warps</h2>
+  <div class="cols c3">
   <div class="callout"><span class="lbl">Q1</span>A block has <strong>1024 threads</strong> (the max per block). How many warps?
     <div class="fragment" style="margin-top:.4em"><strong>A:</strong> \( 1024 / 32 = 32 \) warps.</div></div>
   <div class="callout"><span class="lbl">Q2</span><strong>3 blocks × 256 threads</strong> — how many warps?
     <div class="fragment" style="margin-top:.4em"><strong>A:</strong> \( 3 \times 256 / 32 = 24 \) warps.</div></div>
   <div class="callout"><span class="lbl">Q3</span>How long to issue one warp?
     <div class="fragment" style="margin-top:.4em"><strong>A (modern):</strong> A dispatch unit issues <strong>32 threads/clock</strong>, so a whole warp issues in <strong>one cycle</strong>. <span class="muted">(historical, G80: only 8 SPs → 8 threads/cycle → 4 cycles per warp.)</span></div></div>
+  </div>
   <div class="src">Max 1024 threads/block, warp = 32: CUDA C++ Programming Guide — Compute Capabilities. 32 threads/clock dispatch: NVIDIA A100/H100 whitepapers (SM diagram).</div>
 </section>
 
@@ -781,6 +788,8 @@ if (threadIdx.x &lt; 16) {
 <!-- Variable qualifier table -->
 <section data-background-color="#ffffff">
   <h2>Variable Type Qualifiers</h2>
+  <div class="cols">
+  <div>
   <table style="font-size:.82em">
     <tr><th>Declaration</th><th>Memory</th><th>Scope</th><th>Lifetime</th></tr>
     <tr><td>automatic scalars</td><td>register</td><td>thread</td><td>kernel</td></tr>
@@ -789,12 +798,16 @@ if (threadIdx.x &lt; 16) {
     <tr><td><code class="inline">__device__</code></td><td>global</td><td>grid</td><td>application</td></tr>
     <tr><td><code class="inline">__constant__</code></td><td>constant</td><td>grid</td><td>application</td></tr>
   </table>
+  </div>
+  <div>
   <div class="callout"><span class="lbl">Constants</span><code class="inline">__constant__</code> vars are declared <strong>outside</strong> any function; the host fills them with <code class="inline">cudaMemcpyToSymbol</code> / <code class="inline">cudaMemcpyFromSymbol</code>.</div>
   <div class="code-label">CUDA C — constant memory</div>
   <pre><code class="language-cpp" data-trim>
 __constant__ float constData[256];          // file scope
 cudaMemcpyToSymbol(constData, data, sizeof(data));
 </code></pre>
+  </div>
+  </div>
 </section>
 
 
@@ -998,13 +1011,10 @@ for (int i = 0; i &lt; width; i++) {
 void MatrixMultiplyOnDevice(float* M, float* N, float* P, int width) {
     int size = width * width * sizeof(float);
     float *devM, *devN, *devP;
-
     cudaMalloc((void**)&amp;devM, size);   cudaMemcpy(devM, M, size, cudaMemcpyHostToDevice);  // (1)
     cudaMalloc((void**)&amp;devN, size);   cudaMemcpy(devN, N, size, cudaMemcpyHostToDevice);  // (1)
     cudaMalloc((void**)&amp;devP, size);
-
     // (3) call kernel: MatrixMultiplyKernel&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;(devM, devN, devP, width);
-
     cudaMemcpy(P, devP, size, cudaMemcpyDeviceToHost);          // (1) copy result back
     cudaFree(devM);  cudaFree(devN);  cudaFree(devP);
 }
@@ -1072,7 +1082,7 @@ MatrixMultiplyKernel&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;(devM, devN, devP, wi
     <div class="fragment"><div class="a">It uses a <strong>single block</strong>, so it is capped by the <strong>max threads per block = 1024</strong>. Only <strong>small matrices</strong> fit — a square tile of at most <strong>32×32 = 1024</strong> threads.</div></div></div>
   <div class="qa"><p class="q">3. What <strong>assumptions</strong> did we make?</p>
     <div class="fragment"><div class="a">The matrix is <strong>square</strong> and <strong>fits in one block</strong>. Fixing these (many blocks, tiling with shared memory) is the next session.</div></div></div>
-  <div class="src">Max threads/block = 1024: NVIDIA CUDA C++ Programming Guide — Compute Capabilities, "Technical Specifications per Compute Capability."</div>
+  <div class="src">Max threads/block = 1024: CUDA C++ Programming Guide — Compute Capabilities.</div>
 </section>
 
 <!-- References -->
