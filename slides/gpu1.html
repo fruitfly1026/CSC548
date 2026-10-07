@@ -870,22 +870,6 @@ if (threadIdx.x &lt; 16) {
   <div class="src">CUDA C++ Programming Guide; NVIDIA A100 &amp; H100 whitepapers.</div>
 </section>
 
-<!-- Exercise: latency hiding -->
-<section data-background-color="#ffffff">
-  <h2>In-class: Warps to Hide Latency</h2>
-  <div class="callout"><span class="lbl">Setup <span class="muted">(illustrative, G80-era timing)</span></span>A kernel has <strong>1 global read (200 cycles)</strong> followed by <strong>4 non-dependent mul/add</strong> ops. How many warps are needed to hide the read latency?</div>
-  <div class="fragment">
-    <div class="callout ok"><span class="lbl">Work it out</span>
-      <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li>Assume each op takes 4 dispatch cycles → 4 ops = \( 4 \times 4 = 16 \) cycles of independent work per warp</li>
-        <li>We must cover \( 200 \) cycles: \( 200 / 16 = 12.5 \)</li>
-        <li>Round up: \( \lceil 12.5 \rceil = \) <strong>13 warps</strong></li>
-      </ul></div>
-  </div>
-  <p class="tiny muted">The exact cycle counts are illustrative (G80). The principle is current: enough independent warps must be resident to cover memory latency — this is why occupancy matters.</p>
-</section>
-
-
 <!-- ==================================================================
      PART 5 — MEMORY MODEL & TRANSFERS
      ================================================================== -->
