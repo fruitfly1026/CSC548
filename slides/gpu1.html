@@ -46,7 +46,7 @@
     <tr><td>3</td><td>Hierarchy — Grid / Block / Thread</td><td>1D/2D/3D blocks, thread-ID formulas, indexing across blocks, automatic scalability.</td></tr>
     <tr><td>4</td><td>Scheduling — Warps &amp; the SM</td><td>SM architecture, warps, zero-overhead scheduling, branch divergence.</td></tr>
     <tr><td>5</td><td>Memory — Model &amp; Transfers</td><td>Registers, local, shared, global, constant; variable qualifiers; <code class="inline">cudaMalloc</code>, <code class="inline">cudaMemcpy</code>, <code class="inline">cudaMemcpyAsync</code>.</td></tr>
-    <tr><td>6</td><td>Sync — Synchronizing Threads</td><td><code class="inline">__syncthreads()</code> barrier, walkthrough, conditional-barrier deadlock.</td></tr>
+    <tr><td>6</td><td>Sync — Synchronizing Threads</td><td><code class="inline">__syncthreads()</code> barrier, walkthrough, conditional-barrier deadlock, synchronization at every level.</td></tr>
     <tr><td>7</td><td>Matmul — Naive → Tiled</td><td>CPU loop → naive kernel → critique → multi-block → shared-memory tiling &amp; tile sizing.</td></tr>
   </table>
 </section>
@@ -1191,6 +1191,22 @@ __syncthreads();       // every thread reaches
     </div>
   </div>
   <div class="callout warn"><span class="lbl">Rule</span>Either <strong>all</strong> threads in the block execute a given <code class="inline">__syncthreads()</code>, or none do.</div>
+</section>
+
+<!-- Synchronization at every level -->
+<section data-background-color="#ffffff">
+  <h2>Synchronization at Every Level</h2>
+  <p class="small"><code class="inline">__syncthreads()</code> is the block-level barrier. CUDA has a synchronization tool at each level of the hierarchy.</p>
+  <table class="small">
+    <tr><th>Level</th><th>How</th><th>Notes</th></tr>
+    <tr><td><strong>Warp</strong></td><td><code class="inline">__syncwarp(mask)</code></td><td>Since Volta, threads of a warp are not guaranteed to run in lockstep</td></tr>
+    <tr><td><strong>Block</strong></td><td><code class="inline">__syncthreads()</code></td><td>The barrier from the previous slides; variants <code class="inline">__syncthreads_count</code>, <code class="inline">_and</code>, <code class="inline">_or</code></td></tr>
+    <tr><td><strong>Cluster</strong> (Hopper+)</td><td><code class="inline">cluster.sync()</code></td><td>All blocks of a thread-block cluster (Cooperative Groups)</td></tr>
+    <tr><td><strong>Grid</strong></td><td><code class="inline">grid.sync()</code>, or end the kernel</td><td><code class="inline">grid.sync()</code> needs <code class="inline">cudaLaunchCooperativeKernel</code> and all blocks resident at once; the simple way is to launch the next kernel</td></tr>
+    <tr><td><strong>Host ↔ device</strong></td><td><code class="inline">cudaDeviceSynchronize()</code><br><code class="inline">cudaStreamSynchronize(s)</code></td><td>The CPU waits for GPU work to finish</td></tr>
+  </table>
+  <p class="tiny muted">Memory fences (<code class="inline">__threadfence_block()</code>, <code class="inline">__threadfence()</code>, <code class="inline">__threadfence_system()</code>) order memory writes but do not make threads wait for each other.</p>
+  <div class="src">CUDA C++ Programming Guide.</div>
 </section>
 
 
