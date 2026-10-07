@@ -29,32 +29,30 @@
   <div class="meta">Instructors: Yanbo Zhao, Jiajia Li<br>Fall 2026<br>10/12/2026</div>
   <aside class="notes">
     Session 2 of 2 in the GPU unit — Session 3 is now an in-class lab, not a lecture. We move from
-    "how to write a kernel" to "how to make it fast". A quick review of the memory hierarchy leads
-    into the payoff example — tiled (shared-memory) matrix multiply — and then the optimization
-    module, including the six memory inefficiencies that cuThermo's heat maps expose. We then finish with a full performance-optimization module:
-    parallel reduction &amp; warp divergence, memory coalescing, bank conflicts, occupancy, data
-    prefetching, loop unrolling, and thread granularity.
+    "how to write a kernel" to "how to make it fast". A quick review of the memory hierarchy (tiled matrix
+    multiply was covered in Session 1) leads into the performance-optimization module: parallel
+    reduction &amp; warp divergence, memory coalescing, the six memory inefficiencies that cuThermo's
+    heat maps expose, bank conflicts, occupancy, data prefetching, loop unrolling, and thread granularity.
   </aside>
 </section>
 
 <!-- Roadmap -->
 <section data-background-color="#ffffff">
   <h2>Session Roadmap</h2>
-  <p class="small">A quick review of the memory hierarchy, the payoff example — tiled matrix multiply — then a performance-optimization module. <span class="muted">Session 3 is an in-class lab.</span></p>
+  <p class="small">A quick review of the memory hierarchy, then the performance-optimization module. <span class="muted">Session 3 is an in-class lab.</span></p>
   <table class="small">
     <tr><th>Part</th><th>Topic</th><th>Covers</th></tr>
-    <tr><td>—</td><td>Review</td><td>The CUDA memory hierarchy (Session 1)</td></tr>
-    <tr><td>A</td><td>Tiled Matrix Multiply</td><td>Shared memory breaks the global-memory bottleneck</td></tr>
-    <tr><td>B</td><td>Performance Optimization</td><td>The performance equation</td></tr>
-    <tr><td>C</td><td>Parallel Reduction</td><td>Interleaved vs. contiguous reduction</td></tr>
-    <tr><td>D</td><td>Warp Partitioning &amp; Divergence</td><td>How blocks split into warps; avoiding divergence</td></tr>
-    <tr><td>E</td><td>Memory Coalescing</td><td>One warp's loads fused into 32 B transactions</td></tr>
-    <tr><td>F</td><td>Memory Inefficiencies (cuThermo)</td><td>Hot spot, random hot spot, false sharing, misalignment, strided, shared-memory abuse</td></tr>
-    <tr><td>G</td><td>Bank Conflicts</td><td>Shared-memory banks and conflict-free strides</td></tr>
-    <tr><td>H</td><td>Occupancy</td><td>How registers and shared memory limit resident warps</td></tr>
-    <tr><td>I</td><td>Data Prefetching</td><td>Hiding latency with independent instructions</td></tr>
-    <tr><td>J</td><td>Instruction Mix &amp; Unrolling</td><td>Raising the fraction of useful FP work</td></tr>
-    <tr><td>K</td><td>Thread Granularity</td><td>How much work per thread</td></tr>
+    <tr><td>—</td><td>Review</td><td>The CUDA memory hierarchy and tiled matmul (Session 1)</td></tr>
+    <tr><td>A</td><td>Performance Optimization</td><td>The performance equation</td></tr>
+    <tr><td>B</td><td>Parallel Reduction</td><td>Interleaved vs. contiguous reduction</td></tr>
+    <tr><td>C</td><td>Warp Partitioning &amp; Divergence</td><td>How blocks split into warps; avoiding divergence</td></tr>
+    <tr><td>D</td><td>Memory Coalescing</td><td>One warp's loads fused into 32 B transactions</td></tr>
+    <tr><td>E</td><td>Memory Inefficiencies (cuThermo)</td><td>Hot spot, random hot spot, false sharing, misalignment, strided, shared-memory abuse</td></tr>
+    <tr><td>F</td><td>Bank Conflicts</td><td>Shared-memory banks and conflict-free strides</td></tr>
+    <tr><td>G</td><td>Occupancy</td><td>How registers and shared memory limit resident warps</td></tr>
+    <tr><td>H</td><td>Data Prefetching</td><td>Hiding latency with independent instructions</td></tr>
+    <tr><td>I</td><td>Instruction Mix &amp; Unrolling</td><td>Raising the fraction of useful FP work</td></tr>
+    <tr><td>J</td><td>Thread Granularity</td><td>How much work per thread</td></tr>
   </table>
 </section>
 
@@ -107,159 +105,15 @@
       </table>
     </div>
   </div>
-  <div class="callout takeaway"><span class="lbl">The theme of this session</span>Most GPU optimization means keeping hot data high in this hierarchy and touching global memory in whole 32 B sectors. Tiled matrix multiply is the first example.</div>
-  <div class="src">Details in Session 1, Part 7. Figure: UIUC ECE498AL &amp; NVIDIA CUDA C Programming Guide.</div>
+  <div class="callout takeaway"><span class="lbl">The theme of this session</span>Most GPU optimization means keeping hot data high in this hierarchy and touching global memory in whole 32 B sectors. Tiled matrix multiply (Session 1) was the first example.</div>
+  <div class="src">Session 1, Part 5; UIUC ECE498AL; CUDA C++ Programming Guide.</div>
 </section>
 
 <!-- ==================================================================
-     PART A — TILED (SHARED-MEMORY) MATRIX MULTIPLY
+     PART A — PERFORMANCE OPTIMIZATION (module opener)
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part A</div>
-  <div class="mod-title">Tiled Matrix Multiply</div>
-</section>
-
-<!-- Naive kernel -->
-<section data-background-color="#ffffff">
-  <h2>Naive Multi-block Matmul</h2>
-  <p class="small">Each thread computes one element of P by streaming an entire row of M and column of N from <strong>global memory</strong>.</p>
-  <div class="cols">
-    <div>
-      <div class="code-label">CUDA C — naive kernel</div>
-      <pre><code class="language-cpp" data-trim>
-int col = blockIdx.x*blockDim.x + threadIdx.x;
-int row = blockIdx.y*blockDim.y + threadIdx.y;
-float pValue = 0;
-for (int k = 0; k &lt; width; k++)
-    pValue += devM[row*width + k]
-            * devN[k*width + col];
-devP[row*width + col] = pValue;
-</code></pre>
-    </div>
-    <div>
-      <div class="code-label">CUDA C — launch</div>
-      <pre><code class="language-cpp" data-trim>
-dim3 dimBlocks(TILE_WIDTH, TILE_WIDTH);
-dim3 dimGrid(WIDTH/TILE_WIDTH,
-             WIDTH/TILE_WIDTH);
-MatrixMultiplyKernel
-    &lt;&lt;&lt;dimGrid, dimBlocks&gt;&gt;&gt;(...);
-</code></pre>
-    </div>
-  </div>
-</section>
-
-<!-- Bandwidth bottleneck -->
-<section data-background-color="#ffffff">
-  <h2>The Bandwidth Bottleneck</h2>
-  <p class="small">Every <code class="inline">pValue +=</code> does <strong>2 global loads</strong> (4 B each) for <strong>2 FLOPs</strong> — far too much memory traffic.</p>
-  <div class="cols">
-    <div class="callout warn"><span class="lbl">A100 numbers</span>
-      <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li>Peak FP32 compute: <strong>19.5 TFLOPS</strong></li>
-        <li>At 4 B loaded per FLOP that would need <strong>≈ 78 TB/s</strong></li>
-        <li>But HBM2 bandwidth is only <strong>1.55 TB/s</strong></li>
-      </ul></div>
-    <div class="callout"><span class="lbl">Result</span>Memory caps you at \( \approx \) <strong>390 GFLOPS</strong> — only about <strong>2%</strong> of peak.</div>
-  </div>
-  <div class="callout takeaway"><span class="lbl">Fix</span>We must <strong>cut global-memory access</strong> — reuse data on-chip via <strong>shared memory</strong>.</div>
-  <div class="src">A100 FP32 19.5 TFLOPS &amp; HBM2 1555 GB/s: NVIDIA A100 Tensor Core GPU Architecture whitepaper.</div>
-</section>
-
-<!-- Tiling idea -->
-<section data-background-color="#ffffff">
-  <h2>The Tiling Idea</h2>
-  <div class="cols">
-    <div>
-      <p class="small">Break P into <strong>TILE_WIDTH × TILE_WIDTH</strong> tiles — one tile per block. Each <strong>phase</strong>:</p>
-      <ul class="small">
-        <li>Load a tile of M and a tile of N into <strong>shared memory</strong></li>
-        <li><code class="inline">__syncthreads()</code> — wait for the loads</li>
-        <li>Accumulate the <strong>partial dot product</strong> from the tiles</li>
-        <li><code class="inline">__syncthreads()</code> — before overwriting the tiles next phase</li>
-      </ul>
-    </div>
-    <div class="center">
-      <svg viewBox="0 0 280 200" class="chart" style="max-width:320px">
-        <rect x="150" y="20" width="110" height="110" fill="#fff" stroke="var(--line)"/>
-        <text x="205" y="14" text-anchor="middle" class="tiny">N</text>
-        <rect x="186" y="20" width="36" height="110" fill="#dbeafe" stroke="#3b82f6"/>
-        <rect x="20" y="150" width="110" height="40" fill="#fff" stroke="var(--line)"/>
-        <text x="14" y="175" text-anchor="end" class="tiny">M</text>
-        <rect x="20" y="150" width="36" height="40" fill="#fef9c3" stroke="#d97706"/>
-        <rect x="150" y="150" width="110" height="40" fill="#fff" stroke="var(--line)"/>
-        <text x="205" y="145" text-anchor="middle" class="tiny">P</text>
-        <rect x="186" y="150" width="36" height="40" fill="#dcfce7" stroke="#22c55e"/>
-        <text x="204" y="174" text-anchor="middle" class="tiny">tile</text>
-      </svg>
-    </div>
-  </div>
-  <div class="src">UIUC ECE498/AL.</div>
-</section>
-
-<!-- Tiled kernel -->
-<section data-background-color="#ffffff">
-  <h2>Tiled Kernel</h2>
-  <div class="code-label">CUDA C — shared-memory tiled matmul</div>
-  <pre><code class="language-cpp" data-trim>
-__shared__ float sM[TILE_WIDTH][TILE_WIDTH];
-__shared__ float sN[TILE_WIDTH][TILE_WIDTH];
-int bx = blockIdx.x;  int by = blockIdx.y;
-int tx = threadIdx.x; int ty = threadIdx.y;
-int col = bx*TILE_WIDTH + tx;
-int row = by*TILE_WIDTH + ty;
-float pValue = 0;
-for (int m = 0; m &lt; width/TILE_WIDTH; m++) {        // m = phase index
-    sM[ty][tx] = devM[row*width + (m*TILE_WIDTH + tx)];
-    sN[ty][tx] = devN[col + (m*TILE_WIDTH + ty)*width];
-    __syncthreads();                                 // 1: tiles fully loaded
-    for (int k = 0; k &lt; TILE_WIDTH; ++k)
-        pValue += sM[ty][k] * sN[k][tx];
-    __syncthreads();                                 // 2: done before overwrite
-}
-devP[row*width + col] = pValue;
-</code></pre>
-  <div class="callout"><span class="lbl">Two barriers</span><strong>#1</strong> after the loads so every thread sees the full tiles; <strong>#2</strong> so no thread overwrites the tile before others finish reading it. <code class="inline">width/TILE_WIDTH</code> = number of phases.</div>
-  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/04_matmul.cu"><code class="inline">Demos/cuda/04_matmul.cu</code></a></p>
-</section>
-
-<!-- Choosing TILE_WIDTH -->
-<section data-background-color="#ffffff">
-  <h2>Choosing TILE_WIDTH</h2>
-  <p class="small">Bounded by <strong>max threads/block</strong> (<strong>1024</strong> on all current GPUs, CC ≥ 2.0) and <strong>shared memory</strong> per block.</p>
-  <div class="cols">
-    <div class="callout"><span class="lbl">Sizing the tiles</span>
-      <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li>TILE_WIDTH = 32 → \( 32\times32 = 1024 \) threads/block (the max)</li>
-        <li>\( 32 \times 32 \times 4\,\text{B} = 4 \) KB each for <code class="inline">sM</code>, <code class="inline">sN</code> → 8 KB/block — easily within 164 KB (A100)</li>
-        <li>Larger tile → more reuse, but fewer resident blocks</li>
-      </ul></div>
-    <div class="callout ok"><span class="lbl">Payoff</span>
-      <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li>Each value reused TILE_WIDTH times → global access cut by <strong>TILE_WIDTH×</strong> (16× at TW=16, 32× at TW=32)</li>
-        <li>Compute-bound instead of bandwidth-bound — approaches the SM's arithmetic peak</li>
-      </ul></div>
-  </div>
-  <div class="src">Max 1024 threads/block: CUDA C++ Programming Guide — Compute Capabilities. 164 KB shared/SM (A100): NVIDIA A100 whitepaper.</div>
-</section>
-
-<!-- First-order sizing -->
-<section data-background-color="#ffffff">
-  <h2>First-order Sizing</h2>
-  <div class="callout"><span class="lbl">TILE_WIDTH = 16</span>
-    <ul class="small" style="margin:.2em 0 .2em .9em">
-      <li>\( 16 \times 16 = 256 \) threads/block</li>
-      <li>A \( 1024 \times 1024 \) output P → \( 64 \times 64 = 4096 \) blocks</li>
-      <li>Each block does <strong>512 global loads</strong> (per phase, both tiles) for <strong>8192 mul/add</strong></li>
-    </ul></div>
-  <div class="callout takeaway"><span class="lbl">Bottom line</span>Compute now dominates memory — the <strong>global-memory bandwidth is no longer the limiter</strong>. Tiling turned a 4%-of-peak kernel into a near-peak one. Next we push further with architecture-aware optimizations.</div>
-</section>
-
-<!-- ==================================================================
-     PART B — PERFORMANCE OPTIMIZATION (module opener)
-     ================================================================== -->
-<section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part B</div>
   <div class="mod-title">Performance Optimization</div>
   <aside class="notes">
     Optimization module (formerly the Session 3 lecture; the Session 3 slot is now an in-class lab).
@@ -283,10 +137,10 @@ devP[row*width + col] = pValue;
 </section>
 
 <!-- ==================================================================
-     PART C — PARALLEL REDUCTION
+     PART B — PARALLEL REDUCTION
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part C</div>
+  <div class="mod-num">Part B</div>
   <div class="mod-title">Parallel Reduction Revisited</div>
 </section>
 
@@ -411,10 +265,10 @@ for (stride = blockDim.x/2; stride &gt; 0; stride /= 2){
 </section>
 
 <!-- ==================================================================
-     PART D — WARP PARTITIONING & DIVERGENCE
+     PART C — WARP PARTITIONING & DIVERGENCE
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part D</div>
+  <div class="mod-num">Part C</div>
   <div class="mod-title">Warp Partitioning &amp; Divergence</div>
 </section>
 
@@ -489,10 +343,10 @@ for (stride = blockDim.x/2; stride &gt; 0; stride /= 2){
 </section>
 
 <!-- ==================================================================
-     PART E — MEMORY COALESCING
+     PART D — MEMORY COALESCING
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part E</div>
+  <div class="mod-num">Part D</div>
   <div class="mod-title">Memory Coalescing</div>
 </section>
 
@@ -533,7 +387,7 @@ for (stride = blockDim.x/2; stride &gt; 0; stride /= 2){
     <ol>
       <li>Read global memory <strong>coalesced</strong> into <strong>shared memory</strong> (whole warp, contiguous)</li>
       <li>Then access shared memory <strong>randomly</strong> at full on-chip bandwidth</li>
-      <li>(ignoring bank conflicts — Part G)</li>
+      <li>(ignoring bank conflicts — Part F)</li>
     </ol></div>
   <div class="callout"><span class="lbl">Modern note</span>
     Less critical on GPUs with large on-chip caches, but the coalesced global → staged shared pattern is still the workhorse for tiled kernels.</div>
@@ -541,10 +395,10 @@ for (stride = blockDim.x/2; stride &gt; 0; stride /= 2){
 </section>
 
 <!-- ==================================================================
-     PART F — GPU MEMORY INEFFICIENCIES (cuThermo)
+     PART E — GPU MEMORY INEFFICIENCIES (cuThermo)
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part F</div>
+  <div class="mod-num">Part E</div>
   <div class="mod-title">GPU Memory Inefficiencies (cuThermo)</div>
 </section>
 
@@ -605,7 +459,7 @@ for (size_t k_idx = 0; k_idx &lt; k; ++k_idx)
       <p class="small">Every warp in a block re-reads the same sectors of <code class="inline">B</code> from global memory. On the heat map, every word of those sectors is touched by all the warps — uniformly hot.</p>
     </div>
     <div>
-      <div class="callout takeaway"><span class="lbl">Fix</span>Stage tiles in shared memory — exactly the tiled kernel of Part A. Each tile of <code class="inline">B</code> is read from global memory once per block, then reused on-chip by every warp.</div>
+      <div class="callout takeaway"><span class="lbl">Fix</span>Stage tiles in shared memory — exactly the tiled kernel from Session 1. Each tile of <code class="inline">B</code> is read from global memory once per block, then reused on-chip by every warp.</div>
       <div class="callout ok"><span class="lbl">Demo</span><span class="small"><code class="inline">hotspot/gemm_coalesced.cu</code> → <code class="inline">gemm_tiled.cu</code>: 32×32×32 shared-memory tiling added. 1.551 → 1.235 ms (1.26×).</span></div>
     </div>
   </div>
@@ -737,17 +591,17 @@ if (i &lt; n) c[i] = a[i] + b[i];
     <tr><td><code class="inline">misalignment/</code></td><td>−24.6% sector transactions</td><td>unchanged</td><td>DRAM-bound; misalignment adds only L1↔L2 traffic</td></tr>
     <tr><td><code class="inline">false_sharing/warpsum_*</code></td><td>8× fewer store sectors</td><td>6% slower</td><td>stores are ~3% of traffic; the added <code class="inline">__syncthreads()</code> costs more</td></tr>
     <tr><td><code class="inline">random_hot/</code> SMEM staging</td><td>correct</td><td>0.88×</td><td>after reordering, L1 already serves the working set</td></tr>
-    <tr><td><code class="inline">bank_conflict/</code> (Part G)</td><td>4.06 M → 0 conflicts</td><td>1.87× at 512², 1.07× at 2048²</td><td>the conflicts matter only while they're on the critical path</td></tr>
+    <tr><td><code class="inline">bank_conflict/</code> (Part F)</td><td>4.06 M → 0 conflicts</td><td>1.87× at 512², 1.07× at 2048²</td><td>the conflicts matter only while they're on the critical path</td></tr>
   </table>
   <div class="callout takeaway"><span class="lbl">The lesson</span>A profiler finds the pattern; the roofline (Topic 2) tells you whether fixing it can pay. Fix the patterns on your kernel's critical path.</div>
   <div class="src">parallel-demos <code class="inline">Demos/cuda/README.md</code>, measured on an RTX A4500 (Ampere sm_86, CUDA 13.0).</div>
 </section>
 
 <!-- ==================================================================
-     PART G — BANK CONFLICTS
+     PART F — BANK CONFLICTS
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part G</div>
+  <div class="mod-num">Part F</div>
   <div class="mod-title">Bank Conflicts</div>
 </section>
 
@@ -815,10 +669,10 @@ float f = shared[index + s * threadIdx.x];
 </section>
 
 <!-- ==================================================================
-     PART H — SM RESOURCE PARTITIONING (OCCUPANCY)
+     PART G — SM RESOURCE PARTITIONING (OCCUPANCY)
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part H</div>
+  <div class="mod-num">Part G</div>
   <div class="mod-title">SM Resource Partitioning (Occupancy)</div>
 </section>
 
@@ -881,10 +735,10 @@ float f = shared[index + s * threadIdx.x];
 </section>
 
 <!-- ==================================================================
-     PART I — DATA PREFETCHING
+     PART H — DATA PREFETCHING
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part I</div>
+  <div class="mod-num">Part H</div>
   <div class="mod-title">Data Prefetching</div>
 </section>
 
@@ -928,10 +782,10 @@ for (/* each tile */) {
 </section>
 
 <!-- ==================================================================
-     PART J — INSTRUCTION MIX & LOOP UNROLLING
+     PART I — INSTRUCTION MIX & LOOP UNROLLING
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part J</div>
+  <div class="mod-num">Part I</div>
   <div class="mod-title">Instruction Mix &amp; Loop Unrolling</div>
 </section>
 
@@ -981,10 +835,10 @@ Pvalue += Ms[ty][0]*Ns[0][tx] + Ms[ty][1]*Ns[1][tx]
 </section>
 
 <!-- ==================================================================
-     PART K — THREAD GRANULARITY
+     PART J — THREAD GRANULARITY
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part K</div>
+  <div class="mod-num">Part J</div>
   <div class="mod-title">Thread Granularity</div>
 </section>
 
@@ -1038,7 +892,7 @@ Pvalue += Ms[ty][0]*Ns[0][tx] + Ms[ty][1]*Ns[1][tx]
     <li>NVIDIA, <em>CUDA C++ Best Practices Guide</em> — Coalesced Access to Global Memory; Shared Memory (Bank Conflicts). https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/</li>
     <li>NVIDIA architecture whitepapers: <em>V100 (Volta)</em>, <em>A100 (Ampere)</em>, <em>H100 (Hopper)</em>.</li>
   </ul>
-  <p class="src">Session 2 of 2 of the CSC 548 GPU unit — tiling &amp; performance optimization. Session 3 is an in-class lab.</p>
+  <p class="src">Session 2 of 2 of the CSC 548 GPU unit — performance optimization. Session 3 is an in-class lab.</p>
 </section>
 
 </div>
