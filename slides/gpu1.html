@@ -45,7 +45,7 @@
     <tr><td>2</td><td>Built-ins — Functions &amp; Types</td><td>Function qualifiers, math functions &amp; intrinsics, vector types.</td></tr>
     <tr><td>3</td><td>Hierarchy — Grid / Block / Thread</td><td>1D/2D/3D blocks, thread-ID formulas, indexing across blocks, automatic scalability.</td></tr>
     <tr><td>4</td><td>Scheduling — Warps &amp; the SM</td><td>SM architecture, warps, zero-overhead scheduling, branch divergence.</td></tr>
-    <tr><td>5</td><td>Memory — Model &amp; Transfers</td><td>Registers, local, shared, global, constant; variable qualifiers; <code class="inline">cudaMalloc</code>, <code class="inline">cudaMemcpy</code>.</td></tr>
+    <tr><td>5</td><td>Memory — Model &amp; Transfers</td><td>Registers, local, shared, global, constant; variable qualifiers; <code class="inline">cudaMalloc</code>, <code class="inline">cudaMemcpy</code>, <code class="inline">cudaMemcpyAsync</code>.</td></tr>
     <tr><td>6</td><td>Sync — Synchronizing Threads</td><td><code class="inline">__syncthreads()</code> barrier, walkthrough, conditional-barrier deadlock.</td></tr>
     <tr><td>7</td><td>Matmul — Naive → Tiled</td><td>CPU loop → naive kernel → critique → multi-block → shared-memory tiling &amp; tile sizing.</td></tr>
   </table>
@@ -1077,6 +1077,36 @@ cudaMemcpy(hostPtr, devicePtr, size,
   </div>
   <div class="src">CUDA C++ Programming Guide.</div>
   <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/strided/vadd_opt.cu"><code class="inline">Demos/cuda/strided/vadd_opt.cu</code></a></p>
+</section>
+
+<!-- Async copies -->
+<section data-background-color="#ffffff">
+  <h2>Asynchronous Copies: <code class="inline">cudaMemcpyAsync</code></h2>
+  <p class="small"><code class="inline">cudaMemcpy</code> blocks the host until the copy finishes. <code class="inline">cudaMemcpyAsync</code> takes one more argument, a <strong>stream</strong>, and returns immediately.</p>
+  <div class="cols">
+    <div>
+      <div class="code-label">CUDA C — copy, compute, copy back in one stream</div>
+      <pre><code class="language-c" data-trim>
+float *hostPtr;
+cudaMallocHost(&amp;hostPtr, size);   // pinned host memory
+cudaStream_t s;
+cudaStreamCreate(&amp;s);
+
+cudaMemcpyAsync(devPtr, hostPtr, size,
+                cudaMemcpyHostToDevice, s);
+myKernel&lt;&lt;&lt;grid, block, 0, s&gt;&gt;&gt;(devPtr);
+cudaMemcpyAsync(hostPtr, devPtr, size,
+                cudaMemcpyDeviceToHost, s);
+
+cudaStreamSynchronize(s);  // wait before reading hostPtr
+</code></pre>
+    </div>
+    <div>
+      <div class="callout"><span class="lbl">Runs in order; host doesn't wait</span><span class="small">Work in one stream runs in issue order: copy, kernel, copy back. The host keeps going, so don't read <code class="inline">hostPtr</code> until you synchronize the stream.</span></div>
+      <div class="callout ok"><span class="lbl">Overlap needs pinned memory</span><span class="small">A copy in one stream can run while a kernel in another stream computes, using the GPU's copy engines. This works only if the host buffer is page-locked, e.g. from <code class="inline">cudaMallocHost</code>.</span></div>
+    </div>
+  </div>
+  <div class="src">CUDA C++ Programming Guide.</div>
 </section>
 
 <!-- ==================================================================
