@@ -31,7 +31,7 @@
   <aside class="notes">
     Session 2 of 2 in the GPU unit. Session 3 is an in-class lab. Session 1 covered the CUDA model and the tiled matrix multiply.
     This session is about memory: how a warp's loads become sector transactions, how to see wasted transactions
-    with distinct-warp heat maps, and the memory inefficiency patterns one by one. We finish with shared-memory
+    by counting distinct warps per word and sector, and the memory inefficiency patterns one by one. We finish with shared-memory
     bank conflicts and occupancy.
   </aside>
 </section>
@@ -138,7 +138,7 @@
 <section data-background-color="#ffffff">
   <h2>Inefficient Access Patterns at a Glance</h2>
   <table style="font-size:.7em">
-    <tr><th>Pattern</th><th>Heat-map signature</th><th>Why it's slow</th><th>Fix</th></tr>
+    <tr><th>Pattern</th><th>Distinct-warp signature</th><th>Why it's slow</th><th>Fix</th></tr>
     <tr><td><strong>Hot spot</strong></td><td>every word hot (e.g. 32 warps); sector ≈ its hottest word</td><td>many warps re-read the same sectors</td><td>stage in shared memory or registers</td></tr>
     <tr><td><strong>Random hot</strong></td><td>words shared by a random number of warps</td><td>input-dependent contention</td><td>stage in shared memory; reorder the input</td></tr>
     <tr><td><strong>False sharing</strong></td><td>each word 1 warp; sector 8 warps</td><td>8 sector transactions instead of 1</td><td>swap the thread-to-index mapping so <code class="inline">threadIdx.x</code> runs along the contiguous dimension</td></tr>
@@ -185,7 +185,7 @@ for (size_t k_idx = 0; k_idx &lt; k; ++k_idx)
     sum += A[C_row_idx * lda + k_idx]
          * B[k_idx * ldb + C_col_idx];
 </code></pre>
-      <p class="small">Every warp in a block re-reads the same sectors of <code class="inline">B</code> from global memory. On the heat map, every word of those sectors is touched by all the warps.</p>
+      <p class="small">Every warp in a block re-reads the same sectors of <code class="inline">B</code> from global memory. Every word of those sectors is touched by all the warps.</p>
     </div>
     <div>
       <div class="callout takeaway"><span class="lbl">Fix</span>Stage tiles in shared memory, exactly the tiled kernel from Session 1. Each tile of <code class="inline">B</code> is read from global memory once per block, then reused on-chip by every warp.</div>
@@ -232,7 +232,6 @@ if (j &lt; nnz)
   <div class="cols w-64">
     <div>
       <div class="callout warn"><span class="lbl">The trap</span>A warp's accesses to <strong>different words of one sector</strong> coalesce into <strong>one</strong> 32 B transaction. The same sector accessed by <strong>different warps</strong> cannot be coalesced. A sector whose 8 words are each <em>warp-private</em> costs <strong>8 sector transactions</strong> instead of 1.</div>
-      <div class="callout"><span class="lbl">Heat-map tell</span>The whole sector's temperature (8) is far higher than any single word's (1). In a hot spot, the sector ≈ its hottest word.</div>
     </div>
     <div class="center">
       <img src="assets/cuthermo/fig6b-false-sharing.png" alt="False sharing heat map: each word 1 warp, sector total 8" style="max-width:100%">
@@ -285,7 +284,6 @@ size_t C_row_idx = blockIdx.y * blockDim.y + threadIdx.y;
       <ul class="small">
         <li>Top: a warp's 32 floats (128 B) start on a sector boundary and fill exactly 4 sectors.</li>
         <li>Bottom: the request starts 4 words late. The warp needs <strong>5 sectors instead of 4</strong>; sectors 00 and 04 are half-used and waste L1.</li>
-        <li>Heat-map tell: the boundary sectors have a sector temperature of 2. An access count cannot show it, because every sector still has 8 accesses.</li>
       </ul>
     </div>
     <div class="center">
@@ -590,7 +588,7 @@ float f = shared[index + s * threadIdx.x];
 <section data-background-color="#ffffff">
   <h2>References</h2>
   <ul class="small">
-    <li>Y. Zhao, J. Cui, Z. Li, S. Jiao, X. Liu, J. Li, "cuThermo: Exposing GPU Memory Inefficiencies with Heat Map Profiling," arXiv:2507.18729. Heat-map figures are reproduced from this paper.</li>
+    <li>Y. Zhao, J. Cui, Z. Li, S. Jiao, X. Liu, J. Li, "cuThermo: Exposing GPU Memory Inefficiencies with Heat Map Profiling," arXiv:2507.18729. Figures are reproduced from this paper.</li>
     <li>NVIDIA, <em>CUDA C++ Programming Guide</em>.</li>
     <li>NVIDIA, <em>CUDA C++ Best Practices Guide</em>.</li>
     <li>NVIDIA V100, A100 &amp; H100 architecture whitepapers.</li>
