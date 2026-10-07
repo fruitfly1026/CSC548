@@ -43,7 +43,7 @@
   <table class="small">
     <tr><th>Part</th><th>Topic</th><th>Covers</th></tr>
     <tr><td>A</td><td>Memory Coalescing</td><td>How a warp's loads become 32 B sector transactions</td></tr>
-    <tr><td>B</td><td>Seeing Memory Inefficiencies</td><td>Distinct-warp heat maps; the patterns at a glance</td></tr>
+    <tr><td>B</td><td>Seeing Memory Inefficiencies</td><td>Counting distinct warps; the patterns at a glance</td></tr>
     <tr><td>C</td><td>Hot Spots</td><td>Hot and random hot sectors</td></tr>
     <tr><td>D</td><td>False Sharing</td><td>Warp-private words in one sector</td></tr>
     <tr><td>E</td><td>Misalignment</td><td>Requests that straddle a sector boundary</td></tr>
@@ -129,27 +129,6 @@
     </div>
     <div class="center">
       <img src="assets/cuthermo/fig3-coalescing-vs-false-sharing.png" alt="Perfect coalescing vs. false sharing in one global-memory sector" style="max-height:330px">
-    </div>
-  </div>
-  <div class="src">Figure: cuThermo (Zhao et al., arXiv:2507.18729).</div>
-</section>
-
-<!-- Reading a heat map -->
-<section data-background-color="#ffffff">
-  <h2>Reading a Memory Heat Map</h2>
-  <div class="cols w-64">
-    <div class="center">
-      <img src="assets/cuthermo/fig4-heat-map.png" alt="Heat map of word temperatures across sector tags, grouped into regions" style="max-height:300px">
-    </div>
-    <div>
-      <ul class="small">
-        <li>x-axis: sector tags (one column per 32 B sector)</li>
-        <li>y-axis: word ID 0–7 inside the sector</li>
-        <li>Color: temperature, the number of distinct warps</li>
-        <li>Top row: temperature of the whole sector</li>
-        <li>Consecutive sectors with the same pattern collapse into one region with a repeat count</li>
-      </ul>
-      <div class="callout takeaway"><span class="lbl">How to use it</span><span class="small">Hot regions (Region 1, 8 warps) are highly shared. Consider registers, shared memory, or L1 for them. Cold regions suggest streaming access, where bypassing the cache avoids pollution.</span></div>
     </div>
   </div>
   <div class="src">Figure: cuThermo (Zhao et al., arXiv:2507.18729).</div>
