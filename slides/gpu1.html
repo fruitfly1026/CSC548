@@ -329,7 +329,10 @@ f4.x; f4.y; f4.z; f4.w;     // NOT .r .g .b .a
     <tr><td><strong>2D</strong>, size \((D_x, D_y)\)</td><td>\((x, y)\)</td><td>\(\text{ID} = x + y\,D_x\)</td></tr>
     <tr><td><strong>3D</strong>, size \((D_x, D_y, D_z)\)</td><td>\((x, y, z)\)</td><td>\(\text{ID} = x + y\,D_x + z\,D_x D_y\)</td></tr>
   </table>
-  <div class="callout"><span class="lbl">Row-major flatten</span>Each higher dimension multiplies by the product of all the lower dimensions — exactly how a multi-dimensional array is laid out in linear memory.</div>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Row-major flatten</span>Each higher dimension multiplies by the product of all the lower dimensions — exactly how a multi-dimensional array is laid out in linear memory.</div>
+    <div class="callout warn"><span class="lbl">Watch the order</span>CUDA's \((x, y)\) is <strong>(column, row)</strong>, the reverse of matrix notation \((\text{row}, \text{column})\). <code class="inline">x</code> varies fastest, so <code class="inline">threadIdx.x</code> picks the column and <code class="inline">threadIdx.y</code> the row: element \(A[\text{row}][\text{col}]\) is thread \((x{=}\text{col},\ y{=}\text{row})\).</div>
+  </div>
   <div class="src">Index formulas for 2D block \((D_x,D_y)\) and 3D block \((D_x,D_y,D_z)\): NVIDIA CUDA C++ Programming Guide — Programming Model: Thread Hierarchy.</div>
 </section>
 
