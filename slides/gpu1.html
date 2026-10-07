@@ -41,8 +41,7 @@
   <h2>Agenda</h2>
   <table class="small">
     <tr><th>Part</th><th>Topic</th><th>Covers</th></tr>
-    <tr><td>—</td><td>History — GPGPU &amp; APIs</td><td>From graphics coprocessor to general-purpose compute; CUDA, OpenCL, Vulkan, Metal, WebGPU.</td></tr>
-    <tr><td>1</td><td>Heterogeneous — Host &amp; Device</td><td>CPU vs. GPU, separate memories, what a CUDA program and a kernel are.</td></tr>
+    <tr><td>1</td><td>GPU Computing — History &amp; Host/Device</td><td>From graphics coprocessor to general-purpose compute (CUDA, OpenCL, Vulkan, Metal, WebGPU); CPU vs. GPU, separate memories, what a CUDA program and a kernel are.</td></tr>
     <tr><td>2</td><td>Kernels — First CUDA Code</td><td><code class="inline">__global__</code>, <code class="inline">threadIdx</code>, execution configuration, program lifecycle.</td></tr>
     <tr><td>3</td><td>Built-ins — Functions &amp; Types</td><td>Function qualifiers, device-function constraints, math functions &amp; intrinsics, vector types.</td></tr>
     <tr><td>4</td><td>Hierarchy — Grid / Block / Thread</td><td>1D/2D/3D blocks, thread-ID formulas, indexing across blocks, automatic scalability.</td></tr>
@@ -53,7 +52,13 @@
   </table>
 </section>
 
-<!-- Opener: GPU computing history & APIs (no part divider) -->
+<!-- ==================================================================
+     PART 1 — GPU COMPUTING & THE HETEROGENEOUS MODEL
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Part 1</div>
+  <div class="mod-title">GPU Computing &amp; the Heterogeneous Model</div>
+</section>
 
 <!-- History timeline -->
 <section data-background-color="#ffffff">
@@ -74,13 +79,7 @@
   <div class="src">NVIDIA CUDA C Programming Guide; Khronos (OpenCL/Vulkan/WebGPU); adapted from CIS 565 (UPenn).</div>
 </section>
 
-<!-- ==================================================================
-     PART 1 — HETEROGENEOUS COMPUTING
-     ================================================================== -->
-<section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part 1</div>
-  <div class="mod-title">Heterogeneous Computing</div>
-</section>
+
 
 <!-- Host / device terms -->
 <section data-background-color="#ffffff">
