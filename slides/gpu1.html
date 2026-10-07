@@ -883,7 +883,7 @@ if (threadIdx.x &lt; 16) {
   <h2>CUDA Memory Model</h2>
   <div class="cols w-64">
     <div class="center">
-      <svg viewBox="0 0 360 312" class="chart" style="width:100%;max-height:455px" role="img" aria-label="CUDA memory model">
+      <svg viewBox="0 0 360 288" class="chart" style="width:100%;max-height:440px" role="img" aria-label="CUDA memory model">
         <defs><marker id="mm-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8b5cf6"/></marker></defs>
         <rect x="4" y="4" width="352" height="160" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2"/>
         <text x="14" y="21" style="font-size:12px;font-weight:700;fill:#334155">Grid (one kernel launch)</text>
@@ -902,15 +902,13 @@ if (threadIdx.x &lt; 16) {
         <text x="266" y="125" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#14532d">Shared memory</text>
         <text x="266" y="137" text-anchor="middle" style="font-size:8.5px;fill:#14532d">per block</text>
         <line x1="100" y1="164" x2="100" y2="186" stroke="#94a3b8" stroke-width="1.2"/><line x1="272" y1="164" x2="272" y2="186" stroke="#94a3b8" stroke-width="1.2"/>
-        <rect x="4" y="172" width="352" height="74" rx="8" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="5 3"/>
+        <rect x="4" y="172" width="352" height="48" rx="8" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="5 3"/>
         <text x="180" y="185" text-anchor="middle" style="font-size:8.5px;fill:#92400e">device memory: shared by all grids, persists across kernel launches</text>
         <rect x="14" y="192" width="332" height="22" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.2"/>
         <text x="180" y="207" text-anchor="middle" style="font-size:10px;fill:#92400e"><tspan font-weight="700">Global memory</tspan> — read/write</text>
-        <rect x="14" y="218" width="332" height="22" rx="4" fill="#fde68a" stroke="#f59e0b" stroke-width="1.2"/>
-        <text x="180" y="233" text-anchor="middle" style="font-size:10px;fill:#92400e"><tspan font-weight="700">Constant memory</tspan> — read-only for kernels</text>
-        <line x1="180" y1="274" x2="180" y2="249" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4 3" marker-start="url(#mm-arr)" marker-end="url(#mm-arr)"/>
-        <rect x="14" y="276" width="332" height="32" rx="6" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.2"/>
-        <text x="180" y="296" text-anchor="middle" style="font-size:10px;fill:#5b21b6"><tspan font-weight="700">Host (CPU)</tspan> — reads/writes global &amp; constant memory only</text>
+        <line x1="180" y1="250" x2="180" y2="223" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4 3" marker-start="url(#mm-arr)" marker-end="url(#mm-arr)"/>
+        <rect x="14" y="252" width="332" height="32" rx="6" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.2"/>
+        <text x="180" y="272" text-anchor="middle" style="font-size:10px;fill:#5b21b6"><tspan font-weight="700">Host (CPU)</tspan> — reads/writes global memory</text>
         </svg>
       <p class="tiny muted" style="margin:.2em 0 0;text-align:left">* Local memory is private to each thread but is stored off-chip in device memory.</p>
     </div>
@@ -919,9 +917,8 @@ if (threadIdx.x &lt; 16) {
         <li><strong>Per-thread</strong>: registers (on-chip) + local memory (off-chip)</li>
         <li><strong>Per-block</strong>: shared memory (R/W, fast)</li>
         <li><strong>All threads, all kernels</strong>: global memory (R/W, large, slow)</li>
-        <li><strong>All threads, all kernels</strong>: constant memory (read-only)</li>
-      </ul>
-      <div class="callout"><span class="lbl">Host access</span>The CPU can read/write only <strong>global</strong> and <strong>constant</strong> memory — that's where transfers land.</div>
+        </ul>
+      <div class="callout"><span class="lbl">Host access</span>The CPU reads and writes <strong>global</strong> memory — that's where <code class="inline">cudaMemcpy</code> transfers land.</div>
     </div>
   </div>
   <div class="src">Adapted from UIUC ECE498AL and the CUDA C++ Programming Guide.</div>
