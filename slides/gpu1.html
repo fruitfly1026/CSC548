@@ -931,7 +931,7 @@ if (threadIdx.x &lt; 16) {
     <ul class="small" style="margin:.2em 0 .2em .9em">
       <li><strong>65,536</strong> (64K) 32-bit registers per SM</li>
       <li>Up to <strong>255</strong> registers per thread</li>
-      <li>At 2048 resident threads/SM → \( 65536/2048 = 32 \) regs/thread for full occupancy (A4500: 1536 threads → ~42)</li>
+      <li>At 2048 resident threads/SM → \( 65536/2048 = 32 \) regs/thread for full occupancy</li>
     </ul></div>
   <div class="callout ok"><span class="lbl">Special registers</span><code class="inline">threadIdx</code>, <code class="inline">blockIdx</code>, <code class="inline">blockDim</code>, <code class="inline">gridDim</code></div>
   <div class="src">CUDA C++ Programming Guide; NVIDIA A100 whitepaper.</div>
