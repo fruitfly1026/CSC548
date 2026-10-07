@@ -494,12 +494,11 @@ dim3 blocks(N / threadsPerBlock.x,
   <h2>The Streaming Multiprocessor (SM)</h2>
   <div class="symkey">
     <span><strong>SM</strong> streaming multiprocessor</span>
-    <span><strong>SP</strong> streaming processor (CUDA core)</span>
   </div>
   <div class="cols">
     <div class="callout"><span class="lbl">A GPU is an array of SMs</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li>Each SM contains many <strong>streaming processors (SPs)</strong></li>
+        <li>Each SM contains many <strong>CUDA cores</strong> (FP32, INT32, FP64 units) and Tensor Cores</li>
         <li>One or more <strong>warp schedulers</strong></li>
         <li><strong>Shared memory / L1</strong> and a register file, all on-chip</li>
       </ul>
@@ -508,12 +507,8 @@ dim3 blocks(N / threadsPerBlock.x,
       <svg viewBox="0 0 280 190" class="chart" style="max-width:330px">
         <rect x="6" y="6" width="268" height="178" rx="12" fill="#f8fafc" stroke="var(--line)"/>
         <text x="140" y="24" text-anchor="middle" class="note">One SM</text>
-        <g fill="#fbbf24" stroke="#d97706">
-          <rect x="22" y="38" width="44" height="34" rx="5"/><rect x="72" y="38" width="44" height="34" rx="5"/>
-          <rect x="122" y="38" width="44" height="34" rx="5"/><rect x="172" y="38" width="44" height="34" rx="5"/>
-          <rect x="222" y="38" width="40" height="34" rx="5"/>
-        </g>
-        <text x="140" y="60" text-anchor="middle" class="lbl" style="fill:#7c2d12">SP SP SP SP …</text>
+        <rect x="22" y="38" width="240" height="34" rx="5" fill="#fbbf24" stroke="#d97706"/>
+        <text x="142" y="60" text-anchor="middle" class="lbl" style="fill:#7c2d12">CUDA cores + Tensor Cores</text>
         <rect x="22" y="84" width="240" height="28" rx="5" fill="#ede9fe" stroke="#8b5cf6"/>
         <text x="142" y="102" text-anchor="middle" class="lbl">warp scheduler(s)</text>
         <rect x="22" y="122" width="240" height="28" rx="5" fill="#dcfce7" stroke="#22c55e"/>
@@ -865,7 +860,7 @@ if (threadIdx.x &lt; 16) {
   <div class="callout"><span class="lbl">Q2</span><strong>3 blocks × 256 threads</strong> — how many warps?
     <div class="fragment" style="margin-top:.4em"><strong>A:</strong> \( 3 \times 256 / 32 = 24 \) warps.</div></div>
   <div class="callout"><span class="lbl">Q3</span>How long to issue one warp?
-    <div class="fragment" style="margin-top:.4em"><strong>A (modern):</strong> A dispatch unit issues <strong>32 threads/clock</strong>, so a whole warp issues in <strong>one cycle</strong>. <span class="muted">(historical, G80: only 8 SPs → 8 threads/cycle → 4 cycles per warp.)</span></div></div>
+    <div class="fragment" style="margin-top:.4em"><strong>A (modern):</strong> A dispatch unit issues <strong>32 threads/clock</strong>, so a whole warp issues in <strong>one cycle</strong>. <span class="muted">(historical, G80: only 8 cores per SM → 8 threads/cycle → 4 cycles per warp.)</span></div></div>
   </div>
   <div class="src">CUDA C++ Programming Guide; NVIDIA A100 &amp; H100 whitepapers.</div>
 </section>
