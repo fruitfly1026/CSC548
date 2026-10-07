@@ -1001,11 +1001,16 @@ if (threadIdx.x &lt; 16) {
   <p class="tiny muted">* Small arrays indexed only by compile-time constants usually stay in registers.</p>
   </div>
   <div>
-  <div class="callout"><span class="lbl">Constants</span><code class="inline">__constant__</code> vars are declared <strong>outside</strong> any function; the host fills them with <code class="inline">cudaMemcpyToSymbol</code> / <code class="inline">cudaMemcpyFromSymbol</code>.</div>
+  <div class="callout"><span class="lbl">Constants</span><code class="inline">__constant__</code> variables are usually declared at file scope. The host writes them with <code class="inline">cudaMemcpyToSymbol</code> and reads them back with <code class="inline">cudaMemcpyFromSymbol</code>; kernels can only read them.</div>
   <div class="code-label">CUDA C — constant memory</div>
   <pre><code class="language-cpp" data-trim>
-__constant__ float constData[256];          // file scope
+__constant__ float constData[256];  // file scope
+float data[256];                    // host array
+
+// host → constant
 cudaMemcpyToSymbol(constData, data, sizeof(data));
+// constant → host
+cudaMemcpyFromSymbol(data, constData, sizeof(data));
 </code></pre>
   </div>
   </div>
