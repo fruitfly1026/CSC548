@@ -179,10 +179,11 @@ int main() {
   </div>
   <table>
     <tr><th>Qualifier</th><th>Executed on</th><th>Callable from</th><th>Notes</th></tr>
-    <tr><td><code class="inline">__global__</code></td><td>device</td><td>host; also device on CC ≥ 5.0 (dynamic parallelism)</td><td>a <strong>kernel</strong>; must return <code class="inline">void</code></td></tr>
+    <tr><td><code class="inline">__global__</code></td><td>device</td><td>host<sup>*</sup></td><td>a <strong>kernel</strong>; must return <code class="inline">void</code></td></tr>
     <tr><td><code class="inline">__device__</code></td><td>device</td><td>device</td><td><strong>inlined</strong> by default</td></tr>
     <tr><td><code class="inline">__host__</code></td><td>host</td><td>host</td><td>the default if no qualifier</td></tr>
   </table>
+  <p class="tiny muted"><sup>*</sup> Also callable from the device on CC ≥ 5.0, i.e. one kernel launching another (dynamic parallelism).</p>
   <div class="cols">
     <div class="callout ok"><span class="lbl">Legal</span><code class="inline">__host__ __device__</code> together → compiled for <strong>both</strong> host and device.</div>
     <div class="callout warn"><span class="lbl">Illegal</span><code class="inline">__global__ __host__</code> and <code class="inline">__global__ __device__</code> together are <strong>not allowed</strong>.</div>
@@ -196,8 +197,8 @@ int main() {
   <div class="cols">
     <div class="callout"><span class="lbl">Allowed on the device</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li>Recursion on the <strong>device</strong> is OK (except very old G80)</li>
-        <li><strong>Dynamic parallelism</strong> (a <code class="inline">__global__</code> launching itself) requires compute capability <strong>≥ 3.5</strong></li>
+        <li><code class="inline">__device__</code> functions may <strong>recurse</strong> (CC ≥ 2.0); <code class="inline">__global__</code> functions may not</li>
+        <li><strong>Dynamic parallelism</strong> — a kernel launching other kernels — needs CC ≥ 3.5; CUDA 12+ supports only CC ≥ 5.0</li>
       </ul></div>
     <div class="callout ok"><span class="lbl">Myth-busting — these ARE allowed</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
@@ -206,8 +207,8 @@ int main() {
       </ul></div>
   </div>
   <div class="callout takeaway"><span class="lbl">Real constraints</span>
-    A kernel must return <code class="inline">void</code> and take no variable arguments. The old "no static variables, no <code class="inline">malloc</code>" rule is <strong>outdated</strong> — but thousands of threads still share the SM's tiny on-chip state, so device heap and deep recursion cost resources: use them deliberately.</div>
-  <div class="src">CUDA C++ Programming Guide — Variable Memory Space Specifiers; Dynamic Global Memory Allocation and Operations.</div>
+    A kernel must return <code class="inline">void</code>, cannot take a variable number of arguments, and cannot recurse. The old "no static variables, no <code class="inline">malloc</code>" rule is <strong>outdated</strong>. But the device heap is a fixed-size region of global memory (8 MB by default; raise it with <code class="inline">cudaDeviceSetLimit</code>), and recursion uses each thread's small stack — so use them deliberately.</div>
+  <div class="src">CUDA C++ Programming Guide — Variable Memory Space Specifiers; Static Variables within Function; Function Recursion; Dynamic Global Memory Allocation and Operations; CUDA Dynamic Parallelism.</div>
 </section>
 
 <!-- Math functions & intrinsics -->
