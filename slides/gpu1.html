@@ -41,7 +41,7 @@
   <h2>Agenda</h2>
   <table class="small">
     <tr><th>Part</th><th>Topic</th><th>Covers</th></tr>
-    <tr><td>1</td><td>GPU Computing &amp; the CUDA Program</td><td>From graphics coprocessor to general-purpose compute; host vs. device; a first kernel (<code class="inline">__global__</code>, <code class="inline">threadIdx</code>, <code class="inline">&lt;&lt;&lt;&gt;&gt;&gt;</code>) and the program lifecycle.</td></tr>
+    <tr><td>1</td><td>GPU Computing &amp; the CUDA Program</td><td>From graphics coprocessor to general-purpose compute; NVIDIA generations &amp; compute capability; host vs. device; a first kernel (<code class="inline">__global__</code>, <code class="inline">threadIdx</code>, <code class="inline">&lt;&lt;&lt;&gt;&gt;&gt;</code>) and the program lifecycle.</td></tr>
     <tr><td>2</td><td>Built-ins — Functions &amp; Types</td><td>Function qualifiers, device-function constraints, math functions &amp; intrinsics, vector types.</td></tr>
     <tr><td>3</td><td>Hierarchy — Grid / Block / Thread</td><td>1D/2D/3D blocks, thread-ID formulas, indexing across blocks, automatic scalability.</td></tr>
     <tr><td>4</td><td>Scheduling — Warps &amp; the SM</td><td>SM architecture, warps, zero-overhead scheduling, branch divergence.</td></tr>
@@ -76,6 +76,28 @@
     <tr><td><strong>2021–22</strong></td><td>WebGPU</td><td>Modern GPU compute &amp; graphics on the web</td></tr>
   </table>
   <div class="src">NVIDIA CUDA C Programming Guide; Khronos (OpenCL/Vulkan/WebGPU); adapted from CIS 565 (UPenn).</div>
+</section>
+
+<!-- NVIDIA architecture generations & compute capability -->
+<section data-background-color="#ffffff">
+  <h2>NVIDIA GPU Generations &amp; Compute Capability</h2>
+  <div class="callout"><span class="lbl">Compute capability (CC)</span><span class="small"><strong>X.Y</strong> ("SM version") is the GPU's feature-set version: X = core architecture, Y = incremental update. It sets which features and limits your code can use (threads &amp; shared memory per SM, Tensor Core types). Compile with <code class="inline">nvcc -arch=sm_XY</code>: a binary for X.y runs on X.z if z ≥ y; PTX is JIT-compiled for newer GPUs.</span></div>
+  <style>.reveal .slides table.gen-tbl th,.reveal .slides table.gen-tbl td{padding:.14em .55em}</style>
+  <table class="small gen-tbl">
+    <tr><th>Architecture</th><th>Year</th><th>CC</th><th>Example GPU</th><th>What it added</th></tr>
+    <tr><td>Tesla</td><td>2006</td><td>1.x</td><td>GeForce 8800 (G80)</td><td>unified shaders; first CUDA GPU</td></tr>
+    <tr><td>Fermi</td><td>2010</td><td>2.x</td><td>Tesla C2050 (GF100)</td><td>L1/L2 cache hierarchy, ECC, fast double precision</td></tr>
+    <tr><td>Kepler</td><td>2012</td><td>3.x</td><td>Tesla K20 (GK110)</td><td>dynamic parallelism, Hyper-Q</td></tr>
+    <tr><td>Maxwell</td><td>2014</td><td>5.x</td><td>GeForce GTX 980 (GM204)</td><td>energy efficiency</td></tr>
+    <tr><td>Pascal</td><td>2016</td><td>6.x</td><td>Tesla P100 (GP100)</td><td>HBM2, NVLink, page-faulting unified memory</td></tr>
+    <tr><td>Volta</td><td>2017</td><td>7.0</td><td>Tesla V100 (GV100)</td><td>Tensor Cores, independent thread scheduling</td></tr>
+    <tr><td>Turing</td><td>2018</td><td>7.5</td><td>RTX 2080, T4</td><td>RT cores; Tensor Cores in consumer GPUs</td></tr>
+    <tr><td>Ampere</td><td>2020</td><td>8.0 / 8.6</td><td>A100 (GA100); RTX A4500 (GA102)</td><td>TF32 &amp; BF16 Tensor Cores, sparsity, MIG</td></tr>
+    <tr><td>Hopper</td><td>2022</td><td>9.0</td><td>H100 (GH100)</td><td>FP8 Transformer Engine, thread-block clusters, TMA</td></tr>
+    <tr><td>Blackwell</td><td>2024</td><td>10.0 / 12.0</td><td>B200; RTX 50 series</td><td>FP4 Tensor Cores, two-die B200</td></tr>
+  </table>
+  <p class="tiny muted">CC is not the CUDA version: CUDA 12 is a toolkit release, CC 8.6 is a GPU. Our demos run on an RTX A4500 (CC 8.6).</p>
+  <div class="src">CUDA C++ Programming Guide — Compute Capability; Application Compatibility. NVIDIA architecture whitepapers, Fermi through Blackwell.</div>
 </section>
 
 
