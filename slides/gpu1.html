@@ -860,9 +860,9 @@ if (threadIdx.x &lt; 16) {
   <div class="callout"><span class="lbl">Q2</span><strong>3 blocks × 256 threads</strong> — how many warps?
     <div class="fragment" style="margin-top:.4em"><strong>A:</strong> \( 3 \times 256 / 32 = 24 \) warps.</div></div>
   <div class="callout"><span class="lbl">Q3</span>How long to issue one warp?
-    <div class="fragment" style="margin-top:.4em"><strong>A:</strong> On G80, only 8 cores per SM → 8 threads/cycle → 4 cycles per warp.</div></div>
+    <div class="fragment" style="margin-top:.4em"><strong>A:</strong> On modern GPUs, a dispatch unit issues <strong>32 threads/clock</strong>, so a whole warp issues in <strong>one cycle</strong>.</div></div>
   </div>
-  <div class="src">CUDA C++ Programming Guide.</div>
+  <div class="src">CUDA C++ Programming Guide; NVIDIA A100 &amp; H100 whitepapers.</div>
 </section>
 
 <!-- Exercise: latency hiding -->
