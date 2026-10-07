@@ -179,14 +179,15 @@ int main() {
   </div>
   <table>
     <tr><th>Qualifier</th><th>Executed on</th><th>Callable from</th><th>Notes</th></tr>
-    <tr><td><code class="inline">__global__</code></td><td>device</td><td>host</td><td>a <strong>kernel</strong>; must return <code class="inline">void</code></td></tr>
+    <tr><td><code class="inline">__global__</code></td><td>device</td><td>host; also device on CC ≥ 5.0 (dynamic parallelism)</td><td>a <strong>kernel</strong>; must return <code class="inline">void</code></td></tr>
     <tr><td><code class="inline">__device__</code></td><td>device</td><td>device</td><td><strong>inlined</strong> by default</td></tr>
     <tr><td><code class="inline">__host__</code></td><td>host</td><td>host</td><td>the default if no qualifier</td></tr>
   </table>
   <div class="cols">
     <div class="callout ok"><span class="lbl">Legal</span><code class="inline">__host__ __device__</code> together → compiled for <strong>both</strong> host and device.</div>
-    <div class="callout warn"><span class="lbl">Illegal</span><code class="inline">__global__ __host__</code> together is <strong>not allowed</strong>.</div>
+    <div class="callout warn"><span class="lbl">Illegal</span><code class="inline">__global__ __host__</code> and <code class="inline">__global__ __device__</code> together are <strong>not allowed</strong>.</div>
   </div>
+  <div class="src">CUDA C++ Programming Guide — Function Execution Space Specifiers.</div>
 </section>
 
 <!-- Device/global constraints -->
