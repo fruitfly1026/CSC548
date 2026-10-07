@@ -42,7 +42,7 @@
   <table class="small">
     <tr><th>Part</th><th>Topic</th><th>Covers</th></tr>
     <tr><td>1</td><td>GPU Computing &amp; the CUDA Program</td><td>From graphics coprocessor to general-purpose compute; NVIDIA generations &amp; compute capability; host vs. device; a first kernel (<code class="inline">__global__</code>, <code class="inline">threadIdx</code>, <code class="inline">&lt;&lt;&lt;&gt;&gt;&gt;</code>) and the program lifecycle.</td></tr>
-    <tr><td>2</td><td>Built-ins — Functions &amp; Types</td><td>Function qualifiers, device-function constraints, math functions &amp; intrinsics, vector types.</td></tr>
+    <tr><td>2</td><td>Built-ins — Functions &amp; Types</td><td>Function qualifiers, math functions &amp; intrinsics, vector types.</td></tr>
     <tr><td>3</td><td>Hierarchy — Grid / Block / Thread</td><td>1D/2D/3D blocks, thread-ID formulas, indexing across blocks, automatic scalability.</td></tr>
     <tr><td>4</td><td>Scheduling — Warps &amp; the SM</td><td>SM architecture, warps, zero-overhead scheduling, branch divergence.</td></tr>
     <tr><td>5</td><td>Memory — Model &amp; Transfers</td><td>Registers, local, shared, global, constant; variable qualifiers; <code class="inline">cudaMalloc</code>, <code class="inline">cudaMemcpy</code>.</td></tr>
@@ -211,26 +211,6 @@ int main() {
     <div class="callout warn"><span class="lbl">Illegal</span><code class="inline">__global__ __host__</code> and <code class="inline">__global__ __device__</code> together are <strong>not allowed</strong>.</div>
   </div>
   <div class="src">CUDA C++ Programming Guide — Function Execution Space Specifiers.</div>
-</section>
-
-<!-- Device/global constraints -->
-<section data-background-color="#ffffff">
-  <h2>Device &amp; Global Function Constraints</h2>
-  <div class="cols">
-    <div class="callout"><span class="lbl">Allowed on the device</span>
-      <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li><code class="inline">__device__</code> functions may <strong>recurse</strong> (CC ≥ 2.0); <code class="inline">__global__</code> functions may not</li>
-        <li><strong>Dynamic parallelism</strong> — a kernel launching other kernels — needs CC ≥ 3.5; CUDA 12+ supports only CC ≥ 5.0</li>
-      </ul></div>
-    <div class="callout ok"><span class="lbl">Myth-busting — these ARE allowed</span>
-      <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li><strong>Static</strong> <code class="inline">__shared__</code> / <code class="inline">__device__</code> variables <strong>are permitted</strong> in device code</li>
-        <li>Device-side <code class="inline">malloc()</code> / <code class="inline">free()</code> <strong>are supported</strong> from inside a kernel (compute capability ≥ 2.x)</li>
-      </ul></div>
-  </div>
-  <div class="callout takeaway"><span class="lbl">Real constraints</span>
-    A kernel must return <code class="inline">void</code>, cannot take a variable number of arguments, and cannot recurse. The old "no static variables, no <code class="inline">malloc</code>" rule is <strong>outdated</strong>. But the device heap is a fixed-size region of global memory (8 MB by default; raise it with <code class="inline">cudaDeviceSetLimit</code>), and recursion uses each thread's small stack — so use them deliberately.</div>
-  <div class="src">CUDA C++ Programming Guide — Variable Memory Space Specifiers; Static Variables within Function; Function Recursion; Dynamic Global Memory Allocation and Operations; CUDA Dynamic Parallelism.</div>
 </section>
 
 <!-- Math functions & intrinsics -->
