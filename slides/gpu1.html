@@ -390,7 +390,7 @@ int main() {
       <div class="callout takeaway"><span class="lbl">Consequence</span><span class="small">One 1024-thread block is not enough for big data. We need <strong>many blocks</strong>, addressed with <code class="inline">blockIdx</code> and <code class="inline">blockDim</code>.</span></div>
     </div>
   </div>
-  <div class="src">Limits: NVIDIA CUDA C++ Programming Guide — Compute Capabilities, "Technical Specifications per Compute Capability" (1024 threads/block, warp 32, block dims 1024·1024·64, 2048 resident threads/SM for CC 8.0/9.0, 1536 for CC 8.6/8.9). SM figures: NVIDIA A100 (Ampere GA100) &amp; H100 (Hopper GH100) architecture white papers.</div>
+  <div class="src">Limits: CUDA C++ Programming Guide — Compute Capabilities. SM figures: NVIDIA A100 &amp; H100 architecture whitepapers.</div>
 </section>
 
 <!-- Multi-block 2D matrix add -->
