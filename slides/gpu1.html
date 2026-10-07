@@ -927,20 +927,12 @@ if (threadIdx.x &lt; 16) {
 <section data-background-color="#ffffff">
   <h2>Registers</h2>
   <p class="small"><strong>Per-thread</strong>, fast <strong>on-chip</strong>. The SM's register files (one per partition, 64K registers per SM in total) are split across all resident threads — so register use caps occupancy.</p>
-  <div class="cols">
-    <div class="callout"><span class="lbl">Modern budget (A100 / H100)</span>
-      <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li><strong>65,536</strong> (64K) 32-bit registers per SM</li>
-        <li>Up to <strong>255</strong> registers per thread</li>
-        <li>At 2048 resident threads/SM → \( 65536/2048 = 32 \) regs/thread for full occupancy (A4500: 1536 threads → ~42)</li>
-      </ul></div>
-    <div class="callout warn"><span class="lbl">Occupancy trade-off <span class="muted">(historical, G80)</span></span>
-      <ul class="small" style="margin:.2em 0 .2em .9em">
-        <li>G80: 768 thread slots &amp; 8K regs → 10 regs/thread</li>
-        <li>11 regs × 256-thread block → 2 blocks → 512 threads → 16 warps</li>
-        <li>Same effect today: more regs/thread → fewer resident warps → <strong>less latency hiding</strong></li>
-      </ul></div>
-  </div>
+  <div class="callout"><span class="lbl">Modern budget (A100 / H100)</span>
+    <ul class="small" style="margin:.2em 0 .2em .9em">
+      <li><strong>65,536</strong> (64K) 32-bit registers per SM</li>
+      <li>Up to <strong>255</strong> registers per thread</li>
+      <li>At 2048 resident threads/SM → \( 65536/2048 = 32 \) regs/thread for full occupancy (A4500: 1536 threads → ~42)</li>
+    </ul></div>
   <div class="callout ok"><span class="lbl">Special registers</span><code class="inline">threadIdx</code>, <code class="inline">blockIdx</code>, <code class="inline">blockDim</code>, <code class="inline">gridDim</code></div>
   <div class="src">CUDA C++ Programming Guide; NVIDIA A100 whitepaper.</div>
 </section>
