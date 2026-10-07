@@ -218,7 +218,7 @@ int main() {
   <h2>Math Functions &amp; Intrinsics</h2>
   <div class="cols">
     <div class="callout"><span class="lbl">Standard math (double / float overloads)</span>
-      <p class="small" style="margin:.3em 0">Host &amp; device, IEEE-accurate:</p>
+      <p class="small" style="margin:.3em 0">Host &amp; device, with documented error bounds (e.g. <code class="inline">sinf</code> ≤ 2 ulp):</p>
       <p class="small"><code class="inline">sqrt rsqrt exp log sin cos tan sincos asin acos atan2 trunc ceil floor</code></p>
       <span class="tiny muted">A <code class="inline">float</code> and a <code class="inline">double</code> overload exist for each.</span></div>
     <div class="callout ok"><span class="lbl">Intrinsics — device only</span>
@@ -227,8 +227,10 @@ int main() {
         <li>Prefixed with <code class="inline">__</code></li>
         <li>e.g. <code class="inline">__expf</code>, <code class="inline">__sinf</code>, <code class="inline">__logf</code>, <code class="inline">__cosf</code></li>
       </ul>
-      <span class="tiny muted">Use when speed matters and a few ulp of error is acceptable.</span></div>
+      <span class="tiny muted">Use when speed matters and you can accept error that grows with the argument.</span></div>
   </div>
+  <div class="callout warn"><span class="lbl">-use_fast_math</span><span class="small">This compiler flag turns every standard call (<code class="inline">sinf</code>, <code class="inline">expf</code>, <code class="inline">x/y</code>, …) into its intrinsic. It is faster, but less accurate and can change how special values are handled.</span></div>
+  <div class="src">CUDA C++ Programming Guide — Mathematical Functions (Standard Functions; Intrinsic Functions).</div>
 </section>
 
 <!-- Vector types -->
