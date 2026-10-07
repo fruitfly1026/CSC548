@@ -313,7 +313,7 @@ f4.x; f4.y; f4.z; f4.w;     // NOT .r .g .b .a
         <li>Threads in <strong>different blocks</strong> <strong>cannot</strong> cooperate</li>
       </ul>
       <div class="callout"><span class="lbl">Shape the block to the data</span>
-        <span class="small"><strong>1D</strong> → vector &nbsp;·&nbsp; <strong>2D</strong> → matrix &nbsp;·&nbsp; <strong>3D</strong> → volume</span></div>
+        <span class="small"><strong>1D</strong> → vector<br><strong>2D</strong> → matrix<br><strong>3D</strong> → volume</span></div>
     </div>
   </div>
   <div class="src">Figure adapted from UIUC ECE498AL / NVIDIA CUDA C Programming Guide.</div>
@@ -720,7 +720,7 @@ if (threadIdx.x &lt; 16) {
         <li>Same effect today: more regs/thread → fewer resident warps → <strong>less latency hiding</strong></li>
       </ul></div>
   </div>
-  <div class="callout ok"><span class="lbl">Special registers</span><code class="inline">threadIdx</code> · <code class="inline">blockIdx</code> · <code class="inline">blockDim</code> · <code class="inline">gridDim</code></div>
+  <div class="callout ok"><span class="lbl">Special registers</span><code class="inline">threadIdx</code>, <code class="inline">blockIdx</code>, <code class="inline">blockDim</code>, <code class="inline">gridDim</code></div>
   <div class="src">64K regs/SM, 255 regs/thread: CUDA C++ Programming Guide — Compute Capabilities. 2048 resident threads/SM (e.g. A100): NVIDIA A100 whitepaper.</div>
 </section>
 
