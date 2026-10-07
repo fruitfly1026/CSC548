@@ -883,39 +883,43 @@ if (threadIdx.x &lt; 16) {
   <h2>CUDA Memory Model</h2>
   <div class="cols w-64">
     <div class="center">
-      <svg viewBox="0 0 360 286" class="chart" style="max-width:100%;width:100%" role="img" aria-label="CUDA memory model">
+      <svg viewBox="0 0 360 312" class="chart" style="width:100%;max-height:455px" role="img" aria-label="CUDA memory model">
         <defs><marker id="mm-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8b5cf6"/></marker></defs>
-        <rect x="4" y="4" width="352" height="214" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2"/>
-        <text x="14" y="21" style="font-size:12px;font-weight:700;fill:#334155">Grid</text>
+        <rect x="4" y="4" width="352" height="160" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2"/>
+        <text x="14" y="21" style="font-size:12px;font-weight:700;fill:#334155">Grid (one kernel launch)</text>
         <rect x="14" y="28" width="160" height="126" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
         <text x="22" y="43" style="font-size:11px;font-weight:700;fill:#3730a3">Block</text>
-        <rect x="22" y="50" width="68" height="52" rx="4" fill="#ffffff" stroke="#0ea5e9" stroke-width="1.2"/><text x="56" y="68" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#0c4a6e">Thread</text><text x="56" y="82" text-anchor="middle" style="font-size:8.5px;fill:#475569">registers</text><text x="56" y="94" text-anchor="middle" style="font-size:8.5px;fill:#475569">+ local memory</text>
-        <rect x="98" y="50" width="68" height="52" rx="4" fill="#ffffff" stroke="#0ea5e9" stroke-width="1.2"/><text x="132" y="68" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#0c4a6e">Thread</text><text x="132" y="82" text-anchor="middle" style="font-size:8.5px;fill:#475569">registers</text><text x="132" y="94" text-anchor="middle" style="font-size:8.5px;fill:#475569">+ local memory</text>
+        <rect x="22" y="50" width="68" height="52" rx="4" fill="#ffffff" stroke="#0ea5e9" stroke-width="1.2"/><text x="56" y="68" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#0c4a6e">Thread</text><text x="56" y="82" text-anchor="middle" style="font-size:8.5px;fill:#475569">registers</text><text x="56" y="94" text-anchor="middle" style="font-size:8.5px;fill:#475569">local memory*</text>
+        <rect x="98" y="50" width="68" height="52" rx="4" fill="#ffffff" stroke="#0ea5e9" stroke-width="1.2"/><text x="132" y="68" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#0c4a6e">Thread</text><text x="132" y="82" text-anchor="middle" style="font-size:8.5px;fill:#475569">registers</text><text x="132" y="94" text-anchor="middle" style="font-size:8.5px;fill:#475569">local memory*</text>
         <rect x="22" y="110" width="144" height="34" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1.2"/>
         <text x="94" y="125" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#14532d">Shared memory</text>
         <text x="94" y="137" text-anchor="middle" style="font-size:8.5px;fill:#14532d">per block</text>
         <rect x="186" y="28" width="160" height="126" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
         <text x="194" y="43" style="font-size:11px;font-weight:700;fill:#3730a3">Block</text>
-        <rect x="194" y="50" width="68" height="52" rx="4" fill="#ffffff" stroke="#0ea5e9" stroke-width="1.2"/><text x="228" y="68" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#0c4a6e">Thread</text><text x="228" y="82" text-anchor="middle" style="font-size:8.5px;fill:#475569">registers</text><text x="228" y="94" text-anchor="middle" style="font-size:8.5px;fill:#475569">+ local memory</text>
-        <rect x="270" y="50" width="68" height="52" rx="4" fill="#ffffff" stroke="#0ea5e9" stroke-width="1.2"/><text x="304" y="68" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#0c4a6e">Thread</text><text x="304" y="82" text-anchor="middle" style="font-size:8.5px;fill:#475569">registers</text><text x="304" y="94" text-anchor="middle" style="font-size:8.5px;fill:#475569">+ local memory</text>
+        <rect x="194" y="50" width="68" height="52" rx="4" fill="#ffffff" stroke="#0ea5e9" stroke-width="1.2"/><text x="228" y="68" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#0c4a6e">Thread</text><text x="228" y="82" text-anchor="middle" style="font-size:8.5px;fill:#475569">registers</text><text x="228" y="94" text-anchor="middle" style="font-size:8.5px;fill:#475569">local memory*</text>
+        <rect x="270" y="50" width="68" height="52" rx="4" fill="#ffffff" stroke="#0ea5e9" stroke-width="1.2"/><text x="304" y="68" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#0c4a6e">Thread</text><text x="304" y="82" text-anchor="middle" style="font-size:8.5px;fill:#475569">registers</text><text x="304" y="94" text-anchor="middle" style="font-size:8.5px;fill:#475569">local memory*</text>
         <rect x="194" y="110" width="144" height="34" rx="4" fill="#dcfce7" stroke="#22c55e" stroke-width="1.2"/>
         <text x="266" y="125" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#14532d">Shared memory</text>
         <text x="266" y="137" text-anchor="middle" style="font-size:8.5px;fill:#14532d">per block</text>
-        <rect x="14" y="162" width="332" height="22" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.2"/>
-        <text x="180" y="177" text-anchor="middle" style="font-size:10px;fill:#92400e"><tspan font-weight="700">Global memory</tspan> — per grid, read/write</text>
-        <rect x="14" y="188" width="332" height="22" rx="4" fill="#fde68a" stroke="#f59e0b" stroke-width="1.2"/>
-        <text x="180" y="203" text-anchor="middle" style="font-size:10px;fill:#92400e"><tspan font-weight="700">Constant memory</tspan> — per grid, read-only</text>
-        <line x1="180" y1="244" x2="180" y2="214" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4 3" marker-start="url(#mm-arr)" marker-end="url(#mm-arr)"/>
-        <rect x="14" y="246" width="332" height="34" rx="6" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.2"/>
-        <text x="180" y="267" text-anchor="middle" style="font-size:10px;fill:#5b21b6"><tspan font-weight="700">Host (CPU)</tspan> — reads/writes global &amp; constant memory only</text>
+        <line x1="100" y1="164" x2="100" y2="186" stroke="#94a3b8" stroke-width="1.2"/><line x1="272" y1="164" x2="272" y2="186" stroke="#94a3b8" stroke-width="1.2"/>
+        <rect x="4" y="172" width="352" height="74" rx="8" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="5 3"/>
+        <text x="180" y="185" text-anchor="middle" style="font-size:8.5px;fill:#92400e">device memory: shared by all grids, persists across kernel launches</text>
+        <rect x="14" y="192" width="332" height="22" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.2"/>
+        <text x="180" y="207" text-anchor="middle" style="font-size:10px;fill:#92400e"><tspan font-weight="700">Global memory</tspan> — read/write</text>
+        <rect x="14" y="218" width="332" height="22" rx="4" fill="#fde68a" stroke="#f59e0b" stroke-width="1.2"/>
+        <text x="180" y="233" text-anchor="middle" style="font-size:10px;fill:#92400e"><tspan font-weight="700">Constant memory</tspan> — read-only for kernels</text>
+        <line x1="180" y1="274" x2="180" y2="249" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4 3" marker-start="url(#mm-arr)" marker-end="url(#mm-arr)"/>
+        <rect x="14" y="276" width="332" height="32" rx="6" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.2"/>
+        <text x="180" y="296" text-anchor="middle" style="font-size:10px;fill:#5b21b6"><tspan font-weight="700">Host (CPU)</tspan> — reads/writes global &amp; constant memory only</text>
         </svg>
+      <p class="tiny muted" style="margin:.2em 0 0;text-align:left">* Local memory is private to each thread but is stored off-chip in device memory.</p>
     </div>
     <div>
       <ul class="small">
-        <li><strong>Per-thread</strong>: registers + local memory (R/W)</li>
+        <li><strong>Per-thread</strong>: registers (on-chip) + local memory (off-chip)</li>
         <li><strong>Per-block</strong>: shared memory (R/W, fast)</li>
-        <li><strong>Per-grid</strong>: global memory (R/W, large, slow)</li>
-        <li><strong>Per-grid</strong>: constant memory (read-only)</li>
+        <li><strong>All threads, all kernels</strong>: global memory (R/W, large, slow)</li>
+        <li><strong>All threads, all kernels</strong>: constant memory (read-only)</li>
       </ul>
       <div class="callout"><span class="lbl">Host access</span>The CPU can read/write only <strong>global</strong> and <strong>constant</strong> memory — that's where transfers land.</div>
     </div>
@@ -998,8 +1002,8 @@ if (threadIdx.x &lt; 16) {
     <tr><td>automatic scalars</td><td>register</td><td>thread</td><td>kernel</td></tr>
     <tr><td>automatic arrays</td><td>local*</td><td>thread</td><td>kernel</td></tr>
     <tr><td><code class="inline">__shared__</code></td><td>shared</td><td>block</td><td>kernel</td></tr>
-    <tr><td><code class="inline">__device__</code></td><td>global</td><td>grid</td><td>application</td></tr>
-    <tr><td><code class="inline">__constant__</code></td><td>constant</td><td>grid</td><td>application</td></tr>
+    <tr><td><code class="inline">__device__</code></td><td>global</td><td>all grids</td><td>application</td></tr>
+    <tr><td><code class="inline">__constant__</code></td><td>constant</td><td>all grids</td><td>application</td></tr>
   </table>
   <p class="tiny muted">* Small arrays indexed only by compile-time constants usually stay in registers.</p>
   </div>
