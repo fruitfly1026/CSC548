@@ -41,23 +41,22 @@
   <h2>Agenda</h2>
   <table class="small">
     <tr><th>Part</th><th>Topic</th><th>Covers</th></tr>
-    <tr><td>1</td><td>GPU Computing — History &amp; Host/Device</td><td>From graphics coprocessor to general-purpose compute (CUDA, OpenCL, Vulkan, Metal, WebGPU); CPU vs. GPU, separate memories, what a CUDA program and a kernel are.</td></tr>
-    <tr><td>2</td><td>Kernels — First CUDA Code</td><td><code class="inline">__global__</code>, <code class="inline">threadIdx</code>, execution configuration, program lifecycle.</td></tr>
-    <tr><td>3</td><td>Built-ins — Functions &amp; Types</td><td>Function qualifiers, device-function constraints, math functions &amp; intrinsics, vector types.</td></tr>
-    <tr><td>4</td><td>Hierarchy — Grid / Block / Thread</td><td>1D/2D/3D blocks, thread-ID formulas, indexing across blocks, automatic scalability.</td></tr>
-    <tr><td>5</td><td>Scheduling — Warps &amp; the SM</td><td>SM architecture, warps, zero-overhead scheduling, branch divergence.</td></tr>
-    <tr><td>6</td><td>Memory — Model &amp; Transfers</td><td>Registers, local, shared, global, constant; variable qualifiers; <code class="inline">cudaMalloc</code>, <code class="inline">cudaMemcpy</code>.</td></tr>
-    <tr><td>7</td><td>Sync — Synchronizing Threads</td><td><code class="inline">__syncthreads()</code> barrier, walkthrough, conditional-barrier deadlock.</td></tr>
-    <tr><td>8</td><td>Matmul — Naive → Tiled</td><td>CPU loop → naive kernel → critique → multi-block → shared-memory tiling &amp; tile sizing.</td></tr>
+    <tr><td>1</td><td>GPU Computing &amp; the CUDA Program</td><td>From graphics coprocessor to general-purpose compute; host vs. device; a first kernel (<code class="inline">__global__</code>, <code class="inline">threadIdx</code>, <code class="inline">&lt;&lt;&lt;&gt;&gt;&gt;</code>) and the program lifecycle.</td></tr>
+    <tr><td>2</td><td>Built-ins — Functions &amp; Types</td><td>Function qualifiers, device-function constraints, math functions &amp; intrinsics, vector types.</td></tr>
+    <tr><td>3</td><td>Hierarchy — Grid / Block / Thread</td><td>1D/2D/3D blocks, thread-ID formulas, indexing across blocks, automatic scalability.</td></tr>
+    <tr><td>4</td><td>Scheduling — Warps &amp; the SM</td><td>SM architecture, warps, zero-overhead scheduling, branch divergence.</td></tr>
+    <tr><td>5</td><td>Memory — Model &amp; Transfers</td><td>Registers, local, shared, global, constant; variable qualifiers; <code class="inline">cudaMalloc</code>, <code class="inline">cudaMemcpy</code>.</td></tr>
+    <tr><td>6</td><td>Sync — Synchronizing Threads</td><td><code class="inline">__syncthreads()</code> barrier, walkthrough, conditional-barrier deadlock.</td></tr>
+    <tr><td>7</td><td>Matmul — Naive → Tiled</td><td>CPU loop → naive kernel → critique → multi-block → shared-memory tiling &amp; tile sizing.</td></tr>
   </table>
 </section>
 
 <!-- ==================================================================
-     PART 1 — GPU COMPUTING & THE HETEROGENEOUS MODEL
+     PART 1 — GPU COMPUTING & THE CUDA PROGRAM
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 1</div>
-  <div class="mod-title">GPU Computing &amp; the Heterogeneous Model</div>
+  <div class="mod-title">GPU Computing &amp; the CUDA Program</div>
 </section>
 
 <!-- History timeline -->
@@ -105,14 +104,6 @@
   </div>
   <div class="callout takeaway"><span class="lbl">One program, two worlds</span>A CUDA program contains <strong>both host code and device code</strong>. A <strong>kernel</strong> is a data-parallel function; invoking it spawns <strong>many lightweight, hardware-scheduled threads</strong> — much like running a graphics shader over many pixels.</div>
   <div class="src">NVIDIA CUDA C++ Programming Guide — Programming Model (host/device, kernels).</div>
-</section>
-
-<!-- ==================================================================
-     PART 2 — KERNELS
-     ================================================================== -->
-<section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part 2</div>
-  <div class="mod-title">Writing Kernels</div>
 </section>
 
 <!-- First kernel: vectorAdd -->
@@ -172,10 +163,10 @@ int main() {
 </section>
 
 <!-- ==================================================================
-     PART 3 — BUILT-INS & FUNCTIONS
+     PART 2 — BUILT-INS & FUNCTIONS
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part 3</div>
+  <div class="mod-num">Part 2</div>
   <div class="mod-title">Built-in Variables &amp; Functions</div>
 </section>
 
@@ -261,10 +252,10 @@ f4.x; f4.y; f4.z; f4.w;     // NOT .r .g .b .a
 
 
 <!-- ==================================================================
-     PART 4 — THREAD HIERARCHY
+     PART 3 — THREAD HIERARCHY
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part 4</div>
+  <div class="mod-num">Part 3</div>
   <div class="mod-title">The Thread Hierarchy</div>
 </section>
 
@@ -484,10 +475,10 @@ dim3 blocks(N / threadsPerBlock.x,
 </section>
 
 <!-- ==================================================================
-     PART 5 — SCHEDULING THREADS (WARPS & SM ARCHITECTURE)
+     PART 4 — SCHEDULING THREADS (WARPS & SM ARCHITECTURE)
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part 5</div>
+  <div class="mod-num">Part 4</div>
   <div class="mod-title">Scheduling Threads — Warps &amp; the SM</div>
 </section>
 
@@ -643,10 +634,10 @@ if (threadIdx.x &lt; 16) {
 
 
 <!-- ==================================================================
-     PART 6 — MEMORY MODEL & TRANSFERS
+     PART 5 — MEMORY MODEL & TRANSFERS
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part 6</div>
+  <div class="mod-num">Part 5</div>
   <div class="mod-title">CUDA Memory Model &amp; Transfers</div>
 </section>
 
@@ -754,7 +745,7 @@ if (threadIdx.x &lt; 16) {
     <div class="callout"><span class="lbl">Modern budget</span>Configurable shared memory per SM: up to <strong>164 KB</strong> (Ampere A100) / <strong>228 KB</strong> (Hopper H100). Above 48 KB/block requires an explicit opt-in.</div>
     <div class="callout ok"><span class="lbl">Occupancy example</span>If each block uses <strong>50 KB</strong> on A100 → \( \lfloor 164/50 \rfloor = 3 \) blocks per SM (shared memory is the limiter).</div>
   </div>
-  <div class="callout takeaway"><span class="lbl">This is the lever</span>Shared memory is what makes <strong>tiled matmul</strong> (Part 8) fast — threads in a block cooperatively stage data on-chip.</div>
+  <div class="callout takeaway"><span class="lbl">This is the lever</span>Shared memory is what makes <strong>tiled matmul</strong> (Part 7) fast — threads in a block cooperatively stage data on-chip.</div>
   <div class="src">Shared memory/SM (up to 164 KB CC 8.0 / 228 KB CC 9.0), 48 KB opt-in threshold: CUDA C++ Programming Guide — Compute Capabilities. 192/256 KB combined L1+shared: NVIDIA A100 &amp; H100 whitepapers.</div>
 </section>
 
@@ -867,10 +858,10 @@ cudaMemcpy(hostPtr, devicePtr, size,
 </section>
 
 <!-- ==================================================================
-     PART 7 — SYNCHRONIZING THREADS
+     PART 6 — SYNCHRONIZING THREADS
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part 7</div>
+  <div class="mod-num">Part 6</div>
   <div class="mod-title">Synchronizing Threads</div>
 </section>
 
@@ -952,10 +943,10 @@ if (cond) {
 
 
 <!-- ==================================================================
-     PART 8 — MATRIX MULTIPLY
+     PART 7 — MATRIX MULTIPLY
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part 8</div>
+  <div class="mod-num">Part 7</div>
   <div class="mod-title">Matrix Multiply: Naive → Tiled</div>
 </section>
 
