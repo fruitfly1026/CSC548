@@ -69,11 +69,11 @@
     <tr><td><strong>2007</strong></td><td>NVIDIA <strong>CUDA</strong></td><td>C/C++ for the GPU → the term <strong>"GPU Computing"</strong></td></tr>
     <tr><td><strong>2008</strong></td><td><strong>OpenCL</strong></td><td>Open, cross-vendor parallel-compute standard</td></tr>
     <tr><td><strong>2011</strong></td><td>WebGL</td><td>GPU graphics in the browser</td></tr>
-    <tr><td><strong>2013</strong></td><td>OpenGL compute shaders</td><td>General compute inside the graphics API</td></tr>
-    <tr><td><strong>2015</strong></td><td>Vulkan + SPIR-V</td><td>Low-overhead explicit GPU control; portable IR</td></tr>
+    <tr><td><strong>2012</strong></td><td>OpenGL compute shaders</td><td>General compute inside the graphics API</td></tr>
+    <tr><td><strong>2014</strong></td><td>Apple Metal</td><td>Low-level graphics + compute API for Apple GPUs</td></tr>
+    <tr><td><strong>2016</strong></td><td>Vulkan + SPIR-V</td><td>Low-overhead explicit GPU control; portable IR</td></tr>
     <tr><td><strong>2018</strong></td><td>RTX + DXR</td><td>Hardware ray tracing</td></tr>
-    <tr><td><strong>2019</strong></td><td>Apple Metal</td><td>Unified graphics + compute on Apple silicon</td></tr>
-    <tr><td><strong>2021–22</strong></td><td>WebGPU</td><td>Modern GPU compute &amp; graphics on the web</td></tr>
+    <tr><td><strong>2023</strong></td><td>WebGPU</td><td>Modern GPU compute &amp; graphics on the web</td></tr>
   </table>
   <div class="src">NVIDIA CUDA C Programming Guide; Khronos (OpenCL/Vulkan/WebGPU); adapted from CIS 565 (UPenn).</div>
 </section>
@@ -202,7 +202,7 @@ int main() {
   <table>
     <tr><th>Qualifier</th><th>Executed on</th><th>Callable from</th><th>Notes</th></tr>
     <tr><td><code class="inline">__global__</code></td><td>device</td><td>host<sup>*</sup></td><td>a <strong>kernel</strong>; must return <code class="inline">void</code></td></tr>
-    <tr><td><code class="inline">__device__</code></td><td>device</td><td>device</td><td><strong>inlined</strong> by default</td></tr>
+    <tr><td><code class="inline">__device__</code></td><td>device</td><td>device</td><td>may be inlined by the compiler</td></tr>
     <tr><td><code class="inline">__host__</code></td><td>host</td><td>host</td><td>the default if no qualifier</td></tr>
   </table>
   <p class="tiny muted"><sup>*</sup> Also callable from the device on CC ≥ 5.0, i.e. one kernel launching another (dynamic parallelism).</p>
@@ -236,7 +236,7 @@ int main() {
 <!-- Vector types -->
 <section data-background-color="#ffffff">
   <h2>Built-in Vector Types</h2>
-  <p class="small">Component types <code class="inline">char/uchar</code>, <code class="inline">short</code>, <code class="inline">int</code>, <code class="inline">long</code>, <code class="inline">float</code> come in widths <strong>1–4</strong>; plus <code class="inline">double1</code>/<code class="inline">double2</code>.</p>
+  <p class="small">The integer types, <code class="inline">float</code>, and <code class="inline">double</code> come with <strong>1–4</strong> components (e.g. <code class="inline">int2</code>, <code class="inline">float4</code>, <code class="inline">double2</code>). <code class="inline">dim3</code> is a 3-component type for grid and block sizes; unspecified components default to 1.</p>
   <div class="cols">
     <div>
       <div class="code-label">CUDA C — constructors &amp; access</div>
@@ -376,11 +376,11 @@ int main() {
   <div class="cols">
     <div>
       <table class="small">
-        <tr><th>Limit — all current GPUs</th><th>Value</th></tr>
+        <tr><th>Limit</th><th>Value</th></tr>
         <tr><td>Max threads / block</td><td><strong>1024</strong></td></tr>
         <tr><td>Warp size</td><td><strong>32</strong> threads</td></tr>
         <tr><td>Max block dims (x, y, z)</td><td><strong>1024, 1024, 64</strong></td></tr>
-        <tr><td>Max resident threads / SM</td><td><strong>2048</strong></td></tr>
+        <tr><td>Max resident threads / SM</td><td><strong>2048</strong> (A100, H100); 1536 (RTX 30/40, A4500)</td></tr>
       </table>
     </div>
     <div>
@@ -388,7 +388,7 @@ int main() {
       <div class="callout takeaway"><span class="lbl">Consequence</span><span class="small">One 1024-thread block is not enough for big data. We need <strong>many blocks</strong>, addressed with <code class="inline">blockIdx</code> and <code class="inline">blockDim</code>.</span></div>
     </div>
   </div>
-  <div class="src">Limits: NVIDIA CUDA C++ Programming Guide — Compute Capabilities, "Technical Specifications per Compute Capability" (1024 threads/block, warp 32, block dims 1024·1024·64, 2048 resident threads/SM for CC 8.0/9.0). SM figures: NVIDIA A100 (Ampere GA100) &amp; H100 (Hopper GH100) architecture white papers.</div>
+  <div class="src">Limits: NVIDIA CUDA C++ Programming Guide — Compute Capabilities, "Technical Specifications per Compute Capability" (1024 threads/block, warp 32, block dims 1024·1024·64, 2048 resident threads/SM for CC 8.0/9.0, 1536 for CC 8.6/8.9). SM figures: NVIDIA A100 (Ampere GA100) &amp; H100 (Hopper GH100) architecture white papers.</div>
 </section>
 
 <!-- Multi-block 2D matrix add -->
@@ -416,7 +416,7 @@ dim3 blocks(N / threadsPerBlock.x,
     </div>
   </div>
   <div class="src">Global-index pattern <code class="inline">blockIdx·blockDim + threadIdx</code>: NVIDIA CUDA C++ Programming Guide — Programming Model: Thread Hierarchy.</div>
-  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/03_saxpy.cu"><code class="inline">Demos/cuda/03_saxpy.cu</code></a></p>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/low_occupancy/saxpy_opt.cu"><code class="inline">Demos/cuda/low_occupancy/saxpy_opt.cu</code></a></p>
 </section>
 
 <!-- Worked indexing example N=32 -->
@@ -577,7 +577,7 @@ dim3 blocks(N / threadsPerBlock.x,
       <rect x="430" y="82" width="14" height="12" fill="#fee2e2" stroke="#ef4444"/>
     </svg>
   </div>
-  <div class="callout takeaway"><span class="lbl">Key idea</span>GPUs <strong>hide</strong> latency with parallelism instead of <strong>reducing</strong> it with caches.</div>
+  <div class="callout takeaway"><span class="lbl">Key idea</span>GPUs <strong>hide</strong> latency with parallelism rather than relying mainly on large caches to <strong>reduce</strong> it.</div>
   <div class="src">UIUC ECE498/AL.</div>
 </section>
 
@@ -707,11 +707,11 @@ if (threadIdx.x &lt; 16) {
   <h2>Registers</h2>
   <p class="small"><strong>Per-thread</strong>, fast <strong>on-chip</strong>. The register file is split across all resident threads — so register use caps occupancy.</p>
   <div class="cols">
-    <div class="callout"><span class="lbl">Modern budget (CC 7.0–9.0)</span>
+    <div class="callout"><span class="lbl">Modern budget (A100 / H100)</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
         <li><strong>65,536</strong> (64K) 32-bit registers per SM</li>
         <li>Up to <strong>255</strong> registers per thread</li>
-        <li>At 2048 resident threads/SM → \( 65536/2048 = 32 \) regs/thread for full occupancy</li>
+        <li>At 2048 resident threads/SM → \( 65536/2048 = 32 \) regs/thread for full occupancy (A4500: 1536 threads → ~42)</li>
       </ul></div>
     <div class="callout warn"><span class="lbl">Occupancy trade-off <span class="muted">(historical, G80)</span></span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
@@ -733,7 +733,7 @@ if (threadIdx.x &lt; 16) {
         <li>Register / array <strong>spill</strong> space</li>
         <li>Physically lives in <strong>global memory</strong> (off-chip)</li>
         <li>Addressing resolved by the <strong>compiler</strong></li>
-        <li>Stores are <strong>cached in L1</strong> on SM 2.x+</li>
+        <li>Cached in L1/L2 (details vary by architecture)</li>
       </ul></div>
     <div class="callout warn"><span class="lbl">Performance</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
@@ -783,11 +783,12 @@ if (threadIdx.x &lt; 16) {
   <table style="font-size:.82em">
     <tr><th>Declaration</th><th>Memory</th><th>Scope</th><th>Lifetime</th></tr>
     <tr><td>automatic scalars</td><td>register</td><td>thread</td><td>kernel</td></tr>
-    <tr><td>automatic arrays</td><td>local</td><td>thread</td><td>kernel</td></tr>
+    <tr><td>automatic arrays</td><td>local*</td><td>thread</td><td>kernel</td></tr>
     <tr><td><code class="inline">__shared__</code></td><td>shared</td><td>block</td><td>kernel</td></tr>
     <tr><td><code class="inline">__device__</code></td><td>global</td><td>grid</td><td>application</td></tr>
     <tr><td><code class="inline">__constant__</code></td><td>constant</td><td>grid</td><td>application</td></tr>
   </table>
+  <p class="tiny muted">* Small arrays indexed only by compile-time constants usually stay in registers.</p>
   </div>
   <div>
   <div class="callout"><span class="lbl">Constants</span><code class="inline">__constant__</code> vars are declared <strong>outside</strong> any function; the host fills them with <code class="inline">cudaMemcpyToSymbol</code> / <code class="inline">cudaMemcpyFromSymbol</code>.</div>
@@ -860,7 +861,7 @@ cudaMemcpy(hostPtr, devicePtr, size,
     </div>
   </div>
   <div class="src"><code class="inline">cudaMemcpy</code> signature and direction constants: NVIDIA CUDA C++ Programming Guide — Programming Interface: Device Memory.</div>
-  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/02_vector_add.cu"><code class="inline">Demos/cuda/02_vector_add.cu</code></a></p>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/strided/vadd_opt.cu"><code class="inline">Demos/cuda/strided/vadd_opt.cu</code></a></p>
 </section>
 
 <!-- ==================================================================
@@ -934,13 +935,13 @@ if (cond) {
 </code></pre>
     </div>
     <div>
-      <div class="code-label">fix — a barrier in BOTH branches</div>
+      <div class="code-label">fix — hoist the barrier out of the branch</div>
       <pre><code class="language-cpp" data-trim>
 if (cond) {
-    __syncthreads();   // all threads
-} else {
-    __syncthreads();   // reach a barrier
+    /* ... */          // divergent work only
 }
+__syncthreads();       // every thread reaches
+                       // the SAME barrier
 </code></pre>
     </div>
   </div>
@@ -1096,8 +1097,8 @@ devP[row*width + col] = pValue;
       <div class="code-label">CUDA C — launch</div>
       <pre><code class="language-cpp" data-trim>
 dim3 dimBlocks(TILE_WIDTH, TILE_WIDTH);
-dim3 dimGrid(WIDTH/TILE_WIDTH,
-             WIDTH/TILE_WIDTH);
+dim3 dimGrid(width/TILE_WIDTH,    // assumes width is a
+             width/TILE_WIDTH);   // multiple of TILE_WIDTH
 MatrixMultiplyKernel
     &lt;&lt;&lt;dimGrid, dimBlocks&gt;&gt;&gt;(...);
 </code></pre>
@@ -1116,7 +1117,7 @@ MatrixMultiplyKernel
         <li>At 4 B loaded per FLOP that would need <strong>≈ 78 TB/s</strong></li>
         <li>But HBM2 bandwidth is only <strong>1.55 TB/s</strong></li>
       </ul></div>
-    <div class="callout"><span class="lbl">Result</span>Memory caps you at \( \approx \) <strong>390 GFLOPS</strong> — only about <strong>2%</strong> of peak.</div>
+    <div class="callout"><span class="lbl">Result</span>If every load goes to DRAM, memory caps you at \( \approx \) <strong>390 GFLOPS</strong> — only about <strong>2%</strong> of peak.</div>
   </div>
   <div class="callout takeaway"><span class="lbl">Fix</span>We must <strong>cut global-memory access</strong> — reuse data on-chip via <strong>shared memory</strong>.</div>
   <div class="src">A100 FP32 19.5 TFLOPS &amp; HBM2 1555 GB/s: NVIDIA A100 Tensor Core GPU Architecture whitepaper.</div>
@@ -1176,7 +1177,7 @@ for (int m = 0; m &lt; width/TILE_WIDTH; m++) {        // m = phase index
 devP[row*width + col] = pValue;
 </code></pre>
   <div class="callout"><span class="lbl">Two barriers</span><strong>#1</strong> after the loads so every thread sees the full tiles; <strong>#2</strong> so no thread overwrites the tile before others finish reading it. <code class="inline">width/TILE_WIDTH</code> = number of phases.</div>
-  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/04_matmul.cu"><code class="inline">Demos/cuda/04_matmul.cu</code></a></p>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/hotspot/gemm_tiled.cu"><code class="inline">Demos/cuda/hotspot/gemm_tiled.cu</code></a></p>
 </section>
 
 <!-- Choosing TILE_WIDTH -->
@@ -1193,7 +1194,7 @@ devP[row*width + col] = pValue;
     <div class="callout ok"><span class="lbl">Payoff</span>
       <ul class="small" style="margin:.2em 0 .2em .9em">
         <li>Each value reused TILE_WIDTH times → global access cut by <strong>TILE_WIDTH×</strong> (16× at TW=16, 32× at TW=32)</li>
-        <li>Compute-bound instead of bandwidth-bound — approaches the SM's arithmetic peak</li>
+        <li>On A100 the bandwidth bound rises from ~2% of FP32 peak to ~32% (TW=16) or ~64% (TW=32)</li>
       </ul></div>
   </div>
   <div class="src">Max 1024 threads/block: CUDA C++ Programming Guide — Compute Capabilities. 164 KB shared/SM (A100): NVIDIA A100 whitepaper.</div>
@@ -1208,7 +1209,7 @@ devP[row*width + col] = pValue;
       <li>A \( 1024 \times 1024 \) output P → \( 64 \times 64 = 4096 \) blocks</li>
       <li>Each block does <strong>512 global loads</strong> (per phase, both tiles) for <strong>8192 mul/add</strong></li>
     </ul></div>
-  <div class="callout takeaway"><span class="lbl">Bottom line</span>Compute now dominates memory — the <strong>global-memory bandwidth is no longer the limiter</strong>. Tiling turned a 4%-of-peak kernel into a near-peak one. Next we push further with architecture-aware optimizations.</div>
+  <div class="callout takeaway"><span class="lbl">Bottom line</span>Tiling cuts global traffic 16×: 0.25 B/FLOP instead of 4. On A100 that lifts the first-order bound from ~0.39 to ~6.2 TFLOPS — 16× faster, but still <strong>bandwidth-bound</strong> at ~32% of peak. Modern GPUs have far more compute per byte than G80 did, so reaching peak needs more reuse (bigger tiles, register tiling) — Session 2.</div>
 </section>
 
 <!-- References -->
