@@ -49,7 +49,7 @@
     <tr><td>6</td><td>Scheduling — Warps &amp; the SM</td><td>SM architecture, warps, zero-overhead scheduling, branch divergence.</td></tr>
     <tr><td>7</td><td>Memory — Model &amp; Transfers</td><td>Registers, local, shared, global, constant; variable qualifiers; <code class="inline">cudaMalloc</code>, <code class="inline">cudaMemcpy</code>.</td></tr>
     <tr><td>8</td><td>Sync — Synchronizing Threads</td><td><code class="inline">__syncthreads()</code> barrier, walkthrough, conditional-barrier deadlock.</td></tr>
-    <tr><td>9</td><td>Matmul — P = M · N</td><td>CPU triple loop → 3-step GPU port → naive kernel → performance discussion.</td></tr>
+    <tr><td>9</td><td>Matmul — Naive → Tiled</td><td>CPU loop → naive kernel → critique → multi-block → shared-memory tiling &amp; tile sizing.</td></tr>
   </table>
 </section>
 
@@ -761,7 +761,7 @@ if (threadIdx.x &lt; 16) {
     <div class="callout"><span class="lbl">Modern budget</span>Configurable shared memory per SM: up to <strong>164 KB</strong> (Ampere A100) / <strong>228 KB</strong> (Hopper H100). Above 48 KB/block requires an explicit opt-in.</div>
     <div class="callout ok"><span class="lbl">Occupancy example</span>If each block uses <strong>50 KB</strong> on A100 → \( \lfloor 164/50 \rfloor = 3 \) blocks per SM (shared memory is the limiter).</div>
   </div>
-  <div class="callout takeaway"><span class="lbl">This is the lever</span>Shared memory is what makes <strong>tiled matmul</strong> (Session 2) fast — threads in a block cooperatively stage data on-chip.</div>
+  <div class="callout takeaway"><span class="lbl">This is the lever</span>Shared memory is what makes <strong>tiled matmul</strong> (Part 9) fast — threads in a block cooperatively stage data on-chip.</div>
   <div class="src">Shared memory/SM (up to 164 KB CC 8.0 / 228 KB CC 9.0), 48 KB opt-in threshold: CUDA C++ Programming Guide — Compute Capabilities. 192/256 KB combined L1+shared: NVIDIA A100 &amp; H100 whitepapers.</div>
 </section>
 
@@ -963,7 +963,7 @@ if (cond) {
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 9</div>
-  <div class="mod-title">Matrix Multiply: P = M · N</div>
+  <div class="mod-title">Matrix Multiply: Naive → Tiled</div>
 </section>
 
 <!-- Matmul ops question -->
@@ -1081,8 +1081,144 @@ MatrixMultiplyKernel&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;(devM, devN, devP, wi
   <div class="qa"><p class="q">2. What is the major <strong>limitation</strong>?</p>
     <div class="fragment"><div class="a">It uses a <strong>single block</strong>, so it is capped by the <strong>max threads per block = 1024</strong>. Only <strong>small matrices</strong> fit — a square tile of at most <strong>32×32 = 1024</strong> threads.</div></div></div>
   <div class="qa"><p class="q">3. What <strong>assumptions</strong> did we make?</p>
-    <div class="fragment"><div class="a">The matrix is <strong>square</strong> and <strong>fits in one block</strong>. Fixing these (many blocks, tiling with shared memory) is the next session.</div></div></div>
+    <div class="fragment"><div class="a">The matrix is <strong>square</strong> and <strong>fits in one block</strong>. Fixing these — many blocks, then tiling with shared memory — comes next.</div></div></div>
   <div class="src">Max threads/block = 1024: CUDA C++ Programming Guide — Compute Capabilities.</div>
+</section>
+
+<!-- Naive kernel -->
+<section data-background-color="#ffffff">
+  <h2>Naive Multi-block Matmul</h2>
+  <p class="small">Each thread computes one element of P by streaming an entire row of M and column of N from <strong>global memory</strong>.</p>
+  <div class="cols">
+    <div>
+      <div class="code-label">CUDA C — naive kernel</div>
+      <pre><code class="language-cpp" data-trim>
+int col = blockIdx.x*blockDim.x + threadIdx.x;
+int row = blockIdx.y*blockDim.y + threadIdx.y;
+float pValue = 0;
+for (int k = 0; k &lt; width; k++)
+    pValue += devM[row*width + k]
+            * devN[k*width + col];
+devP[row*width + col] = pValue;
+</code></pre>
+    </div>
+    <div>
+      <div class="code-label">CUDA C — launch</div>
+      <pre><code class="language-cpp" data-trim>
+dim3 dimBlocks(TILE_WIDTH, TILE_WIDTH);
+dim3 dimGrid(WIDTH/TILE_WIDTH,
+             WIDTH/TILE_WIDTH);
+MatrixMultiplyKernel
+    &lt;&lt;&lt;dimGrid, dimBlocks&gt;&gt;&gt;(...);
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- Bandwidth bottleneck -->
+<section data-background-color="#ffffff">
+  <h2>The Bandwidth Bottleneck</h2>
+  <p class="small">Every <code class="inline">pValue +=</code> does <strong>2 global loads</strong> (4 B each) for <strong>2 FLOPs</strong> — far too much memory traffic.</p>
+  <div class="cols">
+    <div class="callout warn"><span class="lbl">A100 numbers</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li>Peak FP32 compute: <strong>19.5 TFLOPS</strong></li>
+        <li>At 4 B loaded per FLOP that would need <strong>≈ 78 TB/s</strong></li>
+        <li>But HBM2 bandwidth is only <strong>1.55 TB/s</strong></li>
+      </ul></div>
+    <div class="callout"><span class="lbl">Result</span>Memory caps you at \( \approx \) <strong>390 GFLOPS</strong> — only about <strong>2%</strong> of peak.</div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Fix</span>We must <strong>cut global-memory access</strong> — reuse data on-chip via <strong>shared memory</strong>.</div>
+  <div class="src">A100 FP32 19.5 TFLOPS &amp; HBM2 1555 GB/s: NVIDIA A100 Tensor Core GPU Architecture whitepaper.</div>
+</section>
+
+<!-- Tiling idea -->
+<section data-background-color="#ffffff">
+  <h2>The Tiling Idea</h2>
+  <div class="cols">
+    <div>
+      <p class="small">Break P into <strong>TILE_WIDTH × TILE_WIDTH</strong> tiles — one tile per block. Each <strong>phase</strong>:</p>
+      <ul class="small">
+        <li>Load a tile of M and a tile of N into <strong>shared memory</strong></li>
+        <li><code class="inline">__syncthreads()</code> — wait for the loads</li>
+        <li>Accumulate the <strong>partial dot product</strong> from the tiles</li>
+        <li><code class="inline">__syncthreads()</code> — before overwriting the tiles next phase</li>
+      </ul>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 280 200" class="chart" style="max-width:320px">
+        <rect x="150" y="20" width="110" height="110" fill="#fff" stroke="var(--line)"/>
+        <text x="205" y="14" text-anchor="middle" class="tiny">N</text>
+        <rect x="186" y="20" width="36" height="110" fill="#dbeafe" stroke="#3b82f6"/>
+        <rect x="20" y="150" width="110" height="40" fill="#fff" stroke="var(--line)"/>
+        <text x="14" y="175" text-anchor="end" class="tiny">M</text>
+        <rect x="20" y="150" width="36" height="40" fill="#fef9c3" stroke="#d97706"/>
+        <rect x="150" y="150" width="110" height="40" fill="#fff" stroke="var(--line)"/>
+        <text x="205" y="145" text-anchor="middle" class="tiny">P</text>
+        <rect x="186" y="150" width="36" height="40" fill="#dcfce7" stroke="#22c55e"/>
+        <text x="204" y="174" text-anchor="middle" class="tiny">tile</text>
+      </svg>
+    </div>
+  </div>
+  <div class="src">UIUC ECE498/AL.</div>
+</section>
+
+<!-- Tiled kernel -->
+<section data-background-color="#ffffff">
+  <h2>Tiled Kernel</h2>
+  <div class="code-label">CUDA C — shared-memory tiled matmul</div>
+  <pre><code class="language-cpp" data-trim>
+__shared__ float sM[TILE_WIDTH][TILE_WIDTH];
+__shared__ float sN[TILE_WIDTH][TILE_WIDTH];
+int bx = blockIdx.x;  int by = blockIdx.y;
+int tx = threadIdx.x; int ty = threadIdx.y;
+int col = bx*TILE_WIDTH + tx;
+int row = by*TILE_WIDTH + ty;
+float pValue = 0;
+for (int m = 0; m &lt; width/TILE_WIDTH; m++) {        // m = phase index
+    sM[ty][tx] = devM[row*width + (m*TILE_WIDTH + tx)];
+    sN[ty][tx] = devN[col + (m*TILE_WIDTH + ty)*width];
+    __syncthreads();                                 // 1: tiles fully loaded
+    for (int k = 0; k &lt; TILE_WIDTH; ++k)
+        pValue += sM[ty][k] * sN[k][tx];
+    __syncthreads();                                 // 2: done before overwrite
+}
+devP[row*width + col] = pValue;
+</code></pre>
+  <div class="callout"><span class="lbl">Two barriers</span><strong>#1</strong> after the loads so every thread sees the full tiles; <strong>#2</strong> so no thread overwrites the tile before others finish reading it. <code class="inline">width/TILE_WIDTH</code> = number of phases.</div>
+  <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/cuda/04_matmul.cu"><code class="inline">Demos/cuda/04_matmul.cu</code></a></p>
+</section>
+
+<!-- Choosing TILE_WIDTH -->
+<section data-background-color="#ffffff">
+  <h2>Choosing TILE_WIDTH</h2>
+  <p class="small">Bounded by <strong>max threads/block</strong> (<strong>1024</strong> on all current GPUs, CC ≥ 2.0) and <strong>shared memory</strong> per block.</p>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Sizing the tiles</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li>TILE_WIDTH = 32 → \( 32\times32 = 1024 \) threads/block (the max)</li>
+        <li>\( 32 \times 32 \times 4\,\text{B} = 4 \) KB each for <code class="inline">sM</code>, <code class="inline">sN</code> → 8 KB/block — easily within 164 KB (A100)</li>
+        <li>Larger tile → more reuse, but fewer resident blocks</li>
+      </ul></div>
+    <div class="callout ok"><span class="lbl">Payoff</span>
+      <ul class="small" style="margin:.2em 0 .2em .9em">
+        <li>Each value reused TILE_WIDTH times → global access cut by <strong>TILE_WIDTH×</strong> (16× at TW=16, 32× at TW=32)</li>
+        <li>Compute-bound instead of bandwidth-bound — approaches the SM's arithmetic peak</li>
+      </ul></div>
+  </div>
+  <div class="src">Max 1024 threads/block: CUDA C++ Programming Guide — Compute Capabilities. 164 KB shared/SM (A100): NVIDIA A100 whitepaper.</div>
+</section>
+
+<!-- First-order sizing -->
+<section data-background-color="#ffffff">
+  <h2>First-order Sizing</h2>
+  <div class="callout"><span class="lbl">TILE_WIDTH = 16</span>
+    <ul class="small" style="margin:.2em 0 .2em .9em">
+      <li>\( 16 \times 16 = 256 \) threads/block</li>
+      <li>A \( 1024 \times 1024 \) output P → \( 64 \times 64 = 4096 \) blocks</li>
+      <li>Each block does <strong>512 global loads</strong> (per phase, both tiles) for <strong>8192 mul/add</strong></li>
+    </ul></div>
+  <div class="callout takeaway"><span class="lbl">Bottom line</span>Compute now dominates memory — the <strong>global-memory bandwidth is no longer the limiter</strong>. Tiling turned a 4%-of-peak kernel into a near-peak one. Next we push further with architecture-aware optimizations.</div>
 </section>
 
 <!-- References -->
@@ -1095,7 +1231,7 @@ MatrixMultiplyKernel&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;(devM, devN, devP, wi
     <li>API timeline: NVIDIA CUDA; Khronos (OpenCL, WebGL, Vulkan/SPIR-V, WebGPU); Apple Metal; Microsoft DXR.</li>
     <li>Pedagogy/figures adapted from <strong>CIS 565</strong> (UPenn) &amp; <strong>UIUC ECE498/AL</strong>.</li>
   </ul>
-  <div class="callout takeaway"><span class="lbl">Next session (Session 2 of 2)</span>Many-block tiled matrix multiply with shared memory, then a full performance-optimization module: reduction &amp; divergence, coalescing, bank conflicts, occupancy, prefetching, unrolling, and granularity. <span class="small">Session 3 is an in-class lab.</span></div>
+  <div class="callout takeaway"><span class="lbl">Next session (Session 2 of 2)</span>A full performance-optimization module: reduction &amp; divergence, coalescing, cuThermo memory inefficiencies, bank conflicts, occupancy, prefetching, unrolling, and granularity. <span class="small">Session 3 is an in-class lab.</span></div>
 </section>
 
 </div>
