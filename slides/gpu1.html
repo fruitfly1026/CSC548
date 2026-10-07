@@ -363,7 +363,6 @@ int main() {
                   threadsPerBlock&gt;&gt;&gt;(A, B, C);
 }
 </code></pre>
-      <div class="callout"><span class="lbl">idx</span><code class="inline">threadIdx.y * blockDim.x + threadIdx.x</code> is the 2D formula with \(D_x =\) <code class="inline">blockDim.x</code>.</div>
     </div>
   </div>
   <div class="src">2D thread-index flattening and <code class="inline">threadIdx</code>/<code class="inline">blockDim</code> built-ins: NVIDIA CUDA C++ Programming Guide — Programming Model: Thread Hierarchy.</div>
