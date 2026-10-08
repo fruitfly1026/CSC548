@@ -411,6 +411,32 @@ if (i &lt; n) c[i] = a[i] + b[i];
   <div class="src">cuThermo (arXiv:2507.18729); parallel-demos, RTX A4500.</div>
 </section>
 
+<!-- When abuse pays: register pressure -->
+<section data-background-color="#ffffff">
+  <h2>When "Abuse" Pays — Trading Registers for Occupancy</h2>
+  <p class="small">The rule of thumb assumes registers are free. They are not: registers per thread decide how many warps fit on an SM (Part I). When the register budget, not shared memory, is what limits occupancy, moving some thread-local data <em>off</em> registers can be the right call.</p>
+  <div class="cols">
+    <div class="callout warn"><span class="lbl">Register pressure</span><span class="small">A100: 64K registers/SM, 256-thread blocks.</span>
+      <ul class="small">
+        <li>128 regs/thread: \( 65536 / (256 \times 128) = 2 \) blocks → 16 warps (25%)</li>
+        <li>64 regs/thread: \( 65536 / (256 \times 64) = 4 \) blocks → 32 warps (50%)</li>
+      </ul>
+      <span class="small">Fewer resident warps → less latency hiding for global loads.</span></div>
+    <div class="callout ok"><span class="lbl">Two release valves</span>
+      <ul class="small">
+        <li><strong>Shared memory:</strong> park cold thread-local values (e.g. per-thread scratch used once) in <code class="inline">__shared__</code>. You choose what moves, and it stays on-chip.</li>
+        <li><strong>Local memory:</strong> cap registers and let the compiler spill. Spills go to local memory, which lives in device memory but is cached in L1/L2.</li>
+      </ul>
+      <pre><code class="language-cpp" data-trim>
+__global__ void __launch_bounds__(256, 4)   // ≤ 64 regs
+kernel(...) { ... }
+// or: nvcc -maxrregcount=64
+</code></pre></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">When it pays</span><span class="small">The kernel is latency-bound (occupancy-limited), and the values moved out are <strong>cold</strong>: touched outside the inner loop. Spilling hot values only trades one bottleneck for another. Check with <code class="inline">-Xptxas -v</code> (spill bytes) and Nsight Compute (achieved occupancy, local-memory traffic).</span></div>
+  <div class="src">CUDA C++ Programming Guide; CUDA C++ Best Practices Guide.</div>
+</section>
+
 <!-- ==================================================================
      PART H — BANK CONFLICTS
      ================================================================== -->
@@ -576,7 +602,7 @@ float f = shared[index + s * threadIdx.x];
       </ul></div>
     <div class="callout"><span class="lbl">Shared memory &amp; resources</span>
       <ul class="small">
-        <li>Thread- or warp-local data → registers or <code class="inline">__shfl_sync</code></li>
+        <li>Thread- or warp-local data → registers or <code class="inline">__shfl_sync</code>, unless registers already cap occupancy</li>
         <li>Avoid bank conflicts (odd strides)</li>
         <li>Watch the occupancy cliff</li>
         <li>Fix only what is on the critical path</li>
