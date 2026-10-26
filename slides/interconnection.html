@@ -16,6 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <!-- course theme -->
 <link rel="stylesheet" href="assets/theme.css?v=13">
+<style>.reveal table.cmp td,.reveal table.cmp th{padding:.2em .55em}</style>
 </head>
 <body>
 <div class="reveal">
@@ -173,6 +174,61 @@
   </div>
   <div class="callout takeaway"><span class="lbl">Bisection bandwidth</span>
     The <strong>minimum number of links cut</strong> when the network is partitioned into two equal halves — a measure of worst-case bandwidth between the two halves.</div>
+</section>
+
+<!-- Simple topologies -->
+<section data-background-color="#ffffff">
+  <h2>Simple Topologies</h2>
+  <p class="small">The building blocks, for <em>p</em> nodes: array, ring, mesh, tree. Short paths cost links or router ports. Torus, hypercube, fat tree and dragonfly (next slides) each fix one of these weaknesses.</p>
+  <div class="center">
+<svg viewBox="0 0 760 175" class="chart" style="width:100%;max-height:215px">
+  <g transform="translate(0,0)">
+    <text x="70" y="12" text-anchor="middle" class="note">Linear array</text>
+    <g stroke="#1d4ed8" stroke-width="2"><line x1="25" y1="60" x2="55" y2="60"/><line x1="55" y1="60" x2="85" y2="60"/><line x1="85" y1="60" x2="115" y2="60"/></g>
+    <g fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"><circle cx="25" cy="60" r="7"/><circle cx="55" cy="60" r="7"/><circle cx="85" cy="60" r="7"/><circle cx="115" cy="60" r="7"/></g>
+    <text x="70" y="125" text-anchor="middle" class="tiny" style="fill:#475569">diameter p − 1</text>
+    <text x="70" y="140" text-anchor="middle" class="tiny" style="fill:#475569">bisection 1</text>
+    <text x="70" y="155" text-anchor="middle" class="tiny" style="fill:#475569">degree 2</text>
+  </g>
+  <g transform="translate(152,0)">
+    <text x="70" y="12" text-anchor="middle" class="note">Ring</text>
+    <g stroke="#1d4ed8" stroke-width="2"><line x1="70.0" y1="22.0" x2="102.9" y2="41.0"/><line x1="102.9" y1="41.0" x2="102.9" y2="79.0"/><line x1="102.9" y1="79.0" x2="70.0" y2="98.0"/><line x1="70.0" y1="98.0" x2="37.1" y2="79.0"/><line x1="37.1" y1="79.0" x2="37.1" y2="41.0"/><line x1="37.1" y1="41.0" x2="70.0" y2="22.0"/></g>
+    <g fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"><circle cx="70.0" cy="22.0" r="7"/><circle cx="102.9" cy="41.0" r="7"/><circle cx="102.9" cy="79.0" r="7"/><circle cx="70.0" cy="98.0" r="7"/><circle cx="37.1" cy="79.0" r="7"/><circle cx="37.1" cy="41.0" r="7"/></g>
+    <text x="70" y="125" text-anchor="middle" class="tiny" style="fill:#475569">diameter ⌊p/2⌋</text>
+    <text x="70" y="140" text-anchor="middle" class="tiny" style="fill:#475569">bisection 2</text>
+    <text x="70" y="155" text-anchor="middle" class="tiny" style="fill:#475569">degree 2</text>
+  </g>
+  <g transform="translate(304,0)">
+    <text x="70" y="12" text-anchor="middle" class="note">2-D mesh</text>
+    <g stroke="#1d4ed8" stroke-width="2"><line x1="40" y1="30" x2="70" y2="30"/><line x1="70" y1="30" x2="100" y2="30"/><line x1="40" y1="60" x2="70" y2="60"/><line x1="70" y1="60" x2="100" y2="60"/><line x1="40" y1="90" x2="70" y2="90"/><line x1="70" y1="90" x2="100" y2="90"/><line x1="40" y1="30" x2="40" y2="60"/><line x1="70" y1="30" x2="70" y2="60"/><line x1="100" y1="30" x2="100" y2="60"/><line x1="40" y1="60" x2="40" y2="90"/><line x1="70" y1="60" x2="70" y2="90"/><line x1="100" y1="60" x2="100" y2="90"/></g>
+    <g fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"><circle cx="40" cy="30" r="7"/><circle cx="70" cy="30" r="7"/><circle cx="100" cy="30" r="7"/><circle cx="40" cy="60" r="7"/><circle cx="70" cy="60" r="7"/><circle cx="100" cy="60" r="7"/><circle cx="40" cy="90" r="7"/><circle cx="70" cy="90" r="7"/><circle cx="100" cy="90" r="7"/></g>
+    <text x="70" y="125" text-anchor="middle" class="tiny" style="fill:#475569">diameter 2(√p − 1)</text>
+    <text x="70" y="140" text-anchor="middle" class="tiny" style="fill:#475569">bisection √p</text>
+    <text x="70" y="155" text-anchor="middle" class="tiny" style="fill:#475569">degree 4</text>
+  </g>
+  <g transform="translate(456,0)">
+    <text x="70" y="12" text-anchor="middle" class="note">Binary tree</text>
+    <g stroke="#1d4ed8" stroke-width="2"><line x1="70" y1="22" x2="40" y2="55"/><line x1="70" y1="22" x2="100" y2="55"/><line x1="40" y1="55" x2="25" y2="92"/><line x1="40" y1="55" x2="55" y2="92"/><line x1="100" y1="55" x2="85" y2="92"/><line x1="100" y1="55" x2="115" y2="92"/></g>
+    <g fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"><circle cx="70" cy="22" r="7"/><circle cx="40" cy="55" r="7"/><circle cx="100" cy="55" r="7"/><circle cx="25" cy="92" r="7"/><circle cx="55" cy="92" r="7"/><circle cx="85" cy="92" r="7"/><circle cx="115" cy="92" r="7"/></g>
+    <text x="70" y="125" text-anchor="middle" class="tiny" style="fill:#475569">diameter ≈ 2 log₂ p</text>
+    <text x="70" y="140" text-anchor="middle" class="tiny" style="fill:#475569">bisection 1</text>
+    <text x="70" y="155" text-anchor="middle" class="tiny" style="fill:#475569">degree 3</text>
+  </g>
+  <g transform="translate(608,0)">
+    <text x="70" y="12" text-anchor="middle" class="note">Star</text>
+    <g stroke="#1d4ed8" stroke-width="2"><line x1="70" y1="60" x2="70.0" y2="22.0"/><line x1="70" y1="60" x2="102.9" y2="41.0"/><line x1="70" y1="60" x2="102.9" y2="79.0"/><line x1="70" y1="60" x2="70.0" y2="98.0"/><line x1="70" y1="60" x2="37.1" y2="79.0"/><line x1="70" y1="60" x2="37.1" y2="41.0"/></g>
+    <g fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"><circle cx="70.0" cy="22.0" r="7"/><circle cx="102.9" cy="41.0" r="7"/><circle cx="102.9" cy="79.0" r="7"/><circle cx="70.0" cy="98.0" r="7"/><circle cx="37.1" cy="79.0" r="7"/><circle cx="37.1" cy="41.0" r="7"/><circle cx="70" cy="60" r="8"/></g>
+    <text x="70" y="125" text-anchor="middle" class="tiny" style="fill:#475569">diameter 2</text>
+    <text x="70" y="140" text-anchor="middle" class="tiny" style="fill:#475569">bisection ⌊p/2⌋, all via the hub</text>
+    <text x="70" y="155" text-anchor="middle" class="tiny" style="fill:#475569">hub degree p − 1</text>
+  </g>
+</svg>
+  </div>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Array and ring: cheap but slow</span><span class="small">2 ports per node, but distance grows with <em>p</em>, and everything crossing the middle shares 1 or 2 links.</span></div>
+    <div class="callout"><span class="lbl">Mesh: spread the load</span><span class="small">4 ports per node; distance grows with √p, and √p links cross the middle. The workhorse of on-chip networks.</span></div>
+    <div class="callout"><span class="lbl">Tree and star: short but centralized</span><span class="small">Paths are short, but the root or hub carries all cross traffic: a single hot spot and a single point of failure.</span></div>
+  </div>
 </section>
 
 <!-- Worked example: 2x3 mesh -->
@@ -346,12 +402,19 @@
 <!-- Comparison table -->
 <section data-background-color="#ffffff">
   <h2>Comparison of Topologies</h2>
-  <p class="small muted">For <em>p</em> nodes (torus row: even <em>k</em>). Diameter and bisection BW trade off against degree (router cost) and number of links.</p>
-  <table>
+  <div class="symkey">
+    <span><strong>Diameter</strong> longest shortest path in hops (worst-case latency)</span>
+    <span><strong>Bisection BW</strong> links cut to halve the network (worst-case throughput)</span>
+    <span><strong>#Links</strong> wiring cost</span>
+    <span><strong>Degree</strong> ports per switch (router cost)</span>
+  </div>
+  <p class="tiny muted">For <em>p</em> nodes (torus row: even <em>k</em>). Smaller diameter and larger bisection are better; they are paid for with more links and higher degree.</p>
+  <table class="cmp" style="font-size:.76em;line-height:1.15">
     <tr><th>Topology</th><th>Diameter</th><th>Bisection BW</th><th>#Links</th><th>Degree</th></tr>
     <tr><td>Fully connected</td><td>\(1\)</td><td>\(p^2/4\)</td><td>\(p(p-1)/2\)</td><td>\(p-1\)</td></tr>
     <tr><td>Linear array</td><td>\(p-1\)</td><td>\(1\)</td><td>\(p-1\)</td><td>\(2\)</td></tr>
     <tr><td>Ring</td><td>\(p/2\)</td><td>\(2\)</td><td>\(p\)</td><td>\(2\)</td></tr>
+    <tr><td>Star</td><td>\(2\)</td><td>\(p/2\)</td><td>\(p-1\)</td><td>\(p-1\) (hub)</td></tr>
     <tr><td>2-D mesh</td><td>\(2(\sqrt{p}-1)\)</td><td>\(\sqrt{p}\)</td><td>\(2\sqrt{p}(\sqrt{p}-1)\)</td><td>\(4\)</td></tr>
     <tr><td class="hi">Hypercube</td><td class="hi">\(\log_2 p\)</td><td class="hi">\(p/2\)</td><td>\(\tfrac{p}{2}\log_2 p\)</td><td>\(\log_2 p\)</td></tr>
     <tr><td>k-ary d-mesh</td><td>\(d(k-1)\)</td><td>\(k^{d-1}\)</td><td>\(dk^{d-1}(k-1)\)</td><td>\(2d\)</td></tr>
