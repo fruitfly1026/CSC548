@@ -742,6 +742,24 @@
   </div>
 </section>
 
+<!-- Routing summary -->
+<section data-background-color="#ffffff">
+  <h2>Routing — Summary</h2>
+  <table class="cmp" style="font-size:.78em;line-height:1.15">
+    <tr><th>Scheme</th><th>Minimal?</th><th>Deterministic?</th><th>Adaptive?</th><th>Deadlock-free?</th><th>Path diversity</th></tr>
+    <tr><td>Dimension-ordered (X-Y)</td><td>yes</td><td>yes</td><td>no</td><td>yes in a mesh; a torus needs VCs</td><td>none</td></tr>
+    <tr><td>Butterfly (destination tag)</td><td>yes</td><td>yes</td><td>no</td><td>yes</td><td>none</td></tr>
+    <tr><td>Valiant (random intermediate)</td><td>no</td><td>no: randomized</td><td>no</td><td>yes, with X-Y in each phase</td><td>high; spreads adversarial traffic</td></tr>
+    <tr><td>Up*/down*</td><td>not always</td><td>can be multipath</td><td>no</td><td>yes, any topology</td><td>some</td></tr>
+    <tr><td>Turn models (west-first, north-last)</td><td>yes</td><td>no</td><td>partially</td><td>yes</td><td>many legal paths</td></tr>
+    <tr><td>Adaptive (source or per-hop tables)</td><td>either</td><td>no</td><td>yes</td><td>only with turn rules or an escape VC</td><td>high; livelock must be bounded</td></tr>
+  </table>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Latency</span><span class="small">Store-and-forward: \(H(T_r + L/B)\). Cut-through: \(HT_r + L/B\), so hop count matters much less than packet length.</span></div>
+    <div class="callout takeaway"><span class="lbl">The trade</span><span class="small">Deterministic routing is simple and deadlock-free but has no path diversity. Adding diversity, randomly or adaptively, buys bandwidth at the price of a deadlock argument, which is Part 2.</span></div>
+  </div>
+</section>
+
 <!-- Module 11.1 review -->
 
 
