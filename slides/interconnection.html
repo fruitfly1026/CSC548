@@ -30,8 +30,8 @@
   <aside class="notes">
     This topic asks: once we have many cores and a coherence protocol, how do the messages
     actually get from one node to another? The interconnection network is the substrate that
-    implements coherence. Two modules: (11.1) the design space — components, switching, topology,
-    routing; and (11.2) deadlock avoidance and router microarchitecture, ending with the
+    implements coherence. Two parts: (1) the design space — components, switching, topology,
+    routing; and (2) deadlock avoidance and router microarchitecture, ending with the
     Alpha 21364 as a real case study.
   </aside>
 </section>
@@ -40,12 +40,12 @@
 <section data-background-color="#ffffff">
   <h2>Topic Roadmap</h2>
   <div class="cols c3">
-    <div class="callout"><span class="lbl">Module 11.1</span><strong>The Design Space</strong><br>
+    <div class="callout"><span class="lbl">Part 1</span><strong>The Design Space</strong><br>
       <span class="small">Nodes, links, flits; circuit vs. packet switching; <em>topology</em> metrics; and routing policies from dimension-ordered to adaptive.</span></div>
-    <div class="callout"><span class="lbl">Module 11.2</span><strong>Deadlock &amp; Routers</strong><br>
+    <div class="callout"><span class="lbl">Part 2</span><strong>Deadlock &amp; Routers</strong><br>
       <span class="small">Why cyclic buffer dependence deadlocks; turn restrictions and virtual channels; router microarchitecture and pipeline.</span></div>
     <div class="callout"><span class="lbl">Case Study</span><strong>Alpha 21364</strong><br>
-      <span class="small">A 128-node 2-D torus with minimal adaptive routing, 19 virtual channels, and a 13-stage router pipeline.</span></div>
+      <span class="small">A 128-node 2-D torus with minimal adaptive routing, 19 virtual channels, and a 13-cycle pin-to-pin router latency.</span></div>
   </div>
   <div class="callout takeaway"><span class="lbl">The thread that ties it together</span>
     The network <strong>implements the coherence mechanism</strong> — moving many small, fixed-size messages with <strong>low latency and high bandwidth</strong>. Every design choice trades those two against cost.</div>
@@ -55,7 +55,7 @@
      MODULE 11.1 — THE DESIGN SPACE
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Module 11.1</div>
+  <div class="mod-num">Part 1</div>
   <div class="mod-title">The Interconnect Design Space</div>
 </section>
 
@@ -287,8 +287,8 @@
     <tr><td>2-D mesh</td><td>\(2(\sqrt{p}-1)\)</td><td>\(\sqrt{p}\)</td><td>\(2\sqrt{p}(\sqrt{p}-1)\)</td><td>\(4\)</td></tr>
     <tr><td class="hi">Hypercube</td><td class="hi">\(\log_2 p\)</td><td class="hi">\(p/2\)</td><td>\(\tfrac{p}{2}\log_2 p\)</td><td>\(\log_2 p\)</td></tr>
     <tr><td>k-ary d-mesh</td><td>\(d(k-1)\)</td><td>\(k^{d-1}\)</td><td>\(dk^{d-1}(k-1)\)</td><td>\(2d\)</td></tr>
-    <tr><td>k-ary tree</td><td>\(2\log_k p\)</td><td>\(1\)</td><td>\(k(p-1)\)</td><td>\(k+1\)</td></tr>
-    <tr><td>k-ary fat tree</td><td>\(2\log_k p\)</td><td>\(p/2\)</td><td>\(k(p-1)\)</td><td>\(k+1\)</td></tr>
+    <tr><td>k-ary tree</td><td>\(2\log_k p\)</td><td>\(1\)</td><td>\(\tfrac{k(p-1)}{k-1}\)</td><td>\(k+1\)</td></tr>
+    <tr><td>k-ary fat tree</td><td>\(2\log_k p\)</td><td>\(p/2\)</td><td>\(\tfrac{k(p-1)}{k-1}\)</td><td>\(k+1\)</td></tr>
     <tr><td>Butterfly</td><td>\(\log_2 p\)</td><td>\(p/2\)</td><td>\(2p\log_2 p\)</td><td>\(4\)</td></tr>
   </table>
 </section>
@@ -356,7 +356,7 @@
     <div class="callout"><span class="lbl">Adaptive?</span>Adaptive = a message can <strong>change path</strong> while in flight.</div>
   </div>
   <div class="callout warn"><span class="lbl">Deadlock-free?</span>
-    Deadlock arises when several messages <strong>mutually wait</strong> for each other's buffer space. A good policy is either provably deadlock-free or paired with an escape mechanism (Module 11.2).</div>
+    Deadlock arises when several messages <strong>mutually wait</strong> for each other's buffer space. A good policy is either provably deadlock-free or paired with an escape mechanism (Part 2).</div>
 </section>
 
 <!-- Topology dependent routing (butterfly) -->
@@ -397,7 +397,7 @@
         <span class="tiny" style="display:block;margin-top:.3em">Simple, but <strong>lacks path diversity</strong>.</span></div>
       <div class="callout"><span class="lbl">Valiant routing</span>
         Pick a <strong>random intermediate node</strong>, route to it, then on to the destination.
-        <span class="tiny" style="display:block;margin-top:.3em">Can be minimal or non-minimal; <strong>improves path diversity</strong> and spreads adversarial traffic.</span></div>
+        <span class="tiny" style="display:block;margin-top:.3em">Non-minimal by design: it trades path length for <strong>path diversity</strong>, spreading adversarial traffic.</span></div>
     </div>
     <div class="center">
       <svg viewBox="0 0 200 180" class="chart" style="max-width:240px">
@@ -425,7 +425,7 @@
   <ol class="small">
     <li><strong>Choose a root</strong> node.</li>
     <li><strong>Breadth-first traversal:</strong> nodes reached become children; repeat until all are visited. Each child→parent link is an <strong>"up" link</strong>.</li>
-    <li>For links <em>within</em> a level: the <strong>"up" direction goes from the lower-numbered node to the higher-numbered node</strong>.</li>
+    <li>For links <em>within</em> a level: the <strong>"up" direction goes from the higher-numbered node to the lower-numbered node</strong> (the lower ID is the "up" end).</li>
   </ol>
   <div class="center">
     <svg viewBox="0 0 320 130" class="chart" style="max-width:380px">
@@ -504,7 +504,7 @@
      MODULE 11.2 — DEADLOCK & ROUTERS
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Module 11.2</div>
+  <div class="mod-num">Part 2</div>
   <div class="mod-title">Deadlock Avoidance &amp; Router Architecture</div>
 </section>
 
@@ -569,18 +569,18 @@
           <line x1="20" y1="30" x2="20" y2="135"/><line x1="70" y1="30" x2="70" y2="135"/>
           <line x1="120" y1="30" x2="120" y2="135"/><line x1="170" y1="30" x2="170" y2="135"/><line x1="220" y1="30" x2="220" y2="135"/>
         </g>
-        <!-- Path 1: up then turn (north out -> forbidden in north-last region) green/labels approximate -->
-        <polyline points="70,135 70,40 95,40" fill="none" stroke="#2563eb" stroke-width="2.5"/>
-        <text x="60" y="22" class="tiny" style="fill:#2563eb">Path 1</text>
-        <!-- Path 2: from below going up-left turn -->
-        <polyline points="60,150 60,100 30,100" fill="none" stroke="#16a34a" stroke-width="2.5"/>
-        <text x="40" y="165" class="tiny" style="fill:#15803d">Path 2</text>
-        <!-- Path 3: middle east then south -->
-        <polyline points="120,100 170,100 170,135" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
-        <text x="150" y="118" class="tiny" style="fill:#6d28d9">Path 3</text>
-        <!-- Path 4: east then south top -->
-        <polyline points="160,40 200,40 200,75" fill="none" stroke="#CC0000" stroke-width="2.5"/>
-        <text x="186" y="32" class="tiny" style="fill:#CC0000">Path 4</text>
+        <!-- Path 1: south then west (S->W): only north-last allows it -->
+        <polyline points="220,30 220,65 185,65" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+        <text x="188" y="24" class="tiny" style="fill:#2563eb">Path 1</text>
+        <!-- Path 2: north then east (N->E): only west-first allows it -->
+        <polyline points="20,135 20,100 55,100" fill="none" stroke="#16a34a" stroke-width="2.5"/>
+        <text x="24" y="152" class="tiny" style="fill:#15803d">Path 2</text>
+        <!-- Path 3: south then east (S->E): west-first and north-last allow it -->
+        <polyline points="70,30 70,65 105,65" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
+        <text x="74" y="24" class="tiny" style="fill:#6d28d9">Path 3</text>
+        <!-- Path 4: east then south (E->S): all three allow it -->
+        <polyline points="120,100 170,100 170,135" fill="none" stroke="#CC0000" stroke-width="2.5"/>
+        <text x="128" y="118" class="tiny" style="fill:#CC0000">Path 4</text>
       </svg>
     </div>
     <div>
@@ -709,7 +709,7 @@
       <ul class="small">
         <li><strong>up to 128 nodes</strong> in a 2-D torus</li>
         <li>Each node: Proc + 2 memory controllers + Mem + Router</li>
-        <li>Router ports: <strong>N, E, S, W</strong> + local cache + 2 MCs + 1 I/O</li>
+        <li>Router ports: <strong>N, E, S, W</strong> + local cache + 2 MCs + 1 I/O (8 input ports, 7 output ports)</li>
         <li><strong>Minimal adaptive routing:</strong> one of two ports chosen by congestion, and the selected port must <strong>reduce Manhattan distance</strong></li>
       </ul>
     </div>
@@ -748,8 +748,8 @@
       <div class="callout"><span class="lbl">Packet classes</span>Seven classes (six non-special + one special) — requests = <strong>3 flits</strong>, data / Write-IO responses = <strong>18–19 flits</strong>. <span class="tiny muted">(Mukherjee et al., IEEE Micro 2002)</span></div>
     </div>
     <div>
-      <div class="callout"><span class="lbl">Virtual channels</span><strong>19 VCs per physical channel.</strong> Each packet class gets its own VC and uses 2 more. <strong>Virtual cut-through</strong> is used, so VC buffer sizes differ by packet size.</div>
-      <div class="callout warn"><span class="lbl">Deadlock</span>Adaptive routing isn't deadlock-free, so it uses one of <strong>2 escape VCs</strong> — one for <em>source ID &lt; dest ID</em>, the other for <em>&gt;</em>.</div>
+      <div class="callout"><span class="lbl">Virtual channels</span><strong>19 VCs per physical channel:</strong> three per non-special packet class (one adaptive, two deadlock-free: VC0 and VC1) plus one for the special class. <strong>Virtual cut-through</strong> is used, so VC buffer sizes differ by packet size.</div>
+      <div class="callout warn"><span class="lbl">Deadlock</span>Adaptive routing isn't deadlock-free, so a blocked packet drains through <strong>VC0 / VC1</strong>, which route dimension-ordered. Which of the two a source–destination pair uses is computed offline (the simplest rule: VC0 if source ID &lt; dest ID, else VC1).</div>
     </div>
   </div>
 </section>
@@ -757,7 +757,7 @@
 <!-- Alpha 21364 pipeline -->
 <section data-background-color="#ffffff">
   <h2>Alpha 21364 — Router Pipeline</h2>
-  <p class="small">A deep <strong>13-stage</strong> pipeline: a 7-stage scheduling pipeline plus 6 more stages.</p>
+  <p class="small">Pin-to-pin latency is <strong>13 cycles</strong> (10.8 ns at 1.2 GHz): the router pipeline below plus 6 cycles of synchronization, pad and wire delay.</p>
   <div class="cols">
     <div>
       <div class="callout"><span class="lbl">Scheduling pipeline (upper)</span>
@@ -787,13 +787,13 @@
 <section data-background-color="#ffffff">
   <h2>Interconnection Networks — Big Picture</h2>
   <div class="cols c3">
-    <div class="callout"><span class="lbl">11.1 Design space</span>Nodes, flits, packet switching, topology metrics, and routing — every choice trades latency, bandwidth, and cost.</div>
-    <div class="callout"><span class="lbl">11.2 Deadlock</span>Cyclic buffer dependence deadlocks; turn restrictions, up*/down*, and escape VCs break the cycles.</div>
-    <div class="callout"><span class="lbl">Routers</span>DC → VA → SA → ST pipeline; the Alpha 21364 shows it at scale — 128-node torus, 19 VCs, 13 stages.</div>
+    <div class="callout"><span class="lbl">Part 1: Design space</span>Nodes, flits, packet switching, topology metrics, and routing — every choice trades latency, bandwidth, and cost.</div>
+    <div class="callout"><span class="lbl">Part 2: Deadlock</span>Cyclic buffer dependence deadlocks; turn restrictions, up*/down*, and escape VCs break the cycles.</div>
+    <div class="callout"><span class="lbl">Routers</span>DC → VA → SA → ST pipeline; the Alpha 21364 shows it at scale — 128-node torus, 19 VCs, 13-cycle latency.</div>
   </div>
   <div class="callout takeaway"><span class="lbl">One sentence</span>
     <strong>The interconnection network is the substrate that makes coherence and parallelism actually move</strong> — its topology and routing set the latency and bandwidth that bound the whole machine.</div>
-  <p class="center muted small">The network you choose here ripples through every coherence and consistency decision in the rest of the course.</p>
+  <p class="center muted small">The network you choose here sets the latency and bandwidth behind every coherence and consistency protocol from Topic 7.</p>
 </section>
 
 
