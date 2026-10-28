@@ -371,7 +371,7 @@ output: 2-way replicated (GFS redundancy)
     <div>
       <div class="callout"><span class="lbl">Job</span><span class="small">A user-submitted map/reduce program.</span></div>
       <div class="callout"><span class="lbl">Task</span><span class="small">A single mapper or reducer instance. Failed tasks are retried automatically; run <strong>local to their data</strong> when possible.</span></div>
-      <div class="callout"><span class="lbl">JobTracker (JT)</span><span class="small">Manages job submission and delegates tasks. Since Hadoop 2, <strong>YARN</strong> splits this role: a ResourceManager hands out cluster resources, a per-job ApplicationMaster schedules that job's tasks, and NodeManagers replace TaskTrackers. The concepts below are unchanged.</span></div>
+      <div class="callout"><span class="lbl">JobTracker (JT)</span><span class="small">Manages job submission and delegates tasks.</span></div>
       <div class="callout"><span class="lbl">TaskTrackers (TT)</span><span class="small">Ask for work and execute tasks; fetch data from a DataNode if it isn't already local.</span></div>
     </div>
     <div>
@@ -380,6 +380,7 @@ output: 2-way replicated (GFS redundancy)
       <div class="callout"><span class="lbl">Data locality</span><span class="small">Schedule tasks where the data already lives; moving data between nodes is assumed costly.</span></div>
     </div>
   </div>
+  <p class="tiny muted">Since Hadoop 2, <strong>YARN</strong> splits the JobTracker: a ResourceManager hands out cluster resources, a per-job ApplicationMaster schedules that job's tasks, and NodeManagers replace TaskTrackers. The concepts on this slide are unchanged.</p>
 </section>
 
 <section data-background-color="#ffffff">
