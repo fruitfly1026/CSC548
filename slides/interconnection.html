@@ -534,8 +534,8 @@
   <h2>Butterfly</h2>
   <div class="cols" style="grid-template-columns:11fr 9fr">
     <div>
-      <p class="small">An <strong>indirect, multistage</strong> network: \(N = k^n\) terminals, \(n = \log_k N\) stages of \(k \times k\) switches, \(N/k\) switches per stage. Every packet crosses <strong>all</strong> \(n\) stages, so distance is the same, \(\log_k N\), for every pair.</p>
-      <div class="callout"><span class="lbl">Routing: destination-tag</span><span class="small">Stage \(i\) looks at digit \(i\) of the destination address and picks that output: no routing tables, no decisions to get wrong.</span></div>
+      <p class="small">An <strong>indirect, multistage</strong> network: \(N\) terminals, \(\log_2 N\) stages of \(2 \times 2\) switches, \(N/2\) switches per stage. Every packet crosses <strong>all</strong> stages, so distance is the same, \(\log_2 N\), for every pair.</p>
+      <div class="callout"><span class="lbl">Routing: destination-tag</span><span class="small">Stage \(i\) looks at bit \(i\) of the destination address and picks that output: no routing tables, no decisions to get wrong.</span></div>
       <div class="callout warn"><span class="lbl">Exactly one path per source–destination pair</span><span class="small">No path diversity: two flows that share a switch output <strong>block</strong> each other. Fixes: a <em>Beneš</em> network (two butterflies back to back) adds paths; the <em>flattened butterfly</em> merges the switches of each row into one high-radix router to save links.</span></div>
     </div>
     <div class="center">
@@ -607,7 +607,7 @@
         <text x="70" y="12" text-anchor="middle" class="tiny" style="fill:#1d4ed8">stage 0</text>
         <text x="130" y="12" text-anchor="middle" class="tiny" style="fill:#1d4ed8">stage 1</text>
         <text x="190" y="12" text-anchor="middle" class="tiny" style="fill:#1d4ed8">stage 2</text>
-        <text x="125" y="177" text-anchor="middle" class="tiny" style="fill:#1d4ed8">2-ary 3-fly: 8 terminals, 3 stages of 2×2 switches</text>
+        <text x="125" y="177" text-anchor="middle" class="tiny" style="fill:#1d4ed8">8 terminals, 3 stages of 2×2 switches</text>
       </svg>
     </div>
   </div>
