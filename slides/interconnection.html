@@ -367,6 +367,26 @@
   </div>
 </section>
 
+<!-- Increase k vs d -->
+<section data-background-color="#ffffff">
+  <h2>Mesh: Increase k or Increase d?</h2>
+  <p class="small">When more nodes must be added, is it better to raise the <strong>arity (k)</strong> or the <strong>dimension (d)</strong>?</p>
+  <div class="cols">
+    <div class="callout ok"><span class="lbl">In favor of more dimensions</span>
+      <ul class="small" style="margin:.3em 0 0 .9em">
+        <li>Diameter grows <strong>slower</strong> in hypercube &amp; butterfly</li>
+        <li>Bisection bandwidth grows <strong>faster</strong> in hypercube &amp; butterfly</li>
+      </ul></div>
+    <div class="callout warn"><span class="lbl">The catch</span>
+      <ul class="small" style="margin:.3em 0 0 .9em">
+        <li>Hypercube routers are <strong>more expensive</strong> (higher degree)</li>
+        <li>Butterfly needs <strong>a lot of routers</strong></li>
+      </ul></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Reality on chip</span>
+    Low-dimensional meshes and tori dominate on-chip networks: wiring is planar, routers stay cheap, and (as we'll see) cut-through routing softens the diameter penalty.</div>
+</section>
+
 <!-- Bus and crossbar -->
 <section data-background-color="#ffffff">
   <h2>Endpoints of the Space: Bus &amp; Crossbar</h2>
@@ -639,15 +659,20 @@
 <!-- Dragonfly -->
 <section data-background-color="#ffffff">
   <h2>Dragonfly</h2>
-  <div class="cols" style="grid-template-columns:7fr 3fr">
+  <div class="symkey">
+    <span><strong>p</strong> compute nodes per router</span>
+    <span><strong>a</strong> routers per group</span>
+    <span><strong>h</strong> global links per router</span>
+  </div>
+  <div class="cols" style="grid-template-columns:6fr 4fr">
     <div>
       <p class="small">A <strong>hierarchical</strong> topology: routers form <strong>dense local groups</strong> over short cables, and a few long <strong>global links</strong> join the groups, so the number of long, expensive cables is small.</p>
-      <div class="callout"><span class="lbl">Structure</span><span class="small"><strong>Dense local groups</strong> joined by <strong>sparse global links</strong>. A group of <em>a</em> routers with <em>h</em> global links each connects all-to-all to up to \(ah\) other groups.</span></div>
-      <div class="callout"><span class="lbl">Degree</span><span class="small">\(k = p + a + h - 1\): <em>p</em> node channels per router, <em>a</em> routers per group, <em>h</em> global channels. Balanced design: \(a = 2p = 2h\).</span></div>
+      <div class="callout"><span class="lbl">Size</span><span class="small">A group has \(ah\) global links, so it can reach up to \(ah\) other groups: at most \(ah+1\) groups and \(pa(ah+1)\) compute nodes.</span></div>
+      <div class="callout"><span class="lbl">Degree</span><span class="small">Router ports \(k = p + (a-1) + h\): nodes, the other routers in the group, global links. Balanced design: \(a = 2p = 2h\).</span></div>
       <div class="callout"><span class="lbl">Routing diameter</span><span class="small"><strong>Minimal = 3</strong> hops (local, global, local). <strong>Valiant = 5</strong>: detour through a random intermediate group for load balancing.</span></div>
     </div>
     <div class="center">
-      <svg viewBox="0 0 260 180" class="chart" style="max-width:320px">
+      <svg viewBox="0 0 260 180" class="chart" style="width:100%;max-width:380px">
         <g stroke="#CC0000" stroke-width="1.8" stroke-dasharray="4 3">
           <line x1="75" y1="40" x2="185" y2="40"/>
           <line x1="60" y1="66" x2="115" y2="140"/>
@@ -673,26 +698,6 @@
 </section>
 
 
-
-<!-- Increase k vs d -->
-<section data-background-color="#ffffff">
-  <h2>Mesh: Increase k or Increase d?</h2>
-  <p class="small">When more nodes must be added, is it better to raise the <strong>arity (k)</strong> or the <strong>dimension (d)</strong>?</p>
-  <div class="cols">
-    <div class="callout ok"><span class="lbl">In favor of more dimensions</span>
-      <ul class="small" style="margin:.3em 0 0 .9em">
-        <li>Diameter grows <strong>slower</strong> in hypercube &amp; butterfly</li>
-        <li>Bisection bandwidth grows <strong>faster</strong> in hypercube &amp; butterfly</li>
-      </ul></div>
-    <div class="callout warn"><span class="lbl">The catch</span>
-      <ul class="small" style="margin:.3em 0 0 .9em">
-        <li>Hypercube routers are <strong>more expensive</strong> (higher degree)</li>
-        <li>Butterfly needs <strong>a lot of routers</strong></li>
-      </ul></div>
-  </div>
-  <div class="callout takeaway"><span class="lbl">Reality on chip</span>
-    Low-dimensional meshes and tori dominate on-chip networks: wiring is planar, routers stay cheap, and (as we'll see) cut-through routing softens the diameter penalty.</div>
-</section>
 
 <!-- Topologies in real machines -->
 <section data-background-color="#ffffff">
