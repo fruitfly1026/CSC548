@@ -165,6 +165,21 @@
 
 <!-- Topology metrics -->
 <section data-background-color="#ffffff">
+  <h2>Packet vs. Flit</h2>
+  <table class="cmp" style="font-size:.8em;line-height:1.2">
+    <thead><tr><th></th><th>Packet</th><th>Flit</th></tr></thead>
+    <tbody>
+      <tr><td><strong>What it is</strong></td><td>A complete message: header + payload (+ trailer)</td><td>A fixed-size piece of a packet</td></tr>
+      <tr><td><strong>Size</strong></td><td>Variable: one flit up to a few KB</td><td>Fixed: tens to a few hundred bits</td></tr>
+      <tr><td><strong>Routing</strong></td><td>Unit of routing: the path is chosen per packet</td><td>Not routed; body/tail flits follow the head flit</td></tr>
+      <tr><td><strong>Flow control</strong></td><td>Not the unit of flow control</td><td>Unit of flow control: buffers and credits are counted in flits</td></tr>
+      <tr><td><strong>On the link</strong></td><td>All its flits travel the same path, in order</td><td>One flit per cycle; flits of different VCs may interleave</td></tr>
+    </tbody>
+  </table>
+  <div class="callout takeaway"><span class="lbl">Rule of thumb</span>Routing looks at <strong>packets</strong>; flow control looks at <strong>flits</strong>.</div>
+</section>
+
+<section data-background-color="#ffffff">
   <h2>Network Topology = Shape of the Network</h2>
   <p class="small">Topology determines the <strong>distance</strong> a message travels (in links / hops) from one node to another.</p>
   <div class="cols c3">
