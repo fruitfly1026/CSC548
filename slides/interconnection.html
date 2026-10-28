@@ -492,14 +492,15 @@
 <!-- Fat tree and Clos -->
 <section data-background-color="#ffffff">
   <h2>Fat Tree &amp; Clos</h2>
-  <div class="cols" style="grid-template-columns:7fr 3fr">
+  <div class="cols" style="grid-template-columns:11fr 9fr">
     <div>
-      <p class="small">A plain tree has bisection 1: all traffic between the halves squeezes through the root. A <strong>fat tree</strong> makes links <strong>fatter</strong> toward the root, so every level carries what the leaves can send.</p>
-      <div class="callout"><span class="lbl">Fat tree = folded Clos</span><span class="small">Three levels of identical <em>k</em>-port switches (edge, aggregation, core): \(k^3/4\) hosts, \(5k^2/4\) switches, at most 6 link hops between any two hosts, and <strong>full bisection bandwidth</strong>.</span></div>
-      <div class="callout ok"><span class="lbl">Why clusters use it, and what it costs</span><span class="small">Uniform bandwidth between any two nodes, many equal-cost paths, commodity switches: the default topology of InfiniBand and Ethernet HPC clusters. The price is more switches and cables than a torus, and the long core-level cables cost the most.</span></div>
+      <p class="small">A plain tree has bisection 1: all traffic between the halves goes through the root. A <strong>fat tree</strong> makes links <strong>fatter</strong> toward the root, so every level carries what the leaves can send.</p>
+      <div class="callout"><span class="lbl">Clos network (1953)</span><span class="small">Three stages: every <em>middle</em> switch connects to every input and every output switch. With \(n\) inputs per input switch, \(m \ge 2n-1\) middle switches make it <strong>strictly non-blocking</strong>.</span></div>
+      <div class="callout"><span class="lbl">Fat tree = folded Clos</span><span class="small">Fold the Clos so inputs and outputs share the edge switches. With identical <em>k</em>-port switches (edge, aggregation, core) the "fat" links become <strong>many parallel paths</strong>: \(k^3/4\) hosts, \(5k^2/4\) switches, at most 6 link hops, <strong>full bisection bandwidth</strong>.</span></div>
     </div>
-    <div class="center">
-      <svg viewBox="0 0 250 170" class="chart" style="max-width:290px">
+    <div>
+      <div class="center">
+      <svg viewBox="0 0 250 170" class="chart" style="max-width:260px">
         <g stroke="#1d4ed8" stroke-linecap="round">
           <line x1="125" y1="30" x2="65" y2="75" stroke-width="7"/><line x1="125" y1="30" x2="185" y2="75" stroke-width="7"/>
           <line x1="65" y1="75" x2="35" y2="115" stroke-width="3.5"/><line x1="65" y1="75" x2="95" y2="115" stroke-width="3.5"/>
@@ -523,6 +524,8 @@
         </g>
         <text x="125" y="12" text-anchor="middle" class="tiny" style="fill:#1d4ed8">link capacity grows toward the root</text>
       </svg>
+      </div>
+      <div class="callout ok"><span class="lbl">Why clusters use it, and what it costs</span><span class="small">Uniform bandwidth, many equal-cost paths, commodity switches: the default for InfiniBand and Ethernet clusters. The price is more switches and cables than a torus; the long core-level cables cost the most.</span></div>
     </div>
   </div>
   <div class="src">Leiserson, "Fat-Trees" (1985); Al-Fares, Loukissas &amp; Vahdat, SIGCOMM 2008.</div>
