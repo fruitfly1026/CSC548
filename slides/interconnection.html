@@ -641,7 +641,7 @@
   <h2>Dragonfly</h2>
   <div class="cols" style="grid-template-columns:7fr 3fr">
     <div>
-      <p class="small">A <strong>hierarchical</strong> topology: a flattened butterfly with extra <em>local</em> hops so it needs <strong>fewer global hops</strong>, cutting the number of long, expensive cables.</p>
+      <p class="small">A <strong>hierarchical</strong> topology: routers form <strong>dense local groups</strong> over short cables, and a few long <strong>global links</strong> join the groups, so the number of long, expensive cables is small.</p>
       <div class="callout"><span class="lbl">Structure</span><span class="small"><strong>Dense local groups</strong> joined by <strong>sparse global links</strong>. A group of <em>a</em> routers with <em>h</em> global links each connects all-to-all to up to \(ah\) other groups.</span></div>
       <div class="callout"><span class="lbl">Degree</span><span class="small">\(k = p + a + h - 1\): <em>p</em> node channels per router, <em>a</em> routers per group, <em>h</em> global channels. Balanced design: \(a = 2p = 2h\).</span></div>
       <div class="callout"><span class="lbl">Routing diameter</span><span class="small"><strong>Minimal = 3</strong> hops (local, global, local). <strong>Valiant = 5</strong>: detour through a random intermediate group for load balancing.</span></div>
