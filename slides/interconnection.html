@@ -666,13 +666,13 @@
   </div>
   <div class="cols" style="grid-template-columns:6fr 4fr">
     <div>
-      <p class="small">A <strong>hierarchical</strong> topology: routers form <strong>dense local groups</strong> over short cables, and a few long <strong>global links</strong> join the groups, so the number of long, expensive cables is small.</p>
+      <p class="small">A <strong>hierarchical</strong> topology: routers form <strong>dense local groups</strong> over short cables; a few long <strong>global links</strong> join the groups, so few cables are long and expensive.</p>
       <div class="callout"><span class="lbl">Size</span><span class="small">A group has \(ah\) global links, so it can reach up to \(ah\) other groups: at most \(ah+1\) groups and \(pa(ah+1)\) compute nodes.</span></div>
-      <div class="callout"><span class="lbl">Degree</span><span class="small">Router ports \(k = p + (a-1) + h\): nodes, the other routers in the group, global links. Balanced design: \(a = 2p = 2h\).</span></div>
-      <div class="callout"><span class="lbl">Routing diameter</span><span class="small"><strong>Minimal = 3</strong> hops (local, global, local). <strong>Valiant = 5</strong>: detour through a random intermediate group for load balancing.</span></div>
+      <div class="callout"><span class="lbl">Degree</span><span class="small">With an all-to-all group, router ports \(k = p + (a-1) + h\): nodes, the other routers in the group, global links. Balanced design: \(a = 2p = 2h\).</span></div>
+      <div class="callout"><span class="lbl">Routing diameter</span><span class="small"><strong>Minimal ≤ 3</strong> hops (local, global, local). <strong>Valiant ≤ 5</strong>: detour via a random intermediate group for load balancing; adaptive routing (UGAL) chooses per packet.</span></div>
     </div>
     <div class="center">
-      <svg viewBox="0 0 260 180" class="chart" style="width:100%;max-width:380px">
+      <svg viewBox="0 0 260 194" class="chart" style="width:100%;max-width:380px">
         <g stroke="#CC0000" stroke-width="1.8" stroke-dasharray="4 3">
           <line x1="75" y1="40" x2="185" y2="40"/>
           <line x1="60" y1="66" x2="115" y2="140"/>
@@ -689,6 +689,7 @@
           <circle cx="115" cy="140" r="7"/><circle cx="145" cy="140" r="7"/><circle cx="130" cy="166" r="7"/>
         </g>
         <text x="60" y="92" text-anchor="middle" class="tiny" style="fill:#1d4ed8">group (local, dense)</text>
+        <text x="130" y="190" text-anchor="middle" class="tiny" style="fill:#64748b">a = 3, h = 1; the p nodes on each router are not shown</text>
         <text x="235" y="30" text-anchor="middle" class="tiny" style="fill:#CC0000">global</text>
         <text x="235" y="42" text-anchor="middle" class="tiny" style="fill:#CC0000">(sparse)</text>
       </svg>
@@ -703,15 +704,15 @@
 <section data-background-color="#ffffff">
   <h2>Topologies in Real Machines</h2>
   <table class="small">
-    <tr><th>Topology</th><th>Machines</th><th>Why</th></tr>
-    <tr><td>Fully connected (switch)</td><td>GPUs inside one NVIDIA DGX node (NVSwitch)</td><td>Few endpoints; every GPU pair needs full bandwidth</td></tr>
-    <tr><td>Fat tree</td><td>Summit (InfiniBand); most InfiniBand and Ethernet clusters</td><td>Uniform bandwidth from commodity switches</td></tr>
-    <tr><td>3-D torus</td><td>Cray XT/XE (Gemini), Google TPU v4 pods</td><td>Short cables; nearest-neighbor traffic maps directly</td></tr>
-    <tr><td>5-D and 6-D torus</td><td>IBM BlueGene/Q (5-D), Fugaku Tofu-D (6-D)</td><td>More dimensions cut diameter without long cables</td></tr>
-    <tr><td>Dragonfly</td><td>Frontier and Aurora (HPE Slingshot), Cray XC (Aries)</td><td>Fewest long optical cables at exascale</td></tr>
+    <tr><th>Topology</th><th>Machines</th><th>Typical numbers</th><th>Why</th></tr>
+    <tr><td>Fully connected (switch)</td><td>GPUs inside one NVIDIA DGX node (NVSwitch)</td><td>8 GPUs; 900 GB/s per GPU (NVLink 4)</td><td>Few endpoints; every GPU pair needs full bandwidth</td></tr>
+    <tr><td>Fat tree</td><td>Summit (InfiniBand); most InfiniBand and Ethernet clusters</td><td>10<sup>3</sup>–10<sup>4</sup> nodes; 100–400 Gb/s per port</td><td>Uniform bandwidth from commodity switches</td></tr>
+    <tr><td>3-D torus</td><td>Cray XT/XE (Gemini), Google TPU v4 pods</td><td>10<sup>3</sup>–10<sup>4</sup> nodes; TPU v4 pod: 4,096 chips</td><td>Short cables; nearest-neighbor traffic maps directly</td></tr>
+    <tr><td>5-D and 6-D torus</td><td>IBM BlueGene/Q (5-D), Fugaku Tofu-D (6-D)</td><td>~10<sup>5</sup> nodes; 2 GB/s (BG/Q) to 6.8 GB/s (Tofu-D) per link</td><td>More dimensions cut diameter without long cables</td></tr>
+    <tr><td>Dragonfly</td><td>Frontier and Aurora (HPE Slingshot), Cray XC (Aries)</td><td>~10<sup>4</sup> nodes; 200 Gb/s per port (Slingshot)</td><td>Fewest long optical cables at exascale</td></tr>
   </table>
   <div class="callout takeaway"><span class="lbl">Pattern</span>Inside a node: all-to-all. Within a cluster: fat tree. At the largest scale: torus or dragonfly, because cable length and count dominate the cost.</div>
-  <div class="src">Vendor and system documentation (NVIDIA, ORNL, RIKEN, Google, HPE).</div>
+  <div class="src">Vendor and system documentation (NVIDIA, ORNL, IBM, RIKEN/Fujitsu, Google, HPE).</div>
 </section>
 
 
