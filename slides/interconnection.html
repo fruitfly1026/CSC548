@@ -196,7 +196,7 @@
   <h2>Direct vs. Indirect Networks</h2>
   <div class="cols">
     <div>
-      <div class="callout"><span class="lbl">Direct (static) network</span><span class="small">Every switch is <strong>attached to a processor node</strong>; nodes forward each other's packets over fixed links. #switches = #nodes.<br>Examples: linear array, ring, mesh, torus, hypercube.</span></div>
+      <div class="callout"><span class="lbl">Direct (static) network</span><span class="small">Every switch is <strong>attached to a processor node</strong>; nodes forward each other's packets over fixed links. One router per node.<br>Examples: linear array, ring, mesh, torus, hypercube.</span></div>
       <div class="center" style="margin-top:.3em">
         <svg viewBox="0 0 250 70" class="chart" style="width:100%;max-width:420px">
           <g stroke="#1d4ed8" stroke-width="2"><line x1="40" y1="35" x2="90" y2="35"/><line x1="110" y1="35" x2="160" y2="35"/><line x1="180" y1="35" x2="230" y2="35"/></g>
@@ -213,7 +213,7 @@
       </div>
     </div>
     <div>
-      <div class="callout"><span class="lbl">Indirect (dynamic) network</span><span class="small">Processors sit only at the <strong>edge</strong>; dedicated switches in between build the path at run time. #switches ≠ #nodes.<br>Examples: bus, crossbar, butterfly / multistage, fat tree, Clos.</span></div>
+      <div class="callout"><span class="lbl">Indirect (dynamic) network</span><span class="small">Processors sit only at the <strong>edge</strong>; dedicated switches in between forward the traffic. Switch count is independent of node count.<br>Examples: bus, crossbar, butterfly / multistage, fat tree, Clos.</span></div>
       <div class="center" style="margin-top:.3em">
         <svg viewBox="0 0 250 70" class="chart" style="width:100%;max-width:420px">
           <g stroke="#1d4ed8" stroke-width="1.6">
@@ -231,7 +231,7 @@
           </g>
           <g class="tiny" text-anchor="middle"><text x="27" y="17">P</text><text x="27" y="35">P</text><text x="27" y="53">P</text><text x="235" y="17">P</text><text x="235" y="35">P</text><text x="235" y="53">P</text></g>
           <g class="tiny" text-anchor="middle" style="fill:#CC0000"><text x="110" y="28">S</text><text x="110" y="50">S</text><text x="160" y="28">S</text><text x="160" y="50">S</text></g>
-          <text x="135" y="68" text-anchor="middle" class="tiny" style="fill:#1d4ed8">switches S between the nodes</text>
+          <text x="130" y="68" text-anchor="middle" class="tiny" style="fill:#1d4ed8">same 4 nodes: inputs (left), outputs (right)</text>
         </svg>
       </div>
     </div>
