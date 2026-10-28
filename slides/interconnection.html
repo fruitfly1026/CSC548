@@ -721,14 +721,14 @@
   <h2>Real Interconnect Technologies</h2>
   <p class="small muted">The link and switch families actually deployed in clusters and supercomputers, from commodity to custom.</p>
   <table>
-    <tr><th>Family</th><th>Variants / rates</th><th>Notes</th></tr>
-    <tr><td>Ethernet</td><td>1 / 10 / 40 / 100 / 400 GbE</td><td>Copper &amp; optical; commodity, data-processing farms</td></tr>
-    <tr><td class="hi">InfiniBand</td><td class="hi">SDR, DDR, QDR, FDR, EDR, HDR, NDR; 1X / 4X / 12X</td><td class="hi">Low-latency HPC fabric</td></tr>
-    <tr><td>Fibre Channel</td><td>4 / 8 / 16 Gbps</td><td>Storage-oriented</td></tr>
-    <tr><td>Legacy</td><td>Myrinet, Quadrics, SCI</td><td>Once common, now obsolete</td></tr>
-    <tr><td>Custom</td><td>Cray Gemini and Aries, HPE Slingshot, Fujitsu Tofu, NVIDIA NVLink</td><td>Vendor-designed for top-end machines and GPU nodes</td></tr>
+    <tr><th>Family</th><th>Variants</th><th>Per-port rate</th><th>Notes</th></tr>
+    <tr><td>Ethernet</td><td>1 / 10 / 25 / 100 / 400 / 800 GbE</td><td>1 Gb/s (1998) to 800 Gb/s (2024)</td><td>Copper &amp; optical; commodity, data-processing farms</td></tr>
+    <tr><td class="hi">InfiniBand</td><td class="hi">SDR, DDR, QDR, FDR, EDR, HDR, NDR, XDR; 1X / 4X / 12X</td><td class="hi">4X: 10 Gb/s (SDR) to 800 Gb/s (XDR, 2024); ~1 µs latency</td><td class="hi">Low-latency HPC fabric</td></tr>
+    <tr><td>Fibre Channel</td><td>8 / 16 / 32 / 64 GFC</td><td>8 to 64 Gb/s</td><td>Storage-oriented</td></tr>
+    <tr><td>Legacy</td><td>Myrinet, Quadrics, SCI</td><td>1 to 10 Gb/s</td><td>Once common, now obsolete</td></tr>
+    <tr><td>Custom</td><td>Cray Gemini and Aries, HPE Slingshot, Fujitsu Tofu, NVIDIA NVLink</td><td>Slingshot 200 Gb/s; Tofu-D 6.8 GB/s per link; NVLink 4 900 GB/s per GPU</td><td>Vendor-designed for top-end machines and GPU nodes</td></tr>
   </table>
-  <div class="src">Vendor specifications and HPC interconnect surveys.</div>
+  <div class="src">IEEE 802.3, IBTA and FCIA roadmaps; HPE, Fujitsu and NVIDIA specifications.</div>
 </section>
 
 
