@@ -36,11 +36,11 @@
 <section data-background-color="#ffffff">
   <h2>Agenda</h2>
   <div class="cols c3">
-    <div class="callout"><span class="lbl">1 · Motivation</span><span class="small">Data at scale, scale-out vs. scale-up, GFS/HDFS distributed file systems.</span></div>
-    <div class="callout"><span class="lbl">2 · MapReduce</span><span class="small">map / shuffle / reduce, word-count, fault tolerance.</span></div>
-    <div class="callout"><span class="lbl">3 · Hadoop</span><span class="small">HDFS, JobTracker/TaskTracker, the stack.</span></div>
-    <div class="callout"><span class="lbl">4 · Apache Spark</span><span class="small">RDDs, transformations vs. actions, the DAG, caching.</span></div>
-    <div class="callout"><span class="lbl">5 · Which &amp; When</span><span class="small">MapReduce vs. Spark trade-offs.</span></div>
+    <div class="callout"><span class="lbl">1. Motivation</span><span class="small">Data at scale, scale-out vs. scale-up, GFS/HDFS distributed file systems.</span></div>
+    <div class="callout"><span class="lbl">2. MapReduce</span><span class="small">map / shuffle / reduce, word-count, fault tolerance.</span></div>
+    <div class="callout"><span class="lbl">3. Hadoop</span><span class="small">HDFS, JobTracker/TaskTracker (and YARN), the stack.</span></div>
+    <div class="callout"><span class="lbl">4. Apache Spark</span><span class="small">RDDs, transformations vs. actions, the DAG, caching.</span></div>
+    <div class="callout"><span class="lbl">5. Which &amp; When</span><span class="small">MapReduce vs. Spark trade-offs.</span></div>
     <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Move the <em>computation to the data</em>, express it as map + reduce, and let the framework handle distribution &amp; failure.</span></div>
   </div>
 </section>
@@ -238,7 +238,7 @@ def reduce(key, values):
         <code class="inline">good -&gt; {1,1,1,1}</code><br>
         <code class="inline">is&nbsp;&nbsp;&nbsp;-&gt; {1,1,1}</code><br>
         <code class="inline">weather -&gt; {1,1}</code></span></div>
-      <div class="callout takeaway"><span class="lbl">Output</span><span class="small"><code class="inline">good 4 · is 3 · weather 2 · the 1 · today 1</code></span></div>
+      <div class="callout takeaway"><span class="lbl">Output</span><span class="small"><code class="inline">good 4, is 3, weather 2, the 1, today 1</code></span></div>
     </div>
   </div>
   <p class="tiny muted" style="margin-top:.3em">&#9654; Demo: <a href="https://github.com/fruitfly1026/parallel-demos/blob/main/Demos/spark/01_wordcount.py"><code class="inline">Demos/spark/01_wordcount.py</code></a></p>
@@ -279,7 +279,7 @@ def reduce(key, values):
   <h2>Fault Tolerance by Re-execution</h2>
   <div class="cols">
     <div>
-      <div class="callout"><span class="lbl">Worker failure</span><span class="small">Detected by missing <strong>heartbeats</strong>. Completed <em>and</em> in-progress map tasks are re-run; in-progress reduce tasks are re-run.</span></div>
+      <div class="callout"><span class="lbl">Worker failure</span><span class="small">Detected by missing <strong>heartbeats</strong>. Completed <em>and</em> in-progress map tasks are re-run, because their output sat on the failed worker's local disk. Only in-progress reduce tasks are re-run: completed reduce output is already in GFS.</span></div>
       <p class="small">Safe because tasks are <strong>idempotent</strong> — recomputing gives the same result. Completion is committed through the master.</p>
       <div class="callout"><span class="lbl">Stragglers</span><span class="small">A task taking too long is <strong>duplicated</strong> (speculative execution); first to finish wins — agnostic to the cause of the slowdown.</span></div>
     </div>
@@ -328,7 +328,7 @@ output: 2-way replicated (GFS redundancy)
   <div class="cols">
     <div>
       <p class="small">The open-source counterpart of GFS: redundant storage on commodity hardware, built to <strong>expect and tolerate failures</strong>, optimized for large files and batch reads.</p>
-      <div class="callout"><span class="lbl">Layout</span><span class="small">Files = collections of <strong>blocks</strong> (classically 64&nbsp;MB). Every block replicated on <strong>≥ 3</strong> nodes.</span></div>
+      <div class="callout"><span class="lbl">Layout</span><span class="small">Files = collections of <strong>blocks</strong> (64&nbsp;MB classically, 128&nbsp;MB today). Every block replicated <strong>3 times</strong> by default (configurable).</span></div>
       <div class="callout"><span class="lbl">Roles</span><span class="small"><strong>NameNode</strong> holds metadata (files→blocks); <strong>SecondaryNameNode</strong> periodically checkpoints the metadata (merges the edit log into the fsimage) — <em>not</em> a failover; <strong>DataNodes</strong> store &amp; serve blocks.</span></div>
     </div>
     <div class="center">
@@ -366,12 +366,12 @@ output: 2-way replicated (GFS redundancy)
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>Hadoop Jobs, Tasks &amp; Trackers</h2>
+  <h2>Hadoop Jobs, Tasks &amp; Trackers <span class="muted" style="font-size:.6em">(Hadoop 1, MRv1)</span></h2>
   <div class="cols">
     <div>
       <div class="callout"><span class="lbl">Job</span><span class="small">A user-submitted map/reduce program.</span></div>
       <div class="callout"><span class="lbl">Task</span><span class="small">A single mapper or reducer instance. Failed tasks are retried automatically; run <strong>local to their data</strong> when possible.</span></div>
-      <div class="callout"><span class="lbl">JobTracker (JT)</span><span class="small">Manages job submission and delegates tasks.</span></div>
+      <div class="callout"><span class="lbl">JobTracker (JT)</span><span class="small">Manages job submission and delegates tasks. Since Hadoop 2, <strong>YARN</strong> splits this role: a ResourceManager hands out cluster resources, a per-job ApplicationMaster schedules that job's tasks, and NodeManagers replace TaskTrackers. The concepts below are unchanged.</span></div>
       <div class="callout"><span class="lbl">TaskTrackers (TT)</span><span class="small">Ask for work and execute tasks; fetch data from a DataNode if it isn't already local.</span></div>
     </div>
     <div>
@@ -405,7 +405,7 @@ output: 2-way replicated (GFS redundancy)
       </g>
     </svg>
   </div>
-  <p class="tiny muted center"><strong>HBase</strong>: sparse NoSQL store · <strong>Pig</strong>: Pig&nbsp;Latin → MapReduce · <strong>Hive</strong>: SQL-like queries · <strong>Cascading</strong>: complex workflows · <strong>ZooKeeper</strong>: coordinates &amp; monitors components.</p>
+  <p class="tiny muted center"><strong>HBase</strong>: sparse NoSQL store; <strong>Pig</strong>: Pig&nbsp;Latin → MapReduce; <strong>Hive</strong>: SQL-like queries; <strong>Cascading</strong>: complex workflows; <strong>ZooKeeper</strong>: coordinates &amp; monitors components.</p>
 </section>
 
 <!-- ==================================================================
@@ -422,7 +422,7 @@ output: 2-way replicated (GFS redundancy)
     <div>
       <p class="small">MapReduce simplified big-data analysis — but users wanted <strong>multi-stage</strong> apps (iterative graph &amp; ML algorithms) and <strong>interactive</strong> ad-hoc queries. Both need fast data sharing <em>across</em> jobs.</p>
       <div class="callout warn"><span class="lbl">MapReduce way</span><span class="small">Every stage writes to HDFS and the next reads it back — <strong>replication + serialization + disk I/O</strong> between every iteration. Slow.</span></div>
-      <div class="callout takeaway"><span class="lbl">Spark way</span><span class="small">Keep working data in <strong>distributed memory</strong>; load once, reuse across iterations and queries — <strong>10–100×</strong> faster than going through network and disk.</span></div>
+      <div class="callout takeaway"><span class="lbl">Spark way</span><span class="small">Keep working data in <strong>distributed memory</strong>; load once, reuse across iterations and queries — <strong>10–100×</strong> faster than going through network and disk (the Spark project's own figure: up to 100× in memory, 10× on disk).</span></div>
     </div>
     <div class="center">
       <svg viewBox="0 0 300 220" class="chart" style="max-width:330px">
@@ -465,7 +465,7 @@ sc = SparkContext(
     "masterUrl",   # cluster, or local / local[N]
     "name",        # app name
     "sparkHome",   # Spark install path
-    ["library.py"] # JARs/files to ship
+    ["library.py"] # .py files to ship
 )
 </code></pre>
       <p class="tiny muted">APIs in Scala, Java, Python, R. The context is the handle through which you build RDDs. <span class="muted">(Legacy 0.x/1.x constructor; modern PySpark uses <code class="inline">SparkSession</code>.)</span></p>
@@ -627,7 +627,7 @@ lines.flatMap(lambda l: l.split())
     <tr><td>Programming model</td><td>map + reduce only</td><td>map/reduce, DAG, streaming, vertex-based</td></tr>
     <tr><td>Evaluation</td><td>Eager, stage by stage</td><td>Lazy transformations + eager actions</td></tr>
     <tr><td>Fault tolerance</td><td>Re-execute idempotent tasks</td><td>Recompute partitions from lineage</td></tr>
-    <tr><td>APIs</td><td>Java (Pig/Hive on top)</td><td>Scala, Java, Python, R</td></tr>
+    <tr><td>APIs</td><td>Java; any language via Hadoop Streaming; Pig/Hive on top</td><td>Scala, Java, Python, R</td></tr>
   </table>
   <div class="callout warn"><span class="lbl">When MapReduce still wins</span>A single huge batch pass that streams once through data far larger than cluster memory — there's little to reuse, so Spark's in-memory edge mostly disappears.</div>
 </section>
