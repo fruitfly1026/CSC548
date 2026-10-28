@@ -41,9 +41,9 @@
   <h2>Topic Roadmap</h2>
   <div class="cols c3">
     <div class="callout"><span class="lbl">Part 1</span><strong>The Design Space</strong><br>
-      <span class="small">Nodes, links, flits; circuit vs. packet switching; <em>topologies</em> from bus and crossbar to mesh, torus, hypercube, fat tree, butterfly and dragonfly; and routing policies from dimension-ordered to adaptive.</span></div>
+      <span class="small">Nodes, links, flits; circuit vs. packet switching; <em>topologies</em> from bus and crossbar to mesh, torus, hypercube, fat tree, butterfly and dragonfly; what deadlock is; and routing policies from dimension-ordered to adaptive.</span></div>
     <div class="callout"><span class="lbl">Part 2</span><strong>Deadlock &amp; Routers</strong><br>
-      <span class="small">Why cyclic buffer dependence deadlocks; turn restrictions and virtual channels; router microarchitecture and pipeline.</span></div>
+      <span class="small">Turn restrictions and virtual channels that keep routing deadlock-free; router microarchitecture and pipeline.</span></div>
     <div class="callout"><span class="lbl">Case Study</span><strong>Alpha 21364</strong><br>
       <span class="small">A 128-node 2-D torus with minimal adaptive routing, 19 virtual channels, and a 13-cycle pin-to-pin router latency.</span></div>
   </div>
@@ -778,6 +778,41 @@
     Deadlock arises when several messages <strong>mutually wait</strong> for each other's buffer space. A good policy is either provably deadlock-free or paired with an escape mechanism (Part 2).</div>
 </section>
 
+<!-- Deadlock -->
+<section data-background-color="#ffffff">
+  <h2>What Is Deadlock?</h2>
+  <div class="cols w-64">
+    <div>
+      <p>The network's <strong>inability to forward packets</strong>, caused by limited buffer space and a <strong>cyclic dependence</strong> on buffer acquisition.</p>
+      <p class="small">In the figure: four packets fill their input buffers and each needs the <em>next</em> output buffer — but that buffer is already full, in a cycle.</p>
+      <p class="small"><strong>Handling deadlock:</strong></p>
+      <ul class="tiny">
+        <li><strong>Detect &amp; break</strong> — expensive</li>
+        <li><strong>Drop packets</strong> — hurts performance, complicates the protocol</li>
+        <li><strong>Avoid</strong> — restrict routing</li>
+        <li><strong>Adapt / escape</strong> — escape channel or separate VCs per packet type</li>
+      </ul>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 180 180" class="chart" style="max-width:220px">
+        <!-- 4 routers in a square with cyclic dependence -->
+        <g fill="#fee2e2" stroke="#CC0000" stroke-width="2">
+          <rect x="30" y="20" width="44" height="34" rx="5"/><rect x="106" y="20" width="44" height="34" rx="5"/>
+          <rect x="106" y="120" width="44" height="34" rx="5"/><rect x="30" y="120" width="44" height="34" rx="5"/>
+        </g>
+        <g stroke="#CC0000" stroke-width="2.5" fill="none">
+          <line x1="74" y1="37" x2="106" y2="37" marker-end="url(#dh)"/>
+          <line x1="128" y1="54" x2="128" y2="120" marker-end="url(#dh)"/>
+          <line x1="106" y1="137" x2="74" y2="137" marker-end="url(#dh)"/>
+          <line x1="52" y1="120" x2="52" y2="54" marker-end="url(#dh)"/>
+        </g>
+        <defs><marker id="dh" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#CC0000"/></marker></defs>
+        <text x="90" y="174" text-anchor="middle" class="tiny" style="fill:#CC0000">cyclic buffer wait</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
 <!-- Topology dependent routing (butterfly) -->
 <section data-background-color="#ffffff">
   <h2>Topology-Dependent Routing</h2>
@@ -925,41 +960,6 @@
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Part 2</div>
   <div class="mod-title">Deadlock Avoidance &amp; Router Architecture</div>
-</section>
-
-<!-- Deadlock -->
-<section data-background-color="#ffffff">
-  <h2>What Is Deadlock?</h2>
-  <div class="cols w-64">
-    <div>
-      <p>The network's <strong>inability to forward packets</strong>, caused by limited buffer space and a <strong>cyclic dependence</strong> on buffer acquisition.</p>
-      <p class="small">In the figure: four packets fill their input buffers and each needs the <em>next</em> output buffer — but that buffer is already full, in a cycle.</p>
-      <p class="small"><strong>Handling deadlock:</strong></p>
-      <ul class="tiny">
-        <li><strong>Detect &amp; break</strong> — expensive</li>
-        <li><strong>Drop packets</strong> — hurts performance, complicates the protocol</li>
-        <li><strong>Avoid</strong> — restrict routing</li>
-        <li><strong>Adapt / escape</strong> — escape channel or separate VCs per packet type</li>
-      </ul>
-    </div>
-    <div class="center">
-      <svg viewBox="0 0 180 180" class="chart" style="max-width:220px">
-        <!-- 4 routers in a square with cyclic dependence -->
-        <g fill="#fee2e2" stroke="#CC0000" stroke-width="2">
-          <rect x="30" y="20" width="44" height="34" rx="5"/><rect x="106" y="20" width="44" height="34" rx="5"/>
-          <rect x="106" y="120" width="44" height="34" rx="5"/><rect x="30" y="120" width="44" height="34" rx="5"/>
-        </g>
-        <g stroke="#CC0000" stroke-width="2.5" fill="none">
-          <line x1="74" y1="37" x2="106" y2="37" marker-end="url(#dh)"/>
-          <line x1="128" y1="54" x2="128" y2="120" marker-end="url(#dh)"/>
-          <line x1="106" y1="137" x2="74" y2="137" marker-end="url(#dh)"/>
-          <line x1="52" y1="120" x2="52" y2="54" marker-end="url(#dh)"/>
-        </g>
-        <defs><marker id="dh" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#CC0000"/></marker></defs>
-        <text x="90" y="174" text-anchor="middle" class="tiny" style="fill:#CC0000">cyclic buffer wait</text>
-      </svg>
-    </div>
-  </div>
 </section>
 
 <!-- Turn restriction -->
