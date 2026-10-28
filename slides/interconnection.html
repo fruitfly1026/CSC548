@@ -537,13 +537,13 @@
   <h2>Butterfly</h2>
   <div class="cols" style="grid-template-columns:11fr 9fr">
     <div>
-      <p class="small">An <strong>indirect, multistage</strong> network: \(N\) terminals, \(\log_2 N\) stages of \(2 \times 2\) switches, \(N/2\) switches per stage. Every packet crosses <strong>all</strong> stages, so distance is the same, \(\log_2 N\), for every pair.</p>
-      <div class="callout"><span class="lbl">Routing: destination-tag</span><span class="small">Stage \(i\) looks at bit \(i\) of the destination address and picks that output.</span></div>
-      <div class="callout warn"><span class="lbl">Exactly one path per source–destination pair</span><span class="small">No path diversity: two flows that share a switch output <strong>block</strong> each other. Fixes: a <em>Beneš</em> network (two butterflies back to back) adds paths; the <em>flattened butterfly</em> merges the switches of each row into one high-radix router to save links.</span></div>
+      <p class="small">An <strong>indirect, multistage</strong> network: \(N\) terminals, \(\log_2 N\) stages of \(2 \times 2\) switches, \(N/2\) per stage. Every packet crosses <strong>all</strong> stages, so every pair is \(\log_2 N\) apart. Routing is <strong>destination-tag</strong>: stage \(i\) looks at bit \(i\) of the destination address and picks that output.</p>
+      <div class="callout warn"><span class="lbl">Exactly one path per source–destination pair</span><span class="small">No path diversity: flows that share a switch output <strong>block</strong> each other. Fixes: a <em>Beneš</em> network (two butterflies back to back) adds paths; a <em>flattened butterfly</em> merges each row of switches into one high-radix router.</span></div>
+      <div class="callout ok"><span class="lbl">Same wiring as a hypercube</span><span class="small">Stage \(i\) uses the links of hypercube dimension \(i\). The hypercube reuses one router per node for all dimensions; the butterfly spends a fresh switch per stage: fixed degree, single path.</span></div>
     </div>
     <div class="center">
-      <svg viewBox="0 0 250 180" class="chart" style="max-width:400px">
-        <g stroke="#1d4ed8" stroke-width="1.3" fill="none">
+      <svg viewBox="0 0 250 180" class="chart" style="width:100%;max-width:430px;display:block;margin:0 auto">
+        <g stroke="#94a3b8" stroke-width="1.3" fill="none">
           <line x1="26" y1="22" x2="62.0" y2="22"/>
           <line x1="198.0" y1="22" x2="224" y2="22"/>
           <line x1="26" y1="42" x2="62.0" y2="42"/>
@@ -560,6 +560,8 @@
           <line x1="198.0" y1="142" x2="224" y2="142"/>
           <line x1="26" y1="162" x2="62.0" y2="162"/>
           <line x1="198.0" y1="162" x2="224" y2="162"/>
+        </g>
+        <g stroke="#1d4ed8" stroke-width="1.5" fill="none">
           <line x1="78.0" y1="32.0" x2="122.0" y2="32.0"/>
           <line x1="78.0" y1="32.0" x2="122.0" y2="112.0"/>
           <line x1="78.0" y1="72.0" x2="122.0" y2="72.0"/>
@@ -568,6 +570,8 @@
           <line x1="78.0" y1="112.0" x2="122.0" y2="32.0"/>
           <line x1="78.0" y1="152.0" x2="122.0" y2="152.0"/>
           <line x1="78.0" y1="152.0" x2="122.0" y2="72.0"/>
+        </g>
+        <g stroke="#CC0000" stroke-width="1.5" fill="none">
           <line x1="138.0" y1="32.0" x2="182.0" y2="32.0"/>
           <line x1="138.0" y1="32.0" x2="182.0" y2="72.0"/>
           <line x1="138.0" y1="72.0" x2="182.0" y2="72.0"/>
@@ -611,6 +615,21 @@
         <text x="130" y="12" text-anchor="middle" class="tiny" style="fill:#1d4ed8">stage 1</text>
         <text x="190" y="12" text-anchor="middle" class="tiny" style="fill:#1d4ed8">stage 2</text>
         <text x="125" y="177" text-anchor="middle" class="tiny" style="fill:#1d4ed8">8 terminals, 3 stages of 2×2 switches</text>
+      </svg>
+      <svg viewBox="0 0 250 112" class="chart" style="width:100%;max-width:430px;display:block;margin:.2em auto 0">
+        <g stroke-width="2.4" fill="none">
+          <line x1="100" y1="22" x2="150" y2="22" stroke="#CC0000"/><line x1="100" y1="72" x2="150" y2="72" stroke="#CC0000"/>
+          <line x1="100" y1="22" x2="100" y2="72" stroke="#1d4ed8"/><line x1="150" y1="22" x2="150" y2="72" stroke="#1d4ed8"/>
+        </g>
+        <g fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.6">
+          <circle cx="100" cy="22" r="9"/><circle cx="150" cy="22" r="9"/><circle cx="100" cy="72" r="9"/><circle cx="150" cy="72" r="9"/>
+        </g>
+        <g class="tiny" text-anchor="middle">
+          <text x="100" y="25.5">0</text><text x="150" y="25.5">1</text><text x="100" y="75.5">2</text><text x="150" y="75.5">3</text>
+        </g>
+        <text x="88" y="50" text-anchor="end" class="tiny" style="fill:#1d4ed8">stage 0→1 links</text>
+        <text x="162" y="50" text-anchor="start" class="tiny" style="fill:#CC0000">stage 1→2 links</text>
+        <text x="125" y="104" text-anchor="middle" class="tiny" style="fill:#1d4ed8">merge each row of switches → 2-D hypercube</text>
       </svg>
     </div>
   </div>
