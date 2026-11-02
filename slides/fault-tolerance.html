@@ -37,10 +37,10 @@
 <section data-background-color="#ffffff">
   <h2>Agenda</h2>
   <div class="cols c3">
-    <div class="callout"><span class="lbl">1 · Why Resilience?</span><span class="small">System MTBF at scale; faults vs errors vs failures; rollback vs forward recovery.</span></div>
-    <div class="callout"><span class="lbl">2 · Checkpoint / Restart</span><span class="small">Coordinated snapshots, the Young/Daly optimal interval, multi-level &amp; logging.</span></div>
-    <div class="callout"><span class="lbl">3 · Beyond Rollback</span><span class="small">Replication, proactive migration, ABFT, silent-error (SDC) detection.</span></div>
-    <div class="callout"><span class="lbl">4 · Across the Stack</span><span class="small">MPI/ULFM, Spark lineage, deep-learning checkpointing.</span></div>
+    <div class="callout"><span class="lbl">1. Why Resilience?</span><span class="small">System MTBF at scale; faults vs errors vs failures; rollback vs forward recovery.</span></div>
+    <div class="callout"><span class="lbl">2. Checkpoint / Restart</span><span class="small">Coordinated snapshots, the Young/Daly optimal interval, multi-level &amp; logging.</span></div>
+    <div class="callout"><span class="lbl">3. Beyond Rollback</span><span class="small">Replication, proactive migration, ABFT, silent-error (SDC) detection.</span></div>
+    <div class="callout"><span class="lbl">4. Across the Stack</span><span class="small">MPI/ULFM, Spark lineage, deep-learning checkpointing.</span></div>
     <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">At scale, failure is not an exception — it is part of the steady state. <em>Design for it.</em></span></div>
   </div>
 </section>
@@ -57,7 +57,7 @@
   <h2>The Scale Problem: System MTBF</h2>
   <div class="cols w-64">
     <div>
-      <div class="callout warn"><span class="lbl">Key intuition</span>One node may run for <strong>years</strong> between failures, but a machine is only "up" when <em>all</em> its nodes are. With independent failures, the system MTBF <strong>shrinks linearly</strong> with node count.</div>
+      <div class="callout warn"><span class="lbl">Key intuition</span>One node may run for <strong>years</strong> between failures, but a machine is only "up" when <em>all</em> its nodes are. With independent failures, the system MTBF <strong>shrinks as 1/N</strong> with node count.</div>
       <div class="eq small">\( \mathrm{MTBF}_{sys} \approx \dfrac{\mathrm{MTBF}_{node}}{N} \)</div>
       <p class="small">Node MTBF = 5 years; <code class="inline">N</code> = 100,000 nodes →
       <strong>MTBF<sub>sys</sub> ≈ 26 minutes.</strong> Something is always broken.</p>
@@ -116,7 +116,7 @@
       <p class="tiny muted">Replication/voting, ABFT, Spark lineage recompute.</p>
     </div>
   </div>
-  <div class="callout"><span class="lbl">Through the deck</span>Modules 2 is rollback; Module 3 is mostly forward; Module 4 shows both philosophies in real systems.</div>
+  <div class="callout"><span class="lbl">Through the deck</span>Module 2 is rollback; Module 3 is mostly forward; Module 4 shows both philosophies in real systems.</div>
 </section>
 
 
@@ -135,7 +135,7 @@
     <div>
       <div class="callout"><span class="lbl">Idea</span>All ranks synchronize at a barrier and write a <strong>globally consistent snapshot</strong> to the parallel file system. On any failure, the whole job restarts from the last snapshot.</div>
       <p class="small">Simple and recovery is easy — the saved state is consistent by construction. But every rank dumps memory to the PFS <em>at the same time</em>: this is the <strong>#1 driver of parallel I/O bandwidth</strong> on HPC systems.</p>
-      <div class="callout takeaway"><span class="lbl">Cross-link → <code class="inline">io</code> deck</span>Checkpoint writes are the canonical bursty, write-heavy collective I/O workload — see the Parallel I/O deck (MPI-IO, collective buffering, the PFS).</div>
+      <div class="callout takeaway"><span class="lbl">Cross-link → Parallel I/O deck</span>Checkpoint writes are the canonical bursty, write-heavy collective I/O workload — see the Parallel I/O deck (MPI-IO, collective buffering, the PFS).</div>
     </div>
     <div class="center">
       <svg viewBox="0 0 300 210" class="chart" style="max-width:330px">
@@ -215,7 +215,7 @@
         <tr><td class="hi"><code class="inline">τ = √(2·C·M)</code></td><td class="hi">√(2·1·240) ≈ <strong>22 min</strong></td></tr>
       </table>
       <p class="small">So checkpoint roughly every <strong>22 minutes</strong>. Halve the MTBF (more nodes) and the interval drops to ≈ 15 min; make checkpoints 4× more expensive and it rises to ≈ 44 min.</p>
-      <p class="tiny muted">Wasted time per failure ≈ ½·τ (expected lost work) + C (the write). Minimizing total overhead yields the √ formula.</p>
+      <p class="tiny muted">Overhead = C per interval (the write) + ½τ expected lost work per failure. Minimizing the sum yields the √ formula.</p>
     </div>
   </div>
 </section>
@@ -233,14 +233,14 @@
     <div class="center">
       <svg viewBox="0 0 230 210" class="chart" style="max-width:250px">
         <rect x="40" y="20" width="150" height="34" rx="5" fill="#86efac"/>
-        <text x="115" y="36" text-anchor="middle" class="lbl">L1 · node NVMe/RAM</text>
-        <text x="115" y="49" text-anchor="middle" class="tiny">fastest · local crash</text>
+        <text x="115" y="36" text-anchor="middle" class="lbl">L1: node NVMe/RAM</text>
+        <text x="115" y="49" text-anchor="middle" class="tiny">fastest, local crash</text>
         <rect x="40" y="78" width="150" height="34" rx="5" fill="#fde68a"/>
-        <text x="115" y="94" text-anchor="middle" class="lbl">L2 · partner / XOR</text>
+        <text x="115" y="94" text-anchor="middle" class="lbl">L2: partner / XOR</text>
         <text x="115" y="107" text-anchor="middle" class="tiny">node loss</text>
         <rect x="40" y="136" width="150" height="34" rx="5" fill="#fca5a5"/>
-        <text x="115" y="152" text-anchor="middle" class="lbl">L3 · PFS</text>
-        <text x="115" y="165" text-anchor="middle" class="tiny">slowest · system loss</text>
+        <text x="115" y="152" text-anchor="middle" class="lbl">L3: PFS</text>
+        <text x="115" y="165" text-anchor="middle" class="tiny">slowest, system loss</text>
         <line x1="115" y1="54" x2="115" y2="78" stroke="#16181d" stroke-width="1.5" marker-end="url(#dn)"/>
         <line x1="115" y1="112" x2="115" y2="136" stroke="#16181d" stroke-width="1.5" marker-end="url(#dn)"/>
         <defs><marker id="dn" markerWidth="7" markerHeight="7" refX="3" refY="6" orient="auto"><path d="M0,0 L6,0 L3,6 Z" fill="#16181d"/></marker></defs>
@@ -323,11 +323,11 @@
   <h2>ABFT — Algorithm-Based Fault Tolerance</h2>
   <div class="cols w-64">
     <div>
-      <div class="callout takeaway"><span class="lbl">Idea</span>Encode redundancy <strong>in the data itself</strong>, so the algorithm can detect — and often locate and correct — a corrupted value <strong>without any rollback</strong>. The classic case is dense linear algebra.</div>
+      <div class="callout takeaway"><span class="lbl">Idea</span>Encode redundancy <strong>in the data itself</strong>, so the algorithm can detect, locate and correct a corrupted value <strong>without any rollback</strong>. Classic case: dense linear algebra.</div>
       <p class="small"><strong>Matrix-multiply checksums.</strong> Augment <code class="inline">A</code> with a <em>column-checksum</em> row (each column's sum) and <code class="inline">B</code> with a <em>row-checksum</em> column (each row's sum). Then in <code class="inline">C = A·B</code>, the checksum row/column are <strong>preserved</strong> by the multiply:</p>
       <div class="eq small">\( \sum_j C_{ij} = C^{r}_i,\qquad \sum_i C_{ij} = C^{c}_j \)</div>
-      <p class="small">After the multiply, recompute each row/column sum and compare to the stored checksum. A <strong>mismatch in row <em>i</em> and column <em>j</em></strong> pinpoints the bad entry <code class="inline">C<sub>ij</sub></code>; the checksum difference gives the <strong>correction</strong> to add back.</p>
-      <div class="callout"><span class="lbl">Cross-link → Linear Algebra advanced topic</span>ABFT lives inside the matmul/factorization kernels covered there; it recovers <em>in place</em>, complementing checkpoint/restart.</div>
+      <p class="small">After the multiply, recompute the row/column sums and compare. A <strong>mismatch in row <em>i</em> and column <em>j</em></strong> pinpoints <code class="inline">C<sub>ij</sub></code>; the checksum difference is the <strong>correction</strong>.</p>
+      <p class="small muted">ABFT lives inside the matmul/factorization kernels of the Linear Algebra topic; it recovers in place, complementing checkpoint/restart.</p>
     </div>
     <div class="center">
       <svg viewBox="0 0 230 210" class="chart" style="max-width:250px">
@@ -394,37 +394,28 @@
   <h2>MPI Fault Tolerance &amp; ULFM</h2>
   <div class="cols">
     <div>
-      <div class="callout warn"><span class="lbl">Default MPI</span>The standard error handler is <code class="inline">MPI_ERRORS_ARE_FATAL</code>: a process failure <strong>aborts the whole job</strong>. The communicator state after a failure is undefined — you cannot safely keep using it.</div>
-      <div class="callout takeaway"><span class="lbl">ULFM — User-Level Failure Mitigation</span>An MPI extension that lets the application <strong>survive</strong> a process loss and decide what to do:</div>
+      <div class="callout warn"><span class="lbl">Default MPI</span>The standard error handler is <code class="inline">MPI_ERRORS_ARE_FATAL</code>: a process failure <strong>aborts the whole job</strong>; after a failure the communicator is unusable.</div>
+      <div class="callout takeaway"><span class="lbl">ULFM — User-Level Failure Mitigation</span>An MPI extension that lets the application <strong>survive</strong> a process loss:</div>
       <ul class="small">
-        <li><code class="inline">MPIX_Comm_revoke</code> — invalidate a broken communicator everywhere so no rank hangs in a collective.</li>
-        <li><code class="inline">MPIX_Comm_shrink</code> — build a new communicator with the dead ranks removed.</li>
-        <li><code class="inline">MPIX_Comm_agree</code> — fault-tolerant agreement so survivors reach a consistent decision.</li>
+        <li><code class="inline">MPIX_Comm_revoke</code> — invalidate the broken communicator so no rank hangs in a collective.</li>
+        <li><code class="inline">MPIX_Comm_shrink</code> — new communicator without the dead ranks.</li>
+        <li><code class="inline">MPIX_Comm_agree</code> — survivors reach a consistent decision.</li>
       </ul>
-      <div class="callout"><span class="lbl">Cross-link → <code class="inline">mpi</code> deck</span>This builds directly on communicators &amp; collectives — ULFM repairs the communicator, then you re-load from a checkpoint and continue.</div>
+      <p class="small muted">ULFM repairs the communicator; you then reload from a checkpoint and continue.</p>
     </div>
     <div>
       <div class="code-label">ULFM-style recovery sketch (C)</div>
       <pre><code class="language-c" data-trim>
-/* install a non-fatal error handler */
-MPI_Comm_set_errhandler(comm,
-    MPI_ERRORS_RETURN);
-
+MPI_Comm_set_errhandler(comm, MPI_ERRORS_RETURN);
 rc = MPI_Allreduce(&amp;local, &amp;sum, 1,
         MPI_DOUBLE, MPI_SUM, comm);
 
-if (rc != MPI_SUCCESS) {
-  /* a rank died: stop the bleeding... */
+if (rc != MPI_SUCCESS) {          /* a rank died */
   MPIX_Comm_revoke(comm);
-
-  /* ...rebuild without the dead ranks */
   MPIX_Comm_shrink(comm, &amp;newcomm);
-
-  /* agree we are all recovering */
   int flag = 1;
   MPIX_Comm_agree(newcomm, &amp;flag);
-
-  comm = newcomm;             /* continue */
+  comm = newcomm;
   reload_from_checkpoint(comm);
 }
 </code></pre>
@@ -439,7 +430,7 @@ if (rc != MPI_SUCCESS) {
     <div>
       <div class="callout"><span class="lbl">A different model</span>Spark records each RDD's <strong>lineage</strong>: the deterministic sequence of transformations (the DAG) that built it from its parents. It does <em>not</em> take global checkpoints.</div>
       <p class="small">When a partition is lost (an executor dies), Spark <strong>recomputes just that partition</strong> from its parent partitions, following the lineage. Recovery is <strong>uncoordinated</strong> and local — no rollback of healthy partitions, no synchronized snapshot.</p>
-      <div class="callout takeaway"><span class="lbl">Cross-link → <code class="inline">bigdata</code> deck</span>This is forward-style recovery enabled by <strong>deterministic, coarse-grained</strong> transformations on immutable RDDs — contrast with HPC coordinated checkpoint/restart. (Long lineages are pruned with explicit <code class="inline">checkpoint()</code>.)</div>
+      <div class="callout takeaway"><span class="lbl">Cross-link → Big Data deck</span>This is forward-style recovery enabled by <strong>deterministic, coarse-grained</strong> transformations on immutable RDDs — contrast with HPC coordinated checkpoint/restart. (Long lineages are pruned with explicit <code class="inline">checkpoint()</code>.)</div>
     </div>
     <div class="center">
       <svg viewBox="0 0 240 200" class="chart" style="max-width:260px">
@@ -480,7 +471,7 @@ if (rc != MPI_SUCCESS) {
     </div>
     <div>
       <div class="callout warn"><span class="lbl">Why it is existential here</span>Training a frontier model runs for <strong>days to weeks on thousands of GPUs</strong>. By Module 1, the MTBF of that many GPUs is hours — a failure is guaranteed. Without frequent checkpoints you lose days of compute.</div>
-      <div class="callout takeaway"><span class="lbl">Cross-link → <code class="inline">nn</code> deck</span>Same checkpoint/restart and Young/Daly interval logic from Module 2 — but the "state" is the model + sharded optimizer, and the writes are huge. Checkpoint cadence is a first-class training hyperparameter.</div>
+      <div class="callout takeaway"><span class="lbl">Cross-link → Deep Learning deck</span>Same checkpoint/restart and Young/Daly interval logic from Module 2 — but the "state" is the model + sharded optimizer, and the writes are huge. Checkpoint cadence is a first-class training hyperparameter.</div>
     </div>
   </div>
 </section>
