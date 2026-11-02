@@ -37,12 +37,12 @@
 <section data-background-color="#ffffff">
   <h2>Agenda</h2>
   <div class="cols c3">
-    <div class="callout"><span class="lbl">1 · The I/O Wall</span><span class="small">Why storage limits HPC; parallel file systems, stripes &amp; OSTs.</span></div>
-    <div class="callout"><span class="lbl">2 · I/O Strategies</span><span class="small">File-per-process vs. single shared file; common patterns.</span></div>
-    <div class="callout"><span class="lbl">3 · MPI-IO</span><span class="small">open / read_at / write_at, individual vs. collective.</span></div>
-    <div class="callout"><span class="lbl">4 · File Views</span><span class="small">Noncontiguous access with derived datatypes.</span></div>
-    <div class="callout"><span class="lbl">5 · High-Level Libraries</span><span class="small">HDF5, NetCDF / pNetCDF, ADIOS.</span></div>
-    <div class="callout"><span class="lbl">6 · Best Practices</span><span class="small">Big contiguous I/O, collectives, stripe alignment.</span></div>
+    <div class="callout"><span class="lbl">1. The I/O Wall</span><span class="small">Why storage limits HPC; parallel file systems, stripes &amp; OSTs.</span></div>
+    <div class="callout"><span class="lbl">2. I/O Strategies</span><span class="small">File-per-process vs. single shared file; common patterns.</span></div>
+    <div class="callout"><span class="lbl">3. MPI-IO</span><span class="small">open / read_at / write_at, individual vs. collective.</span></div>
+    <div class="callout"><span class="lbl">4. File Views</span><span class="small">Noncontiguous access with derived datatypes.</span></div>
+    <div class="callout"><span class="lbl">5. High-Level Libraries</span><span class="small">HDF5, NetCDF / pNetCDF, ADIOS.</span></div>
+    <div class="callout"><span class="lbl">6. Best Practices</span><span class="small">Big contiguous I/O, collectives, stripe alignment.</span></div>
     <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Tell the I/O system the <em>big picture</em> so it can build large, aligned transfers.</span></div>
   </div>
 </section>
@@ -62,7 +62,7 @@
       <div class="callout"><span class="lbl">Parallel I/O</span>Multiple processes of one parallel program read/write a <strong>common file</strong> at the same time.</div>
       <p class="small"><strong>Performance:</strong> aggregate bandwidth far beyond one serial stream.<br>
       <strong>Management:</strong> a <em>single</em> output file is easy to archive, post-process and restart from — and is independent of the process count.</p>
-      <div class="callout warn"><span class="lbl">The wall</span>CPUs and networks scale; spinning/flash storage does not. Naive serial I/O quickly dominates wall-clock time.</div>
+      <div class="callout warn"><span class="lbl">The wall</span>CPUs and networks scale; a single storage device does not. Naive serial I/O quickly dominates wall-clock time.</div>
     </div>
     <div class="center">
       <svg viewBox="0 0 300 200" class="chart" style="max-width:330px">
@@ -89,7 +89,7 @@
   <div class="cols w-64">
     <div>
       <div class="callout"><span class="lbl">Server-side view</span>Parallel I/O = <strong>simultaneous transfer from many storage servers</strong>. One logical file is spread across many disks.</div>
-      <p class="small">Widely deployed: <strong>Lustre</strong>, <strong>GPFS</strong>, PVFS, Ceph, BeeGFS (HPC POSIX). <span class="muted">Big-data DFS such as GFS/HDFS target a different, non-POSIX regime.</span> They separate <em>metadata</em> (where the bytes live) from <em>data</em> (the bytes themselves) so both scale independently.</p>
+      <p class="small">Widely deployed: <strong>Lustre</strong>, <strong>GPFS</strong>, PVFS, Ceph, BeeGFS (HPC POSIX). <span class="muted">Big-data DFS such as GFS/HDFS target a different, non-POSIX regime.</span> Most separate <em>metadata</em> (where the bytes live) from <em>data</em> (the bytes themselves) so both scale independently.</p>
       <div class="callout takeaway"><span class="lbl">Key idea</span>Bandwidth comes from <strong>parallelism in the storage tier</strong>, not from a faster single disk.</div>
     </div>
     <div class="center">
@@ -120,7 +120,7 @@
       <p class="small">A file is cut into fixed-size <strong>stripes</strong> dealt round-robin across a set of <strong>OSTs</strong> (object storage targets). Two knobs:</p>
       <div class="callout"><span class="lbl">stripe size</span>bytes written to one OST before moving to the next (Lustre default ~1 MB).</div>
       <div class="callout"><span class="lbl">stripe count</span>how many OSTs the file spans (default <strong>1</strong> — a single OST; <code class="inline">-1</code> = all).</div>
-      <p class="tiny muted">Striping is set when the file is <strong>created</strong> and cannot change afterward.</p>
+      <p class="tiny muted">Striping is set when the file is <strong>created</strong> and cannot change in place; <code class="inline">lfs migrate</code> rewrites the file with a new layout.</p>
     </div>
     <div class="center">
       <svg viewBox="0 0 300 180" class="chart" style="max-width:320px">
@@ -331,7 +331,7 @@ MPI_Wait(&amp;request, &amp;status);
   <h2>Collective I/O: the <code class="inline">_all</code> Calls</h2>
   <div class="cols">
     <div>
-      <div class="callout takeaway"><span class="lbl">Why collective</span>A critical optimization. Every rank states only its own access, but the library sees the <strong>whole picture</strong> and builds large transfers (2-phase I/O: communicate, then read/write).</div>
+      <div class="callout takeaway"><span class="lbl">Why collective</span>A critical optimization. Every rank states only its own access, but the library sees the <strong>whole picture</strong> and builds large transfers (2-phase I/O: a few aggregator ranks do the large file accesses and exchange data with the rest).</div>
       <p class="small">The <code class="inline">_all</code> suffix means <em>all</em> processes in the communicator passed to <code class="inline">MPI_File_open</code> call it — an implicit synchronization.</p>
     </div>
     <div>
@@ -413,7 +413,7 @@ MPI_Type_commit(&amp;newtype);
 </code></pre>
     </div>
     <div>
-      <p class="small">A <strong>vector</strong> type captures a regular strided pattern: <code class="inline">count</code> blocks of <code class="inline">blocklen</code> elements, each block starting <code class="inline">stride</code> elements after the last.</p>
+      <p class="small">A <strong>vector</strong> type captures a regular strided pattern: <code class="inline">count</code> blocks of <code class="inline">blocklen</code> elements, each block starting <code class="inline">stride</code> elements after the start of the previous one.</p>
       <div class="callout warn"><span class="lbl">Always commit</span>A derived datatype must be passed to <code class="inline">MPI_Type_commit</code> before use, and freed with <code class="inline">MPI_Type_free</code> when done.</div>
     </div>
   </div>
@@ -525,7 +525,7 @@ MPI_File_close(&amp;fh);
       <ul class="small">
         <li><strong>POSIX</strong> — raw <code class="inline">read</code>/<code class="inline">write</code>, no format.</li>
         <li><strong>MPI-IO</strong> — parallel API + collectives, still no format.</li>
-        <li><strong>HDF5 / NetCDF / ADIOS</strong> — API <em>plus</em> a self-describing, portable on-disk format. Most build on MPI-IO underneath.</li>
+        <li><strong>HDF5 / NetCDF / ADIOS</strong> — API <em>plus</em> a self-describing, portable on-disk format. HDF5 and PnetCDF build on MPI-IO; ADIOS2 writes its own subfiles.</li>
       </ul>
       <div class="callout takeaway"><span class="lbl">Self-describing</span>The file carries its own dimensions, types &amp; metadata — readable by any tool, on any machine, years later.</div>
     </div>
@@ -542,11 +542,11 @@ MPI_File_close(&amp;fh);
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>HDF5 · NetCDF · ADIOS</h2>
+  <h2>HDF5, NetCDF &amp; ADIOS</h2>
   <div class="cols c3">
     <div class="callout"><span class="lbl">HDF5</span><span class="small"><strong>H</strong>ierarchical <strong>D</strong>ata <strong>F</strong>ormat. Groups &amp; datasets in a file-system-like tree; rich types, chunking &amp; compression; parallel HDF5 runs on MPI-IO.</span></div>
     <div class="callout"><span class="lbl">NetCDF / pNetCDF</span><span class="small"><strong>Net</strong>work <strong>C</strong>ommon <strong>D</strong>ata <strong>F</strong>orm — array-oriented, big in climate/weather. Parallel-NetCDF adds collective parallel access.</span></div>
-    <div class="callout"><span class="lbl">ADIOS</span><span class="small"><strong>Ada</strong>ptable <strong>IO</strong> <strong>S</strong>ystem — built on MPI-IO; an XML/external config selects the I/O method <em>without</em> recompiling.</span></div>
+    <div class="callout"><span class="lbl">ADIOS</span><span class="small"><strong>Ada</strong>ptable <strong>IO</strong> <strong>S</strong>ystem — MPI-based, writes its own subfiles; an XML/external config selects the I/O method <em>without</em> recompiling.</span></div>
   </div>
   <div class="callout takeaway"><span class="lbl">Why use them</span>You write in terms of <strong>arrays and variables</strong>, not byte offsets; the library handles layout, portability &amp; metadata — and still gets parallel performance via MPI-IO.</div>
 </section>
@@ -563,14 +563,14 @@ MPI_File_close(&amp;fh);
   <h2>Rules of Thumb for Fast Parallel I/O</h2>
   <div class="cols">
     <div>
-      <div class="callout takeaway"><span class="lbl">1 · Go big &amp; contiguous</span>Few large transfers beat many small ones — metadata and seek overhead dominate small accesses.</div>
-      <div class="callout takeaway"><span class="lbl">2 · Use collective I/O</span>Prefer the <code class="inline">_all</code> calls on a shared file; 2-phase I/O aggregates ranks into large writes.</div>
-      <div class="callout takeaway"><span class="lbl">3 · Describe noncontiguity</span>Use file views / derived datatypes so one call passes the whole pattern to the library.</div>
+      <div class="callout takeaway"><span class="lbl">1. Go big &amp; contiguous</span>Few large transfers beat many small ones — metadata and seek overhead dominate small accesses.</div>
+      <div class="callout takeaway"><span class="lbl">2. Use collective I/O</span>Prefer the <code class="inline">_all</code> calls on a shared file; 2-phase I/O aggregates ranks into large writes.</div>
+      <div class="callout takeaway"><span class="lbl">3. Describe noncontiguity</span>Use file views / derived datatypes so one call passes the whole pattern to the library.</div>
     </div>
     <div>
-      <div class="callout takeaway"><span class="lbl">4 · Align to stripes</span>Match access size &amp; offsets to the <strong>stripe size</strong> so a rank's writes don't straddle OST boundaries.</div>
-      <div class="callout takeaway"><span class="lbl">5 · Set striping deliberately</span>One big file → stripe over all OSTs; many small files → don't stripe. Set it at <em>create</em> time.</div>
-      <div class="callout takeaway"><span class="lbl">6 · Move up the stack</span>Let HDF5 / NetCDF / ADIOS handle layout &amp; portability when you can.</div>
+      <div class="callout takeaway"><span class="lbl">4. Align to stripes</span>Match access size &amp; offsets to the <strong>stripe size</strong> so a rank's writes don't straddle OST boundaries.</div>
+      <div class="callout takeaway"><span class="lbl">5. Set striping deliberately</span>One big file → stripe over all OSTs; many small files → don't stripe. Set it at <em>create</em> time.</div>
+      <div class="callout takeaway"><span class="lbl">6. Move up the stack</span>Let HDF5 / NetCDF / ADIOS handle layout &amp; portability when you can.</div>
     </div>
   </div>
 </section>
@@ -579,7 +579,7 @@ MPI_File_close(&amp;fh);
   <h2>Stripe Alignment, Visually</h2>
   <div class="cols">
     <div>
-      <div class="callout warn"><span class="lbl">Unaligned</span>A rank's block crosses a stripe boundary → the write touches <strong>two OSTs</strong> and both must coordinate at the shared block. Contention &amp; serialization.</div>
+      <div class="callout warn"><span class="lbl">Unaligned</span>A rank's block crosses a stripe boundary → the write touches <strong>two OSTs</strong>, and two ranks share a stripe, so they contend for that OST's lock. Contention &amp; serialization.</div>
       <div class="callout"><span class="lbl">Aligned</span>Each rank's access starts on a stripe boundary and is a multiple of the stripe size → one OST per rank, no boundary contention.</div>
     </div>
     <div class="center">
@@ -612,7 +612,7 @@ MPI_File_close(&amp;fh);
   <div class="cols c3">
     <div class="callout"><span class="lbl">Storage is parallel</span>Bandwidth comes from <strong>striping</strong> across many OSTs, not one fast disk.</div>
     <div class="callout"><span class="lbl">One shared file</span>Manageable &amp; restartable; beats N files at scale (or go hybrid).</div>
-    <div class="callout"><span class="lbl">MPI-IO</span><code class="inline">open</code> · <code class="inline">read_at</code>/<code class="inline">write_at</code> · views · <code class="inline">_all</code> collectives.</div>
+    <div class="callout"><span class="lbl">MPI-IO</span><code class="inline">open</code>, <code class="inline">read_at</code>/<code class="inline">write_at</code>, views, <code class="inline">_all</code> collectives.</div>
   </div>
   <div class="cols">
     <div class="callout"><span class="lbl">Describe the access</span>File views + derived datatypes pass noncontiguous patterns in one call → the library optimizes.</div>
