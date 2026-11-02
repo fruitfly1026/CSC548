@@ -610,16 +610,6 @@ lines.flatMap(lambda l: l.split())
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>MapReduce: Good, OK, Bad</h2>
-  <div class="cols c3">
-    <div class="callout takeaway"><span class="lbl">Good for</span><span class="small">Embarrassingly-parallel jobs; summing, grouping, filtering, joining; offline batch over massive data; scanning an <em>entire</em> dataset.</span></div>
-    <div class="callout"><span class="lbl">OK for</span><span class="small">Iterative jobs (graph algorithms) — but each iteration reads/writes disk, so per-iteration I/O latency is high.</span></div>
-    <div class="callout warn"><span class="lbl">Bad for</span><span class="small">Shared state / coordination (tasks must be share-nothing); low-latency jobs; small datasets; finding individual records.</span></div>
-  </div>
-  <div class="callout"><span class="lbl">Abstraction limit</span>MapReduce only fits <strong>idempotent, share-nothing</strong> operations. That constraint is exactly what buys it transparent scaling and fault tolerance — but it rules out tightly-coupled algorithms.</div>
-</section>
-
-<section data-background-color="#ffffff">
   <h2>MapReduce vs. Spark</h2>
   <table style="font-size:.8em">
     <tr><th>Dimension</th><th>Hadoop MapReduce</th><th>Apache Spark</th></tr>
@@ -631,6 +621,16 @@ lines.flatMap(lambda l: l.split())
     <tr><td>APIs</td><td>Java; any language via Hadoop Streaming; Pig/Hive on top</td><td>Scala, Java, Python, R</td></tr>
   </table>
   <div class="callout warn"><span class="lbl">When MapReduce still wins</span>A single huge batch pass that streams once through data far larger than cluster memory — there's little to reuse, so Spark's in-memory edge mostly disappears.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>MapReduce: Good, OK, Bad</h2>
+  <div class="cols c3">
+    <div class="callout takeaway"><span class="lbl">Good for</span><span class="small">Embarrassingly-parallel jobs; summing, grouping, filtering, joining; offline batch over massive data; scanning an <em>entire</em> dataset.</span></div>
+    <div class="callout"><span class="lbl">OK for</span><span class="small">Iterative jobs (graph algorithms) — but each iteration reads/writes disk, so per-iteration I/O latency is high.</span></div>
+    <div class="callout warn"><span class="lbl">Bad for</span><span class="small">Shared state / coordination (tasks must be share-nothing); low-latency jobs; small datasets; finding individual records.</span></div>
+  </div>
+  <div class="callout"><span class="lbl">Abstraction limit</span>MapReduce only fits <strong>idempotent, share-nothing</strong> operations. That constraint is exactly what buys it transparent scaling and fault tolerance — but it rules out tightly-coupled algorithms.</div>
 </section>
 
 <!-- ===== BIG PICTURE ===== -->
