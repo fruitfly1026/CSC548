@@ -265,37 +265,12 @@ lfs df          # per-OST capacity / usage
 
 <section data-background-color="#ffffff">
   <h2>Simple Reads: Pointers vs. Offsets</h2>
+  <p class="small">Every rank opens the same file collectively with <code class="inline">MPI_File_open</code> on a communicator, then reads its own <strong>chunk</strong>: rank <em>r</em> takes bytes <em>r</em>·bufsize to (<em>r</em>+1)·bufsize. There are two ways to say <em>where</em> to read.</p>
   <div class="cols">
-    <div>
-      <div class="code-label">Individual file pointer + seek</div>
-      <pre><code class="language-c" data-trim>
-MPI_File fh;  MPI_Status status;
-int *buf, nints;
-
-bufsize = FILESIZE / nprocs;
-nints   = bufsize / sizeof(int);
-
-MPI_File_open(MPI_COMM_WORLD, "/pfs/datafile",
-    MPI_MODE_RDONLY, MPI_INFO_NULL, &amp;fh);
-MPI_File_seek(fh, rank * bufsize, MPI_SEEK_SET);
-MPI_File_read(fh, buf, nints, MPI_INT, &amp;status);
-MPI_File_close(&amp;fh);
-</code></pre>
-    </div>
-    <div>
-      <div class="code-label">Explicit offset (no seek)</div>
-      <pre><code class="language-c" data-trim>
-MPI_File_open(MPI_COMM_WORLD, "/pfs/datafile",
-    MPI_MODE_RDONLY, MPI_INFO_NULL, &amp;fh);
-
-MPI_File_read_at(fh, rank * bufsize,
-    buf, nints, MPI_INT, &amp;status);
-
-MPI_File_close(&amp;fh);
-</code></pre>
-      <p class="small">Each rank reads its own <strong>chunk</strong> of the common file. <code class="inline">_at</code> folds the offset into the call — thread-safe and no separate seek.</p>
-    </div>
+    <div class="callout"><span class="lbl">Individual file pointer + seek</span>Each rank has its own file pointer. <code class="inline">MPI_File_seek</code> moves it to the rank's offset, then <code class="inline">MPI_File_read</code> reads from there and advances the pointer. Two calls, and the pointer is per-process state that the next read depends on.</div>
+    <div class="callout"><span class="lbl">Explicit offset</span><code class="inline">MPI_File_read_at</code> takes the offset as an argument, so one call does the whole read and the file pointer is never touched. Thread-safe, and the call carries everything the library needs to see the access.</div>
   </div>
+  <div class="callout takeaway"><span class="lbl">Rule</span>Prefer the <code class="inline">_at</code> forms: no hidden pointer state, and they combine naturally with the collective <code class="inline">_all</code> variants.</div>
 </section>
 
 <section data-background-color="#ffffff">
