@@ -36,13 +36,13 @@
 <section data-background-color="#ffffff">
   <h2>Agenda</h2>
   <div class="cols c3">
-    <div class="callout"><span class="lbl">1 · Neural Networks</span><span class="small">DNNs, gradient descent / SGD, CNNs, Transformers, GNNs, rising compute.</span></div>
-    <div class="callout"><span class="lbl">2 · Data Parallelism</span><span class="small">Replicas, all-reduce, the memory wall.</span></div>
-    <div class="callout"><span class="lbl">3 · Model &amp; Tensor Parallelism</span><span class="small">Split layers / split tensors; device placement.</span></div>
-    <div class="callout"><span class="lbl">4 · Pipeline Parallelism</span><span class="small">GPipe, 1F1B &amp; interleaved, the bubble.</span></div>
-    <div class="callout"><span class="lbl">5 · 3D Parallelism</span><span class="small">Combine all three — DeepSpeed.</span></div>
-    <div class="callout"><span class="lbl">6 · Model Compression</span><span class="small">Pruning, quantization, low-rank.</span></div>
-    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Models outgrew single devices — we partition <em>data</em>, <em>tensors</em>, and <em>layers</em>, then shrink the model itself.</span></div>
+    <div class="callout"><span class="lbl">1. Neural Networks</span><span class="small">DNNs, SGD, CNNs, Transformers, GNNs.</span></div>
+    <div class="callout"><span class="lbl">2. Data Parallelism</span><span class="small">Replicas, all-reduce, the memory wall.</span></div>
+    <div class="callout"><span class="lbl">3. Model &amp; Tensor Parallelism</span><span class="small">Split layers or tensors; placement.</span></div>
+    <div class="callout"><span class="lbl">4. Pipeline Parallelism</span><span class="small">GPipe, 1F1B, the bubble.</span></div>
+    <div class="callout"><span class="lbl">5. 3D Parallelism</span><span class="small">Combine all three — DeepSpeed.</span></div>
+    <div class="callout"><span class="lbl">6. Model Compression</span><span class="small">Pruning, quantization, low-rank.</span></div>
+    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Partition <em>data</em>, <em>tensors</em> and <em>layers</em>, then shrink the model.</span></div>
   </div>
 </section>
 
@@ -367,7 +367,7 @@ model = optimizer.step(model, g)  # identical update
   <div class="cols w-64">
     <div>
       <div class="callout"><span class="lbl">Idea</span>Partition the <strong>parameters / gradients within a single layer</strong> across devices — split the weight matrix itself, not whole layers.</div>
-      <p class="small">A matmul \(Y = XW\) splits \(W\) by columns: each device computes a slice \(Y_i = X W_i\), then the slices are concatenated (or all-reduced). The whole team cooperates on <strong>one</strong> layer.</p>
+      <p class="small">A matmul \(Y = XW\) splits \(W\) by columns: each device computes a slice \(Y_i = X W_i\), then the slices are concatenated (an all-gather). Splitting \(W\) by rows instead gives partial sums that need an all-reduce. The whole team cooperates on <strong>one</strong> layer.</p>
       <div class="callout warn"><span class="lbl">Trade-off</span>Fine-grained → frequent collective communication; best kept <strong>within a fast interconnect</strong> (a single node / NVLink).</div>
     </div>
     <div class="center">
@@ -554,7 +554,7 @@ model = optimizer.step(model, g)  # identical update
       <p class="small">Size and speed usually improve <strong>together</strong>: a smaller model moves less data and does less arithmetic.</p>
     </div>
     <div>
-      <div class="callout takeaway"><span class="lbl">Three methods</span><span class="small"><strong>Sparsification (pruning)</strong> · <strong>Quantization</strong> · <strong>Low-rank approximation</strong>.</span></div>
+      <div class="callout takeaway"><span class="lbl">Three methods</span><span class="small"><strong>Sparsification (pruning)</strong>, <strong>Quantization</strong>, <strong>Low-rank approximation</strong>.</span></div>
       <p class="tiny muted">Especially important for inference at the edge, where memory, latency, and energy are all constrained.</p>
     </div>
   </div>
@@ -670,7 +670,8 @@ model = optimizer.step(model, g)  # identical update
   <ul class="small">
     <li>Ben-Nun &amp; Hoefler, "Demystifying Parallel and Distributed Deep Learning: An In-Depth Concurrency Analysis," <em>ACM Computing Surveys</em>, 2019.</li>
     <li>Huang et al., "GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism," NeurIPS 2019.</li>
-    <li>Narayanan et al., "Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM" (1F1B / interleaved), SC 2021.</li>
+    <li>Narayanan et al., "PipeDream: Generalized Pipeline Parallelism for DNN Training" (1F1B), SOSP 2019.</li>
+    <li>Narayanan et al., "Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM" (interleaved 1F1B), SC 2021.</li>
     <li>Mirhoseini et al., "Device Placement Optimization with Reinforcement Learning," ICML 2017.</li>
     <li>Hoefler et al., "Sparsity in Deep Learning," <em>JMLR</em>, 2021.</li>
     <li>Microsoft Research, "DeepSpeed: Extreme-scale model training for everyone."</li>
