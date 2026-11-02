@@ -39,12 +39,13 @@
 
 <!-- Agenda -->
 <section data-background-color="#ffffff">
-  <h2>Agenda — Four Ways to Not Be NVIDIA</h2>
+  <h2>Agenda — Five Ways to Not Be NVIDIA</h2>
   <div class="cols c3">
     <div class="callout"><span class="lbl">1 · AMD</span><span class="small">CDNA data-center GPUs, Matrix Cores, Infinity Fabric/Cache, HBM; ROCm + <strong>HIP</strong> (CUDA portability).</span></div>
     <div class="callout"><span class="lbl">2 · Intel</span><span class="small">Xe-HPC "Ponte Vecchio," <strong>XMX</strong> systolic engines, tiles/chiplets (EMIB/Foveros); oneAPI + SYCL.</span></div>
     <div class="callout"><span class="lbl">3 · Google TPU</span><span class="small">The <strong>systolic MXU</strong>, bfloat16, v1→Ironwood, pods &amp; ICI, XLA compilation.</span></div>
-    <div class="callout"><span class="lbl">4 · Tenstorrent</span><span class="small">Tensix dataflow grid, no cache, TT-Metalium — and the two matmul labs. <span class="pill">labs</span></span></div>
+    <div class="callout"><span class="lbl">4 · Cerebras</span><span class="small">The <strong>wafer-scale</strong> engine: one die per wafer, SRAM-only dataflow grid, weight streaming from MemoryX.</span></div>
+    <div class="callout"><span class="lbl">5 · Tenstorrent</span><span class="small">Tensix dataflow grid, no cache, TT-Metalium — and the two matmul labs. <span class="pill">labs</span></span></div>
     <div class="callout takeaway"><span class="lbl">Recurring themes</span><span class="small">Explicit on-chip memory · matrix/tensor engines · dataflow · portability layers.</span></div>
     <div class="callout ok"><span class="lbl">Why care</span><span class="small">The parallel-programming ideas — tiling, data movement, SPMD — transfer across <em>all</em> of them.</span></div>
   </div>
@@ -75,6 +76,7 @@
         <tr><td class="hi">AMD</td><td class="hi">HIP</td><td class="hi">ROCm; HIP ≈ CUDA</td></tr>
         <tr><td>Intel</td><td>SYCL / ESIMD</td><td>oneAPI (SYCL)</td></tr>
         <tr><td>Google</td><td>(none exposed)</td><td>XLA / JAX / TF</td></tr>
+        <tr><td>Cerebras</td><td>CSL (SDK)</td><td>PyTorch via Cerebras compiler</td></tr>
         <tr><td>Tenstorrent</td><td>TT-Metalium</td><td>TT-NN / TT-Forge</td></tr>
       </table>
       <p class="tiny muted">SYCL &amp; HIP are open, cross-vendor C++ dialects; XLA hides the chip behind a graph compiler.</p>
@@ -441,6 +443,159 @@ q.submit([&amp;](handler &amp;h) {
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Vendor 4</div>
+  <div class="mod-title">Cerebras — One Chip per Wafer</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>The Wafer-Scale Engine</h2>
+  <div class="symkey">
+    <span><b>WSE</b> = Wafer-Scale Engine</span>
+    <span><b>CS-3</b> = the system around one WSE-3</span>
+    <span><b>PE</b> = processing element (core + SRAM + router)</span>
+  </div>
+  <div class="cols w-64">
+    <div>
+      <p class="small">Everyone else cuts a wafer into dies. Cerebras keeps the <strong>whole wafer as one chip</strong>: 46,225 mm², 4 trillion transistors, 900,000 cores, 44 GB SRAM, TSMC 5 nm (WSE-3, 2024).</p>
+      <div class="callout"><span class="lbl">A grid, like Tenstorrent, but on one die</span><span class="small">Cores form a <strong>2-D mesh</strong>, each with local SRAM (48 KB on WSE-2) and a router. No cache, no DRAM on the data path: the <strong>working set lives in on-chip SRAM</strong>.</span></div>
+      <div class="callout"><span class="lbl">Dataflow with sparsity</span><span class="small">A core fires when its operands <strong>arrive</strong>; zeros are never sent, so unstructured sparsity becomes skipped work.</span></div>
+      <div class="callout ok"><span class="lbl">How a wafer can yield</span><span class="small">Identical reticle dies (84 on WSE-2) wired across reticle edges; spare cores and redundant routes <strong>route around defects</strong>.</span></div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 200 200" class="chart" style="width:100%;max-width:230px">
+        <circle cx="100" cy="100" r="92" fill="#f1f5f9" stroke="#64748b" stroke-width="1.5"/>
+        <g fill="#dbeafe" stroke="#1d4ed8" stroke-width="0.8">
+          <rect x="72" y="30" width="12" height="12" rx="1.5"/>
+          <rect x="86" y="30" width="12" height="12" rx="1.5"/>
+          <rect x="100" y="30" width="12" height="12" rx="1.5"/>
+          <rect x="114" y="30" width="12" height="12" rx="1.5"/>
+          <rect x="44" y="44" width="12" height="12" rx="1.5"/>
+          <rect x="58" y="44" width="12" height="12" rx="1.5"/>
+          <rect x="72" y="44" width="12" height="12" rx="1.5"/>
+          <rect x="86" y="44" width="12" height="12" rx="1.5"/>
+          <rect x="100" y="44" width="12" height="12" rx="1.5"/>
+          <rect x="114" y="44" width="12" height="12" rx="1.5"/>
+          <rect x="128" y="44" width="12" height="12" rx="1.5"/>
+          <rect x="142" y="44" width="12" height="12" rx="1.5"/>
+          <rect x="44" y="58" width="12" height="12" rx="1.5"/>
+          <rect x="58" y="58" width="12" height="12" rx="1.5"/>
+          <rect x="72" y="58" width="12" height="12" rx="1.5"/>
+          <rect x="86" y="58" width="12" height="12" rx="1.5"/>
+          <rect x="100" y="58" width="12" height="12" rx="1.5"/>
+          <rect x="114" y="58" width="12" height="12" rx="1.5"/>
+          <rect x="128" y="58" width="12" height="12" rx="1.5"/>
+          <rect x="142" y="58" width="12" height="12" rx="1.5"/>
+          <rect x="156" y="58" width="12" height="12" rx="1.5"/>
+          <rect x="30" y="72" width="12" height="12" rx="1.5"/>
+          <rect x="44" y="72" width="12" height="12" rx="1.5"/>
+          <rect x="58" y="72" width="12" height="12" rx="1.5"/>
+          <rect x="72" y="72" width="12" height="12" rx="1.5"/>
+          <rect x="86" y="72" width="12" height="12" rx="1.5"/>
+          <rect x="100" y="72" width="12" height="12" rx="1.5"/>
+          <rect x="114" y="72" width="12" height="12" rx="1.5"/>
+          <rect x="128" y="72" width="12" height="12" rx="1.5"/>
+          <rect x="142" y="72" width="12" height="12" rx="1.5"/>
+          <rect x="156" y="72" width="12" height="12" rx="1.5"/>
+          <rect x="30" y="86" width="12" height="12" rx="1.5"/>
+          <rect x="44" y="86" width="12" height="12" rx="1.5"/>
+          <rect x="58" y="86" width="12" height="12" rx="1.5"/>
+          <rect x="72" y="86" width="12" height="12" rx="1.5"/>
+          <rect x="86" y="86" width="12" height="12" rx="1.5"/>
+          <rect x="100" y="86" width="12" height="12" rx="1.5"/>
+          <rect x="114" y="86" width="12" height="12" rx="1.5"/>
+          <rect x="128" y="86" width="12" height="12" rx="1.5"/>
+          <rect x="142" y="86" width="12" height="12" rx="1.5"/>
+          <rect x="156" y="86" width="12" height="12" rx="1.5"/>
+          <rect x="30" y="100" width="12" height="12" rx="1.5"/>
+          <rect x="44" y="100" width="12" height="12" rx="1.5"/>
+          <rect x="58" y="100" width="12" height="12" rx="1.5"/>
+          <rect x="72" y="100" width="12" height="12" rx="1.5"/>
+          <rect x="86" y="100" width="12" height="12" rx="1.5"/>
+          <rect x="100" y="100" width="12" height="12" rx="1.5"/>
+          <rect x="114" y="100" width="12" height="12" rx="1.5"/>
+          <rect x="128" y="100" width="12" height="12" rx="1.5"/>
+          <rect x="142" y="100" width="12" height="12" rx="1.5"/>
+          <rect x="156" y="100" width="12" height="12" rx="1.5"/>
+          <rect x="30" y="114" width="12" height="12" rx="1.5"/>
+          <rect x="44" y="114" width="12" height="12" rx="1.5"/>
+          <rect x="58" y="114" width="12" height="12" rx="1.5"/>
+          <rect x="72" y="114" width="12" height="12" rx="1.5"/>
+          <rect x="86" y="114" width="12" height="12" rx="1.5"/>
+          <rect x="100" y="114" width="12" height="12" rx="1.5"/>
+          <rect x="114" y="114" width="12" height="12" rx="1.5"/>
+          <rect x="128" y="114" width="12" height="12" rx="1.5"/>
+          <rect x="142" y="114" width="12" height="12" rx="1.5"/>
+          <rect x="156" y="114" width="12" height="12" rx="1.5"/>
+          <rect x="44" y="128" width="12" height="12" rx="1.5"/>
+          <rect x="58" y="128" width="12" height="12" rx="1.5"/>
+          <rect x="72" y="128" width="12" height="12" rx="1.5"/>
+          <rect x="86" y="128" width="12" height="12" rx="1.5"/>
+          <rect x="100" y="128" width="12" height="12" rx="1.5"/>
+          <rect x="114" y="128" width="12" height="12" rx="1.5"/>
+          <rect x="128" y="128" width="12" height="12" rx="1.5"/>
+          <rect x="142" y="128" width="12" height="12" rx="1.5"/>
+          <rect x="156" y="128" width="12" height="12" rx="1.5"/>
+          <rect x="44" y="142" width="12" height="12" rx="1.5"/>
+          <rect x="58" y="142" width="12" height="12" rx="1.5"/>
+          <rect x="72" y="142" width="12" height="12" rx="1.5"/>
+          <rect x="86" y="142" width="12" height="12" rx="1.5"/>
+          <rect x="100" y="142" width="12" height="12" rx="1.5"/>
+          <rect x="114" y="142" width="12" height="12" rx="1.5"/>
+          <rect x="128" y="142" width="12" height="12" rx="1.5"/>
+          <rect x="142" y="142" width="12" height="12" rx="1.5"/>
+          <rect x="58" y="156" width="12" height="12" rx="1.5"/>
+          <rect x="72" y="156" width="12" height="12" rx="1.5"/>
+          <rect x="86" y="156" width="12" height="12" rx="1.5"/>
+          <rect x="100" y="156" width="12" height="12" rx="1.5"/>
+          <rect x="114" y="156" width="12" height="12" rx="1.5"/>
+          <rect x="128" y="156" width="12" height="12" rx="1.5"/>
+        </g>
+        <text x="100" y="196" text-anchor="middle" class="tiny" style="fill:#1d4ed8">one 300 mm wafer = one chip; dies wired across reticle edges</text>
+      </svg>
+    </div>
+  </div>
+  <div class="src">Cerebras WSE-3 announcement (2024) and WSE product page; S. Lie, "Cerebras Architecture Deep Dive," IEEE Micro 2023 (WSE-2 figures).</div>
+  <aside class="notes">Same two ideas as Tenstorrent: explicit distributed SRAM and a dataflow grid. The difference is the scale-up bet: one enormous die instead of many small chips over Ethernet. The yield trick (redundancy and routing around defects) is what makes a wafer-sized die manufacturable.</aside>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Weight Streaming, Clusters &amp; Software</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">Weight streaming</span><span class="small">Weights live <strong>off the wafer</strong> in <strong>MemoryX</strong> (up to 1.2 PB) and <strong>stream in layer by layer</strong>; the wafer holds only <strong>activations</strong>. Each weight is used once; gradients stream back and the update happens in MemoryX. Model size is bounded by MemoryX: up to 24 trillion parameters per CS-3 (Cerebras's figure).</span></div>
+      <div class="callout"><span class="lbl">Scale-out: SwarmX</span><span class="small">A <strong>tree</strong> fabric between MemoryX and the CS systems broadcasts weights and reduces gradients. Each CS-3 holds a different batch: <strong>pure data parallelism</strong> across up to 2048 systems.</span></div>
+      <div class="callout takeaway"><span class="lbl">Software</span><span class="small">Write <strong>PyTorch</strong>; the Cerebras compiler lowers the graph to the wafer. Custom kernels use the <strong>Cerebras SDK</strong>'s <strong>CSL</strong> kernel language (used for HPC stencils). No CUDA-like layer.</span></div>
+    </div>
+    <div>
+      <svg viewBox="0 0 250 200" class="chart" style="width:100%;max-width:260px">
+        <rect x="80" y="10" width="90" height="30" rx="5" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.6"/>
+        <text x="125" y="24" text-anchor="middle" class="lbl">MemoryX</text>
+        <text x="125" y="35" text-anchor="middle" class="tiny">all weights</text>
+        <rect x="85" y="62" width="80" height="24" rx="5" fill="#f1f5f9" stroke="#64748b" stroke-width="1.4"/>
+        <text x="125" y="77" text-anchor="middle" class="tiny">SwarmX (tree)</text>
+        <g stroke="#1d4ed8" stroke-width="1.6" fill="none">
+          <line x1="125" y1="40" x2="125" y2="62"/>
+          <line x1="125" y1="86" x2="40" y2="120"/><line x1="125" y1="86" x2="125" y2="120"/><line x1="125" y1="86" x2="210" y2="120"/>
+        </g>
+        <g fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.6">
+          <rect x="10" y="120" width="60" height="44" rx="5"/><rect x="95" y="120" width="60" height="44" rx="5"/><rect x="180" y="120" width="60" height="44" rx="5"/>
+        </g>
+        <g class="tiny" text-anchor="middle">
+          <text x="40" y="138">CS-3</text><text x="40" y="152">batch 1</text>
+          <text x="125" y="138">CS-3</text><text x="125" y="152">batch 2</text>
+          <text x="210" y="138">CS-3</text><text x="210" y="152">batch 3</text>
+        </g>
+        <text x="60" y="56" text-anchor="middle" class="tiny" style="fill:#1d4ed8">weights ↓</text>
+        <text x="190" y="56" text-anchor="middle" class="tiny" style="fill:#CC0000">gradients ↑</text>
+        <text x="125" y="190" text-anchor="middle" class="tiny" style="fill:#64748b">activations stay on each wafer; weights stream through</text>
+      </svg>
+    </div>
+  </div>
+  <div class="src">S. Lie, "Cerebras Architecture Deep Dive," IEEE Micro 2023; Cerebras WSE-3 announcement (2024); Cerebras SDK documentation.</div>
+  <aside class="notes">Contrast with the nn deck: GPUs need tensor and pipeline parallelism because one chip cannot hold a layer; here one wafer holds the activations of the whole layer, so the only cross-system parallelism is data parallelism. The compiler-first software story is closer to TPU/XLA than to Metalium.</aside>
+</section>
+
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Vendor 5</div>
   <div class="mod-title">Tenstorrent &amp; TT-Metalium — Dataflow &amp; Matmul Labs</div>
 </section>
 
@@ -1287,15 +1442,15 @@ for (auto&amp; [group, work_per_core] : {std::pair{core_group_1, work_per_core_1
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>Five Accelerators, One Comparison</h2>
-  <table>
-    <tr><th></th><th>NVIDIA</th><th>AMD</th><th>Intel</th><th>Google TPU</th><th>Tenstorrent</th></tr>
-    <tr><td><strong>Matrix engine</strong></td><td>Tensor Core</td><td>Matrix Core</td><td>XMX (systolic)</td><td class="hi">MXU (systolic)</td><td>Tensix FPU</td></tr>
-    <tr><td><strong>On-chip memory</strong></td><td>cache + shared</td><td>cache + Infinity Cache</td><td>cache + SLM</td><td>VMEM scratchpad</td><td class="hi">distributed SRAM, no cache</td></tr>
-    <tr><td><strong>Flagship memory</strong></td><td>HBM3e</td><td>192 GB HBM3</td><td>128 GB HBM2e</td><td>HBM (95 GB v5p)</td><td>DRAM + SRAM</td></tr>
-    <tr><td><strong>Scale-out fabric</strong></td><td>NVLink</td><td>Infinity Fabric</td><td>Xe-Link</td><td class="hi">ICI torus + OCS</td><td class="hi">Ethernet mesh</td></tr>
-    <tr><td><strong>Low-level API</strong></td><td>CUDA</td><td>HIP</td><td>SYCL</td><td>(none exposed)</td><td>TT-Metalium</td></tr>
-    <tr><td><strong>Portability play</strong></td><td>—</td><td class="hi">HIP ≈ CUDA</td><td class="hi">SYCL (open std)</td><td class="hi">XLA graph compiler</td><td>TT-NN / TT-Forge</td></tr>
+  <h2>Six Accelerators, One Comparison</h2>
+  <table class="small">
+    <tr><th></th><th>NVIDIA</th><th>AMD</th><th>Intel</th><th>Google TPU</th><th>Cerebras</th><th>Tenstorrent</th></tr>
+    <tr><td><strong>Matrix engine</strong></td><td>Tensor Core</td><td>Matrix Core</td><td>XMX (systolic)</td><td class="hi">MXU (systolic)</td><td>per-core dataflow PE</td><td>Tensix FPU</td></tr>
+    <tr><td><strong>On-chip memory</strong></td><td>cache + shared</td><td>cache + Infinity Cache</td><td>cache + SLM</td><td>VMEM scratchpad</td><td class="hi">44 GB wafer SRAM, no cache</td><td class="hi">distributed SRAM, no cache</td></tr>
+    <tr><td><strong>Flagship memory</strong></td><td>HBM3e</td><td>192 GB HBM3</td><td>128 GB HBM2e</td><td>HBM (95 GB v5p)</td><td>MemoryX (weights off-wafer)</td><td>DRAM + SRAM</td></tr>
+    <tr><td><strong>Scale-out fabric</strong></td><td>NVLink</td><td>Infinity Fabric</td><td>Xe-Link</td><td class="hi">ICI torus + OCS</td><td>SwarmX tree</td><td class="hi">Ethernet mesh</td></tr>
+    <tr><td><strong>Low-level API</strong></td><td>CUDA</td><td>HIP</td><td>SYCL</td><td>(none exposed)</td><td>CSL (SDK)</td><td>TT-Metalium</td></tr>
+    <tr><td><strong>Portability play</strong></td><td>—</td><td class="hi">HIP ≈ CUDA</td><td class="hi">SYCL (open std)</td><td class="hi">XLA graph compiler</td><td>PyTorch + compiler</td><td>TT-NN / TT-Forge</td></tr>
   </table>
   <div class="src">Compiled from vendor architecture docs (see References). Figures are per most recent widely-documented data-center parts.</div>
   <aside class="notes">Read the table across a row to see convergence (everyone has a systolic-ish matrix engine, HBM, a fabric) and down a column to see each vendor's distinct bet (AMD chiplets + CUDA-mirror, Intel open standard, Google full abstraction, Tenstorrent bare-metal dataflow).</aside>
@@ -1305,7 +1460,7 @@ for (auto&amp; [group, work_per_core] : {std::pair{core_group_1, work_per_core_1
   <h2>Two Axes That Explain Everything</h2>
   <div class="cols w-64">
     <div>
-      <div class="callout"><span class="lbl">Axis 1 — who moves the data?</span>Along a spectrum from <strong>implicit</strong> (CPU/GPU caches) to <strong>explicit</strong> (TPU VMEM, Tenstorrent SRAM). The more the hardware hides, the easier to program; the more it exposes, the more peak you can extract.</div>
+      <div class="callout"><span class="lbl">Axis 1 — who moves the data?</span>Along a spectrum from <strong>implicit</strong> (CPU/GPU caches) to <strong>explicit</strong> (TPU VMEM, Cerebras and Tenstorrent SRAM). The more the hardware hides, the easier to program; the more it exposes, the more peak you can extract.</div>
       <div class="callout"><span class="lbl">Axis 2 — how portable is your code?</span>From <strong>locked-in</strong> (CUDA) through <strong>source-portable</strong> (HIP, SYCL) to <strong>compiler-abstracted</strong> (XLA, TT-Forge). You trade hand-tuning control for freedom to move between vendors.</div>
     </div>
     <div>
@@ -1346,6 +1501,12 @@ for (auto&amp; [group, work_per_core] : {std::pair{core_group_1, work_per_core_1
         <li>Jouppi et al., "In-Datacenter Performance Analysis of a Tensor Processing Unit," ISCA 2017 (TPU v1 256×256 systolic array).</li>
         <li>Jouppi et al., "TPU v4: An Optically Reconfigurable Supercomputer…," ISCA 2023 (3D torus + OCS).</li>
         <li>Austin et al., "How to Scale Your Model" (JAX) — TPU chapter (MXU, VMEM, per-chip/pod figures). https://jax-ml.github.io/scaling-book/tpus/</li>
+      </ol>
+      <p class="tiny" style="font-weight:700;margin:.3em 0 .2em">Cerebras</p>
+      <ol class="tiny src" style="text-align:left;line-height:1.45">
+        <li>S. Lie, "Cerebras Architecture Deep Dive: First Look Inside the HW/SW Co-Design for Deep Learning," IEEE Micro 43(3), 2023.</li>
+        <li>Cerebras, "Cerebras Announces Third Generation Wafer-Scale Engine," March 2024; WSE product page. https://www.cerebras.ai</li>
+        <li>Cerebras SDK documentation (CSL). https://sdk.cerebras.ai</li>
       </ol>
       <p class="tiny" style="font-weight:700;margin:.3em 0 .2em">Tenstorrent</p>
       <ol class="tiny src" style="text-align:left;line-height:1.45">
