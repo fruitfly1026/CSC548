@@ -201,11 +201,11 @@
   <h2>Multi-Level &amp; Asynchronous Checkpointing</h2>
   <div class="cols w-64">
     <div>
-      <div class="callout"><span class="lbl">Insight</span>Most failures are <strong>local</strong> (one node, one process). You don't need the slow global PFS for those — keep cheap checkpoints close, escalate only when you must.</div>
+      <div class="callout"><span class="lbl">Insight</span>Most failures are <strong>local</strong> (one node, one process). Those don't need the slow global PFS: keep cheap checkpoints close, escalate only when you must.</div>
       <p class="small"><strong>L1</strong> — node-local NVMe / RAM: fastest, survives a process crash.<br>
       <strong>L2</strong> — partner / XOR-encoded across neighbors: survives a node loss.<br>
       <strong>L3</strong> — parallel file system: survives a whole-system failure, but slowest.</p>
-      <div class="callout takeaway"><span class="lbl">Burst buffers</span>A node-local or near-node <strong>NVMe</strong> tier absorbs the checkpoint write at memory-like speed; data drains to the PFS <strong>asynchronously</strong>, overlapping the next compute phase. Libraries: <strong>SCR</strong> (Scalable Checkpoint/Restart, LLNL), <strong>FTI</strong> (Fault Tolerance Interface, Tokyo Tech / ANL), <strong>VeloC</strong> (Very Low Overhead Checkpointing, ANL / LLNL).</div>
+      <div class="callout takeaway"><span class="lbl">Burst buffers</span>A node-local or near-node <strong>NVMe</strong> tier absorbs the checkpoint write at memory-like speed; data drains to the PFS <strong>asynchronously</strong>, overlapping the next compute phase.</div>
     </div>
     <div class="center">
       <svg viewBox="0 0 230 210" class="chart" style="max-width:250px">
@@ -226,6 +226,7 @@
       <div class="src">Cheap local checkpoints; escalate only as needed.</div>
     </div>
   </div>
+  <div class="src">Libraries: SCR (Scalable Checkpoint/Restart, LLNL); FTI (Fault Tolerance Interface, Tokyo Tech / ANL); VeloC (Very Low Overhead Checkpointing, ANL / LLNL).</div>
 </section>
 
 <section data-background-color="#ffffff">
