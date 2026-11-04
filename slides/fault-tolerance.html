@@ -300,7 +300,7 @@
   <h2>Proactive / Prediction-Based Resilience</h2>
   <div class="cols w-64">
     <div>
-      <div class="callout"><span class="lbl">Idea</span>Don't wait for the crash — <strong>predict</strong> it. Health monitoring (temperatures, ECC-correctable-error rates, fan/PSU telemetry, SMART data) flags a node that is <em>about</em> to fail.</div>
+      <div class="callout"><span class="lbl">Idea</span>Don't wait for the crash — <strong>predict</strong> it. Health monitoring (temperatures, ECC-correctable-error rates, fan and power-supply (PSU) telemetry, disk SMART data: Self-Monitoring, Analysis and Reporting Technology) flags a node that is <em>about</em> to fail.</div>
       <p class="small">On a prediction, <strong>migrate the process</strong> off the suspect node to a spare <em>before</em> it dies — no rollback, no lost work. This is forward recovery driven by anomaly detection / ML on telemetry.</p>
       <div class="callout takeaway"><span class="lbl">Best as a complement</span>Predictors miss surprises, so proactive migration <em>reduces</em> the failure rate the checkpoint system must absorb — it doesn't replace checkpointing.</div>
     </div>
