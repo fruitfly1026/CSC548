@@ -428,8 +428,8 @@
   <h2>MPI Fault Tolerance &amp; ULFM</h2>
   <div class="cols">
     <div>
-      <div class="callout warn"><span class="lbl">Default MPI</span>The standard error handler is <code class="inline">MPI_ERRORS_ARE_FATAL</code>: a process failure <strong>aborts the whole job</strong>; after a failure the communicator is unusable.</div>
-      <div class="callout takeaway"><span class="lbl">ULFM — User-Level Failure Mitigation</span>An MPI extension that lets the application <strong>survive</strong> a process loss:</div>
+      <div class="callout warn"><span class="lbl">Default MPI</span>Default handler <code class="inline">MPI_ERRORS_ARE_FATAL</code>: one process failure <strong>aborts the whole job</strong>, and a failed communicator is unusable.</div>
+      <div class="callout takeaway"><span class="lbl">ULFM — User-Level Failure Mitigation</span>From ICL, Univ. of Tennessee (Bland et al., 2013); in <strong>Open MPI 5</strong> under the <code class="inline">MPIX_</code> prefix. Lets the application <strong>survive</strong> a process loss:</div>
       <ul class="small">
         <li><code class="inline">MPIX_Comm_revoke</code> — invalidate the broken communicator so no rank hangs in a collective.</li>
         <li><code class="inline">MPIX_Comm_shrink</code> — new communicator without the dead ranks.</li>
@@ -456,6 +456,7 @@ if (rc != MPI_SUCCESS) {          /* a rank died */
       <p class="tiny muted">Handler returns instead of aborting → revoke → shrink → agree → keep going on the smaller communicator.</p>
     </div>
   </div>
+  <div class="src">Bland et al., "Post-failure recovery of MPI communication capability," IJHPCA 2013; Open MPI 5 documentation (ULFM).</div>
 </section>
 
 <section data-background-color="#ffffff">
