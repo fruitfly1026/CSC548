@@ -218,7 +218,7 @@
         <tr><td>System MTBF <code class="inline">M</code></td><td>4 h = 240 min</td></tr>
         <tr><td class="hi"><code class="inline">τ = √(2·C·M)</code></td><td class="hi">√(2·1·240) ≈ <strong>22 min</strong></td></tr>
       </table>
-      <p class="small">So checkpoint roughly every <strong>22 minutes</strong>. Halve the MTBF (more nodes) and the interval drops to ≈ 15 min; make checkpoints 4× more expensive and it rises to ≈ 44 min.</p>
+      <p class="small">So checkpoint roughly every <strong>22 minutes</strong>.<br>Halve the MTBF (more nodes) and the interval drops to ≈ 15 min.<br>Make checkpoints 4× more expensive and it rises to ≈ 44 min.</p>
       <p class="tiny muted">Overhead = C per interval (the write) + ½τ expected lost work per failure. Minimizing the sum yields the √ formula.</p>
     </div>
   </div>
