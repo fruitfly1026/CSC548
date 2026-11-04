@@ -509,6 +509,7 @@ if (rc != MPI_SUCCESS) {          /* a rank died */
       <div class="callout takeaway"><span class="lbl">Cross-link → Deep Learning slides</span>Same checkpoint/restart and Young/Daly interval logic from Module 2 — but the "state" is the model + sharded optimizer, and the writes are huge. Checkpoint cadence is a first-class training hyperparameter.</div>
     </div>
   </div>
+  <div class="src">PyTorch DDP: Li et al., VLDB 2020; DeepSpeed ZeRO: Rajbhandari et al., SC 2020; PyTorch Distributed Checkpoint documentation.</div>
 </section>
 
 
@@ -543,6 +544,8 @@ if (rc != MPI_SUCCESS) {          /* a rank died */
     <li>W. Bland et al., "Post-failure recovery of MPI communication capability (ULFM)," <em>IJHPCA</em>, 2013 — ICL / Univ. of Tennessee, Knoxville.</li>
     <li>K.-H. Huang &amp; J. Abraham, "Algorithm-based fault tolerance for matrix operations," <em>IEEE TC</em>, 1984.</li>
     <li>M. Zaharia et al., "Resilient Distributed Datasets," <em>NSDI</em>, 2012 (Spark lineage).</li>
+    <li>S. Li et al., "PyTorch Distributed: Experiences on Accelerating Data Parallel Training" (DDP), <em>VLDB</em>, 2020.</li>
+    <li>S. Rajbhandari et al., "ZeRO: Memory Optimizations Toward Training Trillion Parameter Models" (DeepSpeed), <em>SC</em>, 2020.</li>
   </ul>
 </section>
 
