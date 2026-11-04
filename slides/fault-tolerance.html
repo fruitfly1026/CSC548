@@ -175,6 +175,29 @@
 </section>
 
 <section data-background-color="#ffffff">
+  <h2>How Often to Checkpoint? — Young / Daly</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">The trade-off</span><strong>Too often</strong> → you burn I/O bandwidth writing checkpoints you never use.<br><strong>Too rarely</strong> → each failure throws away more recomputed work.<br>There is a sweet spot.</div>
+      <div class="eq small">\( \tau_{opt} \approx \sqrt{2\,C\,M} \)</div>
+      <p class="small"><code class="inline">C</code> = cost (time) to write one checkpoint; <code class="inline">M</code> = system MTBF. (Young 1974; Daly 2006 adds higher-order &amp; restart terms.)</p>
+      <div class="callout warn"><span class="lbl">Note the dependence</span>As <code class="inline">M</code> shrinks with scale (Module 1), <code class="inline">τ<sub>opt</sub></code> shrinks too — big machines must checkpoint <em>more</em> often, which strains the very I/O system already under load.</div>
+    </div>
+    <div>
+      <div class="code-label">Worked example</div>
+      <table style="font-size:.84em">
+        <tr><th>Quantity</th><th>Value</th></tr>
+        <tr><td>Checkpoint cost <code class="inline">C</code></td><td>1 min</td></tr>
+        <tr><td>System MTBF <code class="inline">M</code></td><td>4 h = 240 min</td></tr>
+        <tr><td class="hi"><code class="inline">τ = √(2·C·M)</code></td><td class="hi">√(2·1·240) ≈ <strong>22 min</strong></td></tr>
+      </table>
+      <p class="small">So checkpoint roughly every <strong>22 minutes</strong>.<br>Halve the MTBF (more nodes) and the interval drops to ≈ 15 min.<br>Make checkpoints 4× more expensive and it rises to ≈ 44 min.</p>
+      <p class="tiny muted">Overhead = C per interval (the write) + ½τ expected lost work per failure. Minimizing the sum yields the √ formula.</p>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
   <h2>Uncoordinated Checkpointing &amp; the Orphan Problem</h2>
   <div class="cols">
     <div>
@@ -197,29 +220,6 @@
         <text x="140" y="172" text-anchor="middle" class="tiny muted">B's ckpt recorded receiving m, but A's ckpt is before the send → orphan</text>
       </svg>
       <div class="src">Inconsistent cut: a message recorded on one side only.</div>
-    </div>
-  </div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>How Often to Checkpoint? — Young / Daly</h2>
-  <div class="cols w-64">
-    <div>
-      <div class="callout"><span class="lbl">The trade-off</span><strong>Too often</strong> → you burn I/O bandwidth writing checkpoints you never use.<br><strong>Too rarely</strong> → each failure throws away more recomputed work.<br>There is a sweet spot.</div>
-      <div class="eq small">\( \tau_{opt} \approx \sqrt{2\,C\,M} \)</div>
-      <p class="small"><code class="inline">C</code> = cost (time) to write one checkpoint; <code class="inline">M</code> = system MTBF. (Young 1974; Daly 2006 adds higher-order &amp; restart terms.)</p>
-      <div class="callout warn"><span class="lbl">Note the dependence</span>As <code class="inline">M</code> shrinks with scale (Module 1), <code class="inline">τ<sub>opt</sub></code> shrinks too — big machines must checkpoint <em>more</em> often, which strains the very I/O system already under load.</div>
-    </div>
-    <div>
-      <div class="code-label">Worked example</div>
-      <table style="font-size:.84em">
-        <tr><th>Quantity</th><th>Value</th></tr>
-        <tr><td>Checkpoint cost <code class="inline">C</code></td><td>1 min</td></tr>
-        <tr><td>System MTBF <code class="inline">M</code></td><td>4 h = 240 min</td></tr>
-        <tr><td class="hi"><code class="inline">τ = √(2·C·M)</code></td><td class="hi">√(2·1·240) ≈ <strong>22 min</strong></td></tr>
-      </table>
-      <p class="small">So checkpoint roughly every <strong>22 minutes</strong>.<br>Halve the MTBF (more nodes) and the interval drops to ≈ 15 min.<br>Make checkpoints 4× more expensive and it rises to ≈ 44 min.</p>
-      <p class="tiny muted">Overhead = C per interval (the write) + ½τ expected lost work per failure. Minimizing the sum yields the √ formula.</p>
     </div>
   </div>
 </section>
