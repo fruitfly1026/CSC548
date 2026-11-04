@@ -205,7 +205,7 @@
   <h2>How Often to Checkpoint? — Young / Daly</h2>
   <div class="cols w-64">
     <div>
-      <div class="callout"><span class="lbl">The trade-off</span><strong>Too often</strong> → you burn I/O bandwidth writing checkpoints you never use. <strong>Too rarely</strong> → each failure throws away more recomputed work. There is a sweet spot.</div>
+      <div class="callout"><span class="lbl">The trade-off</span><strong>Too often</strong> → you burn I/O bandwidth writing checkpoints you never use.<br><strong>Too rarely</strong> → each failure throws away more recomputed work.<br>There is a sweet spot.</div>
       <div class="eq small">\( \tau_{opt} \approx \sqrt{2\,C\,M} \)</div>
       <p class="small"><code class="inline">C</code> = cost (time) to write one checkpoint; <code class="inline">M</code> = system MTBF. (Young 1974; Daly 2006 adds higher-order &amp; restart terms.)</p>
       <div class="callout warn"><span class="lbl">Note the dependence</span>As <code class="inline">M</code> shrinks with scale (Module 1), <code class="inline">τ<sub>opt</sub></code> shrinks too — big machines must checkpoint <em>more</em> often, which strains the very I/O system already under load.</div>
