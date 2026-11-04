@@ -39,7 +39,7 @@
   <div class="cols c3">
     <div class="callout"><span class="lbl">1. Why Resilience?</span><span class="small">System MTBF at scale; faults vs errors vs failures; rollback vs forward recovery.</span></div>
     <div class="callout"><span class="lbl">2. Checkpoint / Restart</span><span class="small">Coordinated snapshots, the Young/Daly optimal interval, multi-level &amp; logging.</span></div>
-    <div class="callout"><span class="lbl">3. Beyond Rollback</span><span class="small">Replication, proactive migration, ABFT, silent-error (SDC) detection.</span></div>
+    <div class="callout"><span class="lbl">3. Beyond Rollback</span><span class="small">Replication, proactive migration, ABFT, silent data corruption (SDC) detection.</span></div>
     <div class="callout"><span class="lbl">4. Across the Stack</span><span class="small">MPI/ULFM, Spark lineage, deep-learning checkpointing.</span></div>
     <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">At scale, failure is not an exception — it is part of the steady state. <em>Design for it.</em></span></div>
   </div>
@@ -96,7 +96,7 @@
       <table style="font-size:.8em">
         <tr><th>Axis</th><th>Options</th></tr>
         <tr><td class="hi">Duration</td><td><strong>transient</strong> (one-off bit flip) vs <strong>permanent</strong> (dead node/disk)</td></tr>
-        <tr><td class="hi">Symptom</td><td><strong>fail-stop</strong> (node halts, obvious) vs <strong>silent</strong> (SDC — bad data, no crash)</td></tr>
+        <tr><td class="hi">Symptom</td><td><strong>fail-stop</strong> (node halts, obvious) vs <strong>silent</strong> (SDC, silent data corruption: bad data, no crash)</td></tr>
         <tr><td>Detection</td><td><strong>detected</strong> (we know) vs <strong>undetected</strong> (we don't)</td></tr>
       </table>
       <div class="callout warn"><span class="lbl">The scary quadrant</span><strong>Silent + undetected</strong> = <strong>SDC</strong>: the job finishes and hands you a wrong answer. Fail-stop is easy by comparison.</div>
@@ -370,7 +370,7 @@
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>Detecting Silent Errors (SDC)</h2>
+  <h2>Detecting Silent Data Corruption (SDC)</h2>
   <div class="cols">
     <div>
       <div class="callout warn"><span class="lbl">The hard part</span>SDC produces <strong>no crash</strong>, so checkpoint/restart alone can't help — you can't restart what you don't know is wrong. You must add explicit <strong>detection</strong>.</div>
