@@ -326,7 +326,7 @@
 
 <section data-background-color="#ffffff">
   <h2>ABFT — Algorithm-Based Fault Tolerance</h2>
-  <div class="cols w-64">
+  <div class="cols" style="grid-template-columns:11fr 9fr">
     <div>
       <div class="callout takeaway"><span class="lbl">Idea</span>Encode redundancy <strong>in the data itself</strong>, so the algorithm can detect, locate and correct a corrupted value <strong>without any rollback</strong>. Classic case: dense linear algebra.</div>
       <p class="small"><strong>Matrix-multiply checksums.</strong> Augment <code class="inline">A</code> with a <em>column-checksum</em> row (each column's sum) and <code class="inline">B</code> with a <em>row-checksum</em> column (each row's sum). Then in <code class="inline">C = A·B</code>, the checksum row/column are <strong>preserved</strong> by the multiply:</p>
@@ -335,37 +335,66 @@
       <p class="small muted">ABFT lives inside the matmul/factorization kernels of the Linear Algebra topic; it recovers in place, complementing checkpoint/restart.</p>
     </div>
     <div class="center">
-      <svg viewBox="0 0 230 210" class="chart" style="max-width:250px">
-        <!-- 3x3 grid of C -->
-        <g font-size="11" text-anchor="middle">
-          <!-- cells -->
-          <g stroke="#cbd5e1" fill="#fff">
-            <rect x="30" y="20" width="40" height="40"/><rect x="70" y="20" width="40" height="40"/><rect x="110" y="20" width="40" height="40"/>
-            <rect x="30" y="60" width="40" height="40"/>
-            <rect x="70" y="60" width="40" height="40" fill="#fca5a5"/>
-            <rect x="110" y="60" width="40" height="40"/>
-            <rect x="30" y="100" width="40" height="40"/><rect x="70" y="100" width="40" height="40"/><rect x="110" y="100" width="40" height="40"/>
-          </g>
-          <!-- checksum column -->
-          <g stroke="#cbd5e1" fill="#fde68a">
-            <rect x="160" y="20" width="40" height="40"/>
-            <rect x="160" y="60" width="40" height="40"/>
-            <rect x="160" y="100" width="40" height="40"/>
-          </g>
-          <text x="180" y="14" class="note">col-sum</text>
-          <!-- checksum row -->
-          <g stroke="#cbd5e1" fill="#fde68a">
-            <rect x="30" y="150" width="40" height="30"/><rect x="70" y="150" width="40" height="30"/><rect x="110" y="150" width="40" height="30"/>
-          </g>
-          <text x="14" y="168" class="note" transform="rotate(-90 14 168)">row-sum</text>
-          <!-- highlight bad row/col -->
-          <rect x="30" y="60" width="170" height="40" fill="none" stroke="#CC0000" stroke-width="2"/>
-          <rect x="70" y="20" width="40" height="160" fill="none" stroke="#CC0000" stroke-width="2"/>
-          <text x="90" y="84" fill="#CC0000" font-weight="700">✗</text>
+      <svg viewBox="0 0 300 138" class="chart" style="width:100%;max-width:420px">
+        <g>
+          <rect x="12" y="20" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="30" y="20" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="48" y="20" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="12" y="38" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="30" y="38" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="48" y="38" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="12" y="56" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="30" y="56" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="48" y="56" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="12" y="74" width="18" height="18" fill="#fde68a" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="30" y="74" width="18" height="18" fill="#fde68a" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="48" y="74" width="18" height="18" fill="#fde68a" stroke="#94a3b8" stroke-width="0.8"/>
         </g>
-        <text x="120" y="200" text-anchor="middle" class="tiny muted">row i ✗ &amp; col j ✗ → corrupt C<tspan font-size="7" dy="2">ij</tspan></text>
+        <text x="84" y="52" text-anchor="middle" class="lbl">×</text>
+        <g>
+          <rect x="100" y="20" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="118" y="20" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="136" y="20" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="154" y="20" width="18" height="18" fill="#fde68a" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="100" y="38" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="118" y="38" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="136" y="38" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="154" y="38" width="18" height="18" fill="#fde68a" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="100" y="56" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="118" y="56" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="136" y="56" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="154" y="56" width="18" height="18" fill="#fde68a" stroke="#94a3b8" stroke-width="0.8"/>
+        </g>
+        <text x="187" y="52" text-anchor="middle" class="lbl">=</text>
+        <g>
+          <rect x="200" y="20" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="218" y="20" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="236" y="20" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="254" y="20" width="18" height="18" fill="#fde68a" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="200" y="38" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="218" y="38" width="18" height="18" fill="#fca5a5" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="236" y="38" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="254" y="38" width="18" height="18" fill="#fde68a" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="200" y="56" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="218" y="56" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="236" y="56" width="18" height="18" fill="#fff" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="254" y="56" width="18" height="18" fill="#fde68a" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="200" y="74" width="18" height="18" fill="#fde68a" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="218" y="74" width="18" height="18" fill="#fde68a" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="236" y="74" width="18" height="18" fill="#fde68a" stroke="#94a3b8" stroke-width="0.8"/>
+          <rect x="254" y="74" width="18" height="18" fill="#fde68a" stroke="#94a3b8" stroke-width="0.8"/>
+        </g>
+        <rect x="200" y="38" width="72" height="18" fill="none" stroke="#CC0000" stroke-width="1.6"/>
+        <rect x="218" y="20" width="18" height="72" fill="none" stroke="#CC0000" stroke-width="1.6"/>
+        <text x="227" y="51" text-anchor="middle" fill="#CC0000" font-weight="700" font-size="11">✗</text>
+        <g font-size="8.5" text-anchor="middle" fill="#334155">
+          <text x="39" y="104">A + col sums</text>
+          <text x="136" y="104">B + row sums</text>
+          <text x="236" y="104">C + both</text>
+        </g>
+        <text x="150" y="128" text-anchor="middle" font-size="8" fill="#64748b">row i ✗ and column j ✗ locate the corrupt C<tspan font-size="6" dy="2">ij</tspan></text>
       </svg>
-      <div class="src">Checksum row + column locate the bad entry.</div>
+      <div class="src">Yellow = checksums. The checksums of C come out of the multiply itself.</div>
     </div>
   </div>
 </section>
