@@ -139,7 +139,7 @@
     <div>
       <div class="callout"><span class="lbl">Idea</span>All ranks synchronize at a barrier and write a <strong>globally consistent snapshot</strong> to the parallel file system. On any failure, the whole job restarts from the last snapshot.</div>
       <p class="small">Simple and recovery is easy — the saved state is consistent by construction. But every rank dumps memory to the PFS <em>at the same time</em>: this is the <strong>#1 driver of parallel I/O bandwidth</strong> on HPC systems.</p>
-      <div class="callout takeaway"><span class="lbl">Cross-link → I/O slides</span>Checkpoint writes are the canonical bursty, write-heavy collective I/O workload — see the I/O slides (MPI-IO, collective buffering, the PFS).</div>
+      <div class="callout takeaway"><span class="lbl">Cross-link → Parallel I/O slides</span>Checkpoint writes are the canonical bursty, write-heavy collective I/O workload — see the Parallel I/O slides (MPI-IO, collective buffering, the PFS).</div>
     </div>
     <div class="center">
       <svg viewBox="0 0 300 210" class="chart" style="max-width:330px">
