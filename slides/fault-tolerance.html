@@ -198,33 +198,6 @@
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>Uncoordinated Checkpointing &amp; the Orphan Problem</h2>
-  <div class="cols">
-    <div>
-      <div class="callout"><span class="lbl">Idea</span>Each rank checkpoints <strong>independently</strong>, on its own schedule — no global barrier, less synchronization cost.</div>
-      <div class="callout warn"><span class="lbl">The catch: in-flight messages</span>If rank B's checkpoint is <em>after</em> receiving a message but rank A's is <em>before</em> sending it, the recovery line has a receive with no send: <strong>inconsistent</strong>. The reverse case (send recorded, receive not) is consistent, but the message is lost.</div>
-      <p class="small"><strong>Orphan message</strong> — received but the send was never recorded (a "received-from-nowhere" message after rollback). <strong>Lost message</strong> — sent but the receive is undone. Naïve rollback can cascade — the <strong>domino effect</strong> — undoing far more than intended.</p>
-    </div>
-    <div class="center">
-      <svg viewBox="0 0 280 180" class="chart" style="max-width:300px">
-        <line x1="30" y1="50" x2="250" y2="50" stroke="#3b82f6" stroke-width="2.5"/>
-        <line x1="30" y1="130" x2="250" y2="130" stroke="#3b82f6" stroke-width="2.5"/>
-        <text x="10" y="53" class="lbl">A</text><text x="10" y="133" class="lbl">B</text>
-        <!-- checkpoints -->
-        <circle cx="80" cy="50" r="5" fill="#16181d"/><text x="80" y="38" text-anchor="middle" class="note">ckpt A</text>
-        <circle cx="235" cy="130" r="5" fill="#16181d"/><text x="235" y="152" text-anchor="middle" class="note">ckpt B</text>
-        <!-- message m crossing -->
-        <line x1="120" y1="50" x2="200" y2="130" stroke="#CC0000" stroke-width="2" marker-end="url(#mr)"/>
-        <defs><marker id="mr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L7,4 L0,8 Z" fill="#CC0000"/></marker></defs>
-        <text x="150" y="98" class="note" fill="#CC0000">msg m</text>
-        <text x="140" y="172" text-anchor="middle" class="tiny muted">B's ckpt recorded receiving m, but A's ckpt is before the send → orphan</text>
-      </svg>
-      <div class="src">Inconsistent cut: a message recorded on one side only.</div>
-    </div>
-  </div>
-</section>
-
-<section data-background-color="#ffffff">
   <h2>Multi-Level &amp; Asynchronous Checkpointing</h2>
   <div class="cols w-64">
     <div>
@@ -251,6 +224,33 @@
         <text x="200" y="100" class="note" transform="rotate(90 200 100)">rarer, more durable →</text>
       </svg>
       <div class="src">Cheap local checkpoints; escalate only as needed.</div>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Uncoordinated Checkpointing &amp; the Orphan Problem</h2>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">Idea</span>Each rank checkpoints <strong>independently</strong>, on its own schedule — no global barrier, less synchronization cost.</div>
+      <div class="callout warn"><span class="lbl">The catch: in-flight messages</span>If rank B's checkpoint is <em>after</em> receiving a message but rank A's is <em>before</em> sending it, the recovery line has a receive with no send: <strong>inconsistent</strong>. The reverse case (send recorded, receive not) is consistent, but the message is lost.</div>
+      <p class="small"><strong>Orphan message</strong> — received but the send was never recorded (a "received-from-nowhere" message after rollback). <strong>Lost message</strong> — sent but the receive is undone. Naïve rollback can cascade — the <strong>domino effect</strong> — undoing far more than intended.</p>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 280 180" class="chart" style="max-width:300px">
+        <line x1="30" y1="50" x2="250" y2="50" stroke="#3b82f6" stroke-width="2.5"/>
+        <line x1="30" y1="130" x2="250" y2="130" stroke="#3b82f6" stroke-width="2.5"/>
+        <text x="10" y="53" class="lbl">A</text><text x="10" y="133" class="lbl">B</text>
+        <!-- checkpoints -->
+        <circle cx="80" cy="50" r="5" fill="#16181d"/><text x="80" y="38" text-anchor="middle" class="note">ckpt A</text>
+        <circle cx="235" cy="130" r="5" fill="#16181d"/><text x="235" y="152" text-anchor="middle" class="note">ckpt B</text>
+        <!-- message m crossing -->
+        <line x1="120" y1="50" x2="200" y2="130" stroke="#CC0000" stroke-width="2" marker-end="url(#mr)"/>
+        <defs><marker id="mr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L7,4 L0,8 Z" fill="#CC0000"/></marker></defs>
+        <text x="150" y="98" class="note" fill="#CC0000">msg m</text>
+        <text x="140" y="172" text-anchor="middle" class="tiny muted">B's ckpt recorded receiving m, but A's ckpt is before the send → orphan</text>
+      </svg>
+      <div class="src">Inconsistent cut: a message recorded on one side only.</div>
     </div>
   </div>
 </section>
