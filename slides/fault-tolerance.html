@@ -429,7 +429,7 @@
   <div class="cols">
     <div>
       <div class="callout warn"><span class="lbl">Default MPI</span>Default handler <code class="inline">MPI_ERRORS_ARE_FATAL</code>: one process failure <strong>aborts the whole job</strong>, and a failed communicator is unusable.</div>
-      <div class="callout takeaway"><span class="lbl">ULFM — User-Level Failure Mitigation</span>From ICL, Univ. of Tennessee (Bland et al., 2013); in <strong>Open MPI 5</strong> under the <code class="inline">MPIX_</code> prefix. Lets the application <strong>survive</strong> a process loss:</div>
+      <div class="callout takeaway"><span class="lbl">ULFM — User-Level Failure Mitigation</span>From ICL, Univ. of Tennessee (Bland et al., 2013). Still a <strong>proposal</strong>, not part of the MPI standard; shipped in <strong>Open MPI 5</strong> under the <code class="inline">MPIX_</code> prefix. Lets the application <strong>survive</strong> a process loss:</div>
       <ul class="small">
         <li><code class="inline">MPIX_Comm_revoke</code> — invalidate the broken communicator so no rank hangs in a collective.</li>
         <li><code class="inline">MPIX_Comm_shrink</code> — new communicator without the dead ranks.</li>
