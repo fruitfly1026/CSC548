@@ -205,7 +205,7 @@
       <p class="small"><strong>L1</strong> — node-local NVMe / RAM: fastest, survives a process crash.<br>
       <strong>L2</strong> — partner / XOR-encoded across neighbors: survives a node loss.<br>
       <strong>L3</strong> — parallel file system: survives a whole-system failure, but slowest.</p>
-      <div class="callout takeaway"><span class="lbl">Burst buffers</span>A node-local or near-node <strong>NVMe</strong> tier absorbs the checkpoint write at memory-like speed; data drains to the PFS <strong>asynchronously</strong>, overlapping the next compute phase. Libraries: SCR, FTI, VeloC.</div>
+      <div class="callout takeaway"><span class="lbl">Burst buffers</span>A node-local or near-node <strong>NVMe</strong> tier absorbs the checkpoint write at memory-like speed; data drains to the PFS <strong>asynchronously</strong>, overlapping the next compute phase. Libraries: <strong>SCR</strong> (Scalable Checkpoint/Restart, LLNL), <strong>FTI</strong> (Fault Tolerance Interface, Tokyo Tech / ANL), <strong>VeloC</strong> (Very Low Overhead Checkpointing, ANL / LLNL).</div>
     </div>
     <div class="center">
       <svg viewBox="0 0 230 210" class="chart" style="max-width:250px">
@@ -504,6 +504,9 @@ if (rc != MPI_SUCCESS) {          /* a rank died */
     T. Hérault &amp; Y. Robert (eds.), <em>Fault-Tolerance Techniques for High-Performance Computing</em>, Springer, 2015.</div>
   <ul class="small">
     <li>B. Schroeder &amp; G. A. Gibson, "A Large-Scale Study of Failures in High-Performance Computing Systems," <em>DSN</em>, 2006.</li>
+    <li>A. Moody et al., "Design, Modeling, and Evaluation of a Scalable Multi-level Checkpointing System" (SCR), <em>SC</em>, 2010.</li>
+    <li>L. Bautista-Gomez et al., "FTI: High Performance Fault Tolerance Interface for Hybrid Systems," <em>SC</em>, 2011.</li>
+    <li>B. Nicolae et al., "VeloC: Towards High Performance Adaptive Asynchronous Checkpointing at Large Scale," <em>IPDPS</em>, 2019.</li>
     <li>J. W. Young, "A first order approximation to the optimum checkpoint interval," <em>CACM</em>, 1974.</li>
     <li>J. T. Daly, "A higher order estimate of the optimum checkpoint interval for restart dumps," <em>FGCS</em>, 2006.</li>
     <li>W. Bland et al., "Post-failure recovery of MPI communication capability (ULFM)," <em>IJHPCA</em>, 2013 — ICL / Univ. of Tennessee, Knoxville.</li>
