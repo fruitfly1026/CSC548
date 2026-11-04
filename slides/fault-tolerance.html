@@ -26,7 +26,7 @@
   <div class="meta">Instructor: Jiajia Li<br>Fall 2026<br>11/04/2026</div>
   <aside class="notes">
     At leadership scale, failure stops being a rare event and becomes part of the steady-state operating
-    condition. This deck takes a programming/systems view: we start with why system MTBF collapses as you
+    condition. This lecture takes a programming/systems view: we start with why system MTBF collapses as you
     add nodes, build up checkpoint/restart (the workhorse), then go beyond rollback (replication, ABFT),
     and finish by looking at how resilience shows up across the stack you already know — MPI, Spark, and
     deep-learning training.
@@ -120,7 +120,7 @@
       <p class="tiny muted">Replication/voting, ABFT, Spark lineage recompute.</p>
     </div>
   </div>
-  <div class="callout"><span class="lbl">Through the deck</span>Module 2 is rollback; Module 3 is mostly forward; Module 4 shows both philosophies in real systems.</div>
+  <div class="callout"><span class="lbl">Through these slides</span>Module 2 is rollback; Module 3 is mostly forward; Module 4 shows both philosophies in real systems.</div>
 </section>
 
 
@@ -139,7 +139,7 @@
     <div>
       <div class="callout"><span class="lbl">Idea</span>All ranks synchronize at a barrier and write a <strong>globally consistent snapshot</strong> to the parallel file system. On any failure, the whole job restarts from the last snapshot.</div>
       <p class="small">Simple and recovery is easy — the saved state is consistent by construction. But every rank dumps memory to the PFS <em>at the same time</em>: this is the <strong>#1 driver of parallel I/O bandwidth</strong> on HPC systems.</p>
-      <div class="callout takeaway"><span class="lbl">Cross-link → Parallel I/O deck</span>Checkpoint writes are the canonical bursty, write-heavy collective I/O workload — see the Parallel I/O deck (MPI-IO, collective buffering, the PFS).</div>
+      <div class="callout takeaway"><span class="lbl">Cross-link → I/O slides</span>Checkpoint writes are the canonical bursty, write-heavy collective I/O workload — see the I/O slides (MPI-IO, collective buffering, the PFS).</div>
     </div>
     <div class="center">
       <svg viewBox="0 0 300 210" class="chart" style="max-width:330px">
@@ -434,7 +434,7 @@ if (rc != MPI_SUCCESS) {          /* a rank died */
     <div>
       <div class="callout"><span class="lbl">A different model</span>Spark records each RDD's <strong>lineage</strong>: the deterministic sequence of transformations (the DAG) that built it from its parents. It does <em>not</em> take global checkpoints.</div>
       <p class="small">When a partition is lost (an executor dies), Spark <strong>recomputes just that partition</strong> from its parent partitions, following the lineage. Recovery is <strong>uncoordinated</strong> and local — no rollback of healthy partitions, no synchronized snapshot.</p>
-      <div class="callout takeaway"><span class="lbl">Cross-link → Big Data deck</span>This is forward-style recovery enabled by <strong>deterministic, coarse-grained</strong> transformations on immutable RDDs — contrast with HPC coordinated checkpoint/restart. (Long lineages are pruned with explicit <code class="inline">checkpoint()</code>.)</div>
+      <div class="callout takeaway"><span class="lbl">Cross-link → Big Data slides</span>This is forward-style recovery enabled by <strong>deterministic, coarse-grained</strong> transformations on immutable RDDs — contrast with HPC coordinated checkpoint/restart. (Long lineages are pruned with explicit <code class="inline">checkpoint()</code>.)</div>
     </div>
     <div class="center">
       <svg viewBox="0 0 240 200" class="chart" style="max-width:260px">
@@ -475,7 +475,7 @@ if (rc != MPI_SUCCESS) {          /* a rank died */
     </div>
     <div>
       <div class="callout warn"><span class="lbl">Why it is existential here</span>Training a frontier model runs for <strong>days to weeks on thousands of GPUs</strong>. By Module 1, the MTBF of that many GPUs is hours — a failure is guaranteed. Without frequent checkpoints you lose days of compute.</div>
-      <div class="callout takeaway"><span class="lbl">Cross-link → Deep Learning deck</span>Same checkpoint/restart and Young/Daly interval logic from Module 2 — but the "state" is the model + sharded optimizer, and the writes are huge. Checkpoint cadence is a first-class training hyperparameter.</div>
+      <div class="callout takeaway"><span class="lbl">Cross-link → Deep Learning slides</span>Same checkpoint/restart and Young/Daly interval logic from Module 2 — but the "state" is the model + sharded optimizer, and the writes are huge. Checkpoint cadence is a first-class training hyperparameter.</div>
     </div>
   </div>
 </section>
