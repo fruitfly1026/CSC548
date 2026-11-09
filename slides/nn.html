@@ -132,7 +132,7 @@
       <div class="eq small">\( \theta \leftarrow \theta - \eta \, \nabla_\theta L_B(\theta) \)</div>
     </div>
     <div>
-      <div class="callout takeaway"><span class="lbl">Why it matters for parallelism</span>The mini-batch is what we <strong>split across GPUs</strong> in data parallelism — each device processes a slice of \(B\), then the gradients are summed.</div>
+      <div class="callout takeaway"><span class="lbl">Why it matters for parallelism</span>The mini-batch is what we <strong>split across GPUs</strong> in data parallelism — each device processes a slice of \(B\), then the gradients are averaged.</div>
       <p class="tiny muted">Larger batches expose more parallelism but can hurt convergence — the batch size is itself a systems / accuracy trade-off.</p>
     </div>
   </div>
@@ -268,7 +268,7 @@
 shard = batch[p]                # disjoint slice
 loss  = forward(model, shard)
 g_p   = backward(loss)          # local gradients
-g     = all_reduce(g_p, op=AVG) # average across devices
+g     = all_reduce(g_p, SUM) / P  # average across P devices
 model = optimizer.step(model, g)  # identical update
 </code></pre>
       <p class="tiny muted">After the all-reduce every replica applies the <strong>same</strong> averaged gradient, so all replicas stay in sync.</p>
@@ -585,7 +585,7 @@ model = optimizer.step(model, g)  # identical update
       <div class="callout"><span class="lbl">Premise</span>Networks tend to be <strong>over-parameterized</strong> — many weights contribute little. Remove them to save space, time, and energy.</div>
       <p class="small">Today's sparsity methods reach a <strong>10–100×</strong> (up to ~two-orders-of-magnitude) reduction in model size with little accuracy loss.</p>
       <div class="src">Hoefler et al., "Sparsity in Deep Learning," JMLR 22, 2021.</div>
-      <div class="callout warn"><span class="lbl">Accuracy curve</span>Light pruning can <em>reduce noise</em>; a wide middle range stays stable; past a point accuracy <strong>drops</strong> — and where that point is depends on the network.</div>
+      <div class="callout warn"><span class="lbl">Accuracy curve</span>Light pruning can even <em>improve accuracy</em> (it acts as a regularizer); a wide middle range stays stable; past a point accuracy <strong>drops</strong> — and where that point is depends on the network.</div>
     </div>
     <div class="center">
       <svg viewBox="0 0 240 180" class="chart" style="max-width:260px">
@@ -656,7 +656,7 @@ model = optimizer.step(model, g)  # identical update
     <div>
       <div class="callout"><span class="lbl">Low-rank approximation</span>Replace a big weight matrix \(W\) by a product of two thin matrices: \(W \approx U V\) with rank \(r \ll n\).</div>
       <div class="eq small">\( n \times n \;\rightarrow\; n\,r + r\,n \)</div>
-      <p class="tiny muted">Fewer parameters and fewer FLOPs when \(r\) is small — the idea behind low-rank adapters (LoRA).</p>
+      <p class="tiny muted">Fewer parameters and fewer FLOPs when \(r\) is small. LoRA applies the same idea to the fine-tuning update, \(\Delta W \approx BA\), leaving \(W\) frozen.</p>
     </div>
   </div>
   <div class="callout takeaway"><span class="lbl">Combine</span>Pruning, quantization, and low-rank are <strong>complementary</strong> — production models often apply all three.</div>

@@ -37,12 +37,12 @@
 <section data-background-color="#ffffff">
   <h2>Agenda</h2>
   <div class="cols c3">
-    <div class="callout"><span class="lbl">1 · Motivation</span><span class="small">GEMM &rarr; batched GEMM &rarr; tensor contractions. The "multi-linear" generalization; TTGT vs. GETT.</span></div>
+    <div class="callout"><span class="lbl">1 · Motivation</span><span class="small">Why BLAS lifts vectors to matrices; tensors lift again. GEMM &rarr; batched &rarr; contraction; TTGT vs. GETT.</span></div>
     <div class="callout"><span class="lbl">2 · Dense frameworks</span><span class="small">TBLIS, Cyclops (CTF), cuTENSOR, and Bientinesi's GETT / Linnea line of work.</span></div>
     <div class="callout"><span class="lbl">3 · Sparse tensors</span><span class="small">Formats (COO, CSF, HiCOO), kernels (MTTKRP, SpTTM), and the systems built on them.</span></div>
     <div class="callout"><span class="lbl">4 · Decompositions</span><span class="small">CP &amp; Tucker — why the kernels above are the hot inner loops.</span></div>
     <div class="callout"><span class="lbl">5 · Systems tour</span><span class="small">ParTI!/HiParTI, InTensLi, AdaTM, reordering, PASTA, Sparta.</span></div>
-    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Every level of the machine still wants the same thing: <strong>reuse</strong>. Tensors just make finding it harder.</span></div>
+    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Performance is <strong>reuse</strong>. Dense code finds it by raising the primitive; sparse code must find it in the input, so format and kernel are designed together.</span></div>
   </div>
 </section>
 
@@ -55,12 +55,39 @@
 </section>
 
 <section data-background-color="#ffffff">
+  <h2>Why BLAS? Lift the Operation, Gain the Reuse</h2>
+  <div class="symkey">
+    <span><b>BLAS</b> = Basic Linear Algebra Subprograms</span>
+    <span><b>AI</b> = arithmetic intensity, flops per byte moved</span>
+  </div>
+  <div class="cols" style="grid-template-columns:11fr 9fr">
+    <div>
+      <p class="small">Applications were once loops over <strong>vector</strong> operations. Each streams its operands once and does one flop per element: no reuse, so it runs at <strong>memory speed</strong>.</p>
+      <div class="callout"><span class="lbl">The BLAS idea</span><span class="small">Express the work as <strong>matrix-level</strong> operations (BLAS-3). An \(n\times n\) GEMM touches \(3n^2\) numbers but does \(2n^3\) flops, so each number is reused <em>n</em> times: what caches and vector units need. LAPACK's blocked algorithms exist for this.</span></div>
+      <div class="callout takeaway"><span class="lbl">The principle</span><span class="small">Performance comes from <strong>raising the level of the primitive</strong> so the library can find reuse the loop could not. The rest of this lecture applies the same move one order up.</span></div>
+    </div>
+    <div>
+      <table style="font-size:.8em">
+        <tr><th>Level</th><th>Op</th><th>Flops</th><th>Data</th><th>AI</th></tr>
+        <tr><td>BLAS-1</td><td>\(y \leftarrow \alpha x + y\)</td><td>\(2n\)</td><td>\(3n\)</td><td>\(\approx 1\)</td></tr>
+        <tr><td>BLAS-2</td><td>\(y \leftarrow Ax\)</td><td>\(2n^2\)</td><td>\(n^2\)</td><td>\(\approx 2\)</td></tr>
+        <tr><td class="hi">BLAS-3</td><td class="hi">\(C \leftarrow AB\)</td><td class="hi">\(2n^3\)</td><td class="hi">\(3n^2\)</td><td class="hi">\(\approx n\)</td></tr>
+      </table>
+      <p class="tiny muted">Only BLAS-3 has intensity that grows with problem size, so only BLAS-3 can reach the compute roof (recall the roofline lecture).</p>
+    </div>
+  </div>
+  <div class="src">Dongarra, Du Croz, Hammarling &amp; Duff, "A Set of Level 3 Basic Linear Algebra Subprograms," ACM TOMS 16(1), 1990; Anderson et al., LAPACK Users' Guide.</div>
+  <aside class="notes">This is the motivation for the whole lecture: BLAS exists because raising the primitive from vectors to matrices creates reuse that loops over vectors cannot expose. Tensor algebra repeats this move, and sparse tensors are where the move stops working.</aside>
+</section>
+
+<section data-background-color="#ffffff">
   <h2>The Ladder: GEMM &rarr; Batched &rarr; Contraction</h2>
   <div class="cols w-64">
     <div>
       <div class="callout"><span class="lbl">GEMM</span><span class="small">The BLAS-3 workhorse: \( C_{ij} = \sum_k A_{ik} B_{kj} \). The single most tuned kernel in computing — you climbed this ladder in the <strong>midterm</strong>.</span></div>
       <div class="callout"><span class="lbl">Batched GEMM</span><span class="small">Many <em>small, independent</em> products at once: \( C^{(b)} = A^{(b)} B^{(b)} \). Fills the machine when one GEMM is too small (deep learning, block solvers).</span></div>
       <div class="callout takeaway"><span class="lbl">Tensor contraction</span><span class="small">Sum over shared indices of higher-order arrays, e.g. \( C_{abc} = \sum_{k} A_{akc}\,B_{kb} \). GEMM is just the order-2 special case.</span></div>
+      <div class="callout ok"><span class="lbl">Same move, one order up</span><span class="small">Loops over matrix ops (a GEMM per slice, a TTM per mode) reuse data only inside each call. One <strong>whole-contraction</strong> primitive lets the library tile across <em>all</em> modes, as BLAS-3 did for vectors.</span></div>
     </div>
     <div class="center">
       <svg viewBox="0 0 240 220" class="chart" style="max-width:250px">
@@ -280,11 +307,10 @@
     </div>
     <div>
       <div class="callout takeaway"><span class="lbl">Why it's hard (vs. SpMV)</span>
-        <span class="small">&bull; No dense GEMM to fall back on.<br>
-        &bull; Indexing overhead grows with <strong>order</strong>.<br>
-        &bull; Irregular access &rarr; poor locality &amp; load imbalance.<br>
-        &bull; The best <strong>format</strong> depends on the tensor <em>and</em> the kernel <em>and</em> the machine.</span></div>
-      <p class="tiny muted">This is the SpMV format-selection problem (CSR vs. ELL vs. …) made worse by dimensionality.</p>
+        <span class="small">&bull; No dense GEMM to fall back on: nothing dense to lift.<br>
+        &bull; Not just memory-bound: access follows the <strong>input's nonzero structure</strong>, known only at <strong>runtime</strong>: irregular, poor locality, load imbalance.<br>
+        &bull; Indexing overhead grows with <strong>order</strong>.</span></div>
+      <div class="callout warn"><span class="lbl">Format and kernel are bound together</span><span class="small">A format fixes which indices are cheap to walk, hence the kernel's loop order, parallelism and reuse. It is fast only for the kernel, mode and input it was designed for.</span></div>
     </div>
   </div>
   <div class="src">Motivating data &amp; workloads: Li et al., PASTA benchmark suite, 2019.</div>
@@ -564,10 +590,10 @@ val: [a b c d e]
 <section data-background-color="#ffffff">
   <h2>Big Picture — What to Remember</h2>
   <div class="cols c3">
-    <div class="callout"><span class="lbl">It's all GEMM, generalized</span><span class="small">Contractions are the multi-linear GEMM; batched GEMM is the bridge.</span></div>
+    <div class="callout"><span class="lbl">Lift the primitive</span><span class="small">BLAS-1 → BLAS-3 created reuse; contractions repeat the lift one order up.</span></div>
     <div class="callout"><span class="lbl">Dense = reduce to GEMM</span><span class="small">TBLIS/GETT avoid transposes; CTF distributes; cuTENSOR fills Tensor Cores.</span></div>
-    <div class="callout"><span class="lbl">Sparse breaks that</span><span class="small">No dense matrix to call — format &amp; locality become the whole game.</span></div>
-    <div class="callout"><span class="lbl">Format is a first-class choice</span><span class="small">COO → CSF → HiCOO; the best one is input-, kernel-, and machine-dependent.</span></div>
+    <div class="callout"><span class="lbl">Sparse breaks that</span><span class="small">No dense matrix to call, and not merely memory-bound: irregular, input-driven access.</span></div>
+    <div class="callout"><span class="lbl">Format and kernel, together</span><span class="small">COO → CSF → HiCOO: access is input- and runtime-dependent, so the format fixes the kernel's performance.</span></div>
     <div class="callout"><span class="lbl">Kernels drive apps</span><span class="small">MTTKRP → CP, TTM → Tucker. Speed the kernel, speed the science.</span></div>
     <div class="callout"><span class="lbl">Old lessons return</span><span class="small">Tiling, coalescing, privatization, NUMA, auto-tuning — all reappear one order up.</span></div>
   </div>
@@ -587,6 +613,7 @@ val: [a b c d e]
     <div>
       <p class="small"><strong>Dense frameworks</strong></p>
       <ul class="tiny">
+        <li>J. Dongarra, J. Du Croz, S. Hammarling, I. Duff, "A Set of Level 3 Basic Linear Algebra Subprograms," ACM TOMS 16(1), 1990 (BLAS-3).</li>
         <li>D. A. Matthews, "High-Performance Tensor Contraction without Transposition," <em>SIAM J. Sci. Comput.</em> 40(1):C1–C24, 2018 (TBLIS).</li>
         <li>E. Solomonik, D. Matthews, J. Hammond, J. Demmel, "Cyclops Tensor Framework…," <em>IPDPS</em> 2013; jrnl. <em>JPDC</em> 74(12), 2014.</li>
         <li>NVIDIA, <em>cuTENSOR</em> documentation; Bayraktar et al., "cuQuantum SDK," arXiv:2308.01999, 2023.</li>
