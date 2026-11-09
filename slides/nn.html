@@ -647,19 +647,59 @@ model = optimizer.step(model, g)  # identical update
 </section>
 
 <section data-background-color="#ffffff">
-  <h2>Quantization &amp; Low-Rank</h2>
-  <div class="cols">
+  <h2>Quantization</h2>
+  <div class="symkey">
+    <span><b>PTQ</b> = post-training quantization</span>
+    <span><b>QAT</b> = quantization-aware training</span>
+  </div>
+  <div class="cols" style="grid-template-columns:11fr 9fr">
     <div>
-      <div class="callout"><span class="lbl">Quantization</span>Store / compute weights (and activations) in <strong>fewer bits</strong> — FP32 → FP16 / INT8 / lower.</div>
-      <p class="small">Smaller data → less memory traffic and faster integer/low-precision arithmetic. Main risk is accuracy loss, mitigated by quantization-aware training.</p>
+      <div class="callout"><span class="lbl">Idea</span>Store and compute weights (and activations) in <strong>fewer bits</strong>: FP32 → FP16/BF16 → INT8 → 4-bit, via a scale and zero point, \(x \approx s\,(q - z)\).</div>
+      <div class="callout ok"><span class="lbl">Why it pays</span><span class="small">Fewer bytes per weight means less <strong>memory traffic</strong>, which bounds inference; matrix engines also run faster at low precision.</span></div>
+      <div class="callout warn"><span class="lbl">Risk and remedies</span><span class="small">Accuracy loss, mostly from <strong>outliers</strong> that stretch the scale. Remedies: per-channel or per-group scales; keep outliers in higher precision; <strong>QAT</strong> trains with rounding in the loop.</span></div>
     </div>
     <div>
-      <div class="callout"><span class="lbl">Low-rank approximation</span>Replace a big weight matrix \(W\) by a product of two thin matrices: \(W \approx U V\) with rank \(r \ll n\).</div>
-      <div class="eq small">\( n \times n \;\rightarrow\; n\,r + r\,n \)</div>
-      <p class="tiny muted">Fewer parameters and fewer FLOPs when \(r\) is small. LoRA applies the same idea to the fine-tuning update, \(\Delta W \approx BA\), leaving \(W\) frozen.</p>
+      <table style="font-size:.8em">
+        <tr><th>Format</th><th>Bytes / param</th><th>7B-param model</th></tr>
+        <tr><td>FP32</td><td>4</td><td>28 GB</td></tr>
+        <tr><td>FP16 / BF16</td><td>2</td><td>14 GB</td></tr>
+        <tr><td class="hi">INT8</td><td class="hi">1</td><td class="hi">7 GB</td></tr>
+        <tr><td class="hi">INT4</td><td class="hi">0.5</td><td class="hi">3.5 GB</td></tr>
+      </table>
+      <p class="tiny muted">Weight-only quantization is the common choice for LLM inference: weights dominate memory traffic, activations stay in 16-bit.</p>
     </div>
   </div>
-  <div class="callout takeaway"><span class="lbl">Combine</span>Pruning, quantization, and low-rank are <strong>complementary</strong> — production models often apply all three.</div>
+  <div class="src">Jacob et al., CVPR 2018 (integer-arithmetic inference); Dettmers et al., LLM.int8(), NeurIPS 2022; Frantar et al., GPTQ, ICLR 2023.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Low-Rank Approximation</h2>
+  <div class="cols" style="grid-template-columns:11fr 9fr">
+    <div>
+      <div class="callout"><span class="lbl">Idea</span>Replace a big weight matrix \(W\) by a product of two thin matrices, \(W \approx U V\), with rank \(r \ll n\). Storage and FLOPs drop from \(n^2\) to \(2nr\).</div>
+      <div class="eq small">\( n \times n \;\rightarrow\; n\,r + r\,n \)</div>
+      <div class="callout"><span class="lbl">How to get it</span><span class="small">Truncated <strong>SVD</strong> of a trained weight, or train the layer in factored form. Works when singular values decay fast.</span></div>
+      <div class="callout ok"><span class="lbl">LoRA: low-rank for fine-tuning</span><span class="small">Freeze \(W\); train a low-rank update \(\Delta W = BA\) with \(r\) of 8 to 64. Far fewer trainable parameters, and \(BA\) merges into \(W\) after training: no inference cost.</span></div>
+    </div>
+    <div>
+      <svg viewBox="0 0 260 130" class="chart" style="width:100%;max-width:380px">
+        <rect x="10" y="20" width="80" height="80" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="50" y="65" text-anchor="middle" class="lbl">W</text>
+        <text x="50" y="112" text-anchor="middle" class="tiny">n × n</text>
+        <text x="105" y="65" text-anchor="middle" class="lbl">≈</text>
+        <rect x="120" y="20" width="22" height="80" fill="#fde68a" stroke="#b45309" stroke-width="1.5"/>
+        <text x="131" y="65" text-anchor="middle" class="lbl">U</text>
+        <text x="131" y="112" text-anchor="middle" class="tiny">n × r</text>
+        <text x="156" y="65" text-anchor="middle" class="lbl">·</text>
+        <rect x="170" y="20" width="80" height="22" fill="#fde68a" stroke="#b45309" stroke-width="1.5"/>
+        <text x="210" y="35" text-anchor="middle" class="lbl">V</text>
+        <text x="210" y="56" text-anchor="middle" class="tiny">r × n</text>
+        <text x="130" y="126" text-anchor="middle" class="tiny" style="fill:#64748b">two thin factors replace one square matrix</text>
+      </svg>
+      <p class="tiny muted">Same idea as the CP and Tucker decompositions in the Linear Algebra lecture: a low-rank factorization is compression.</p>
+    </div>
+  </div>
+  <div class="src">Denton et al., NeurIPS 2014 (low-rank expansions of conv nets); Hu et al., "LoRA: Low-Rank Adaptation of Large Language Models," ICLR 2022.</div>
 </section>
 
 
@@ -692,6 +732,8 @@ model = optimizer.step(model, g)  # identical update
     <li>Narayanan et al., "Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM" (interleaved 1F1B), SC 2021.</li>
     <li>Mirhoseini et al., "Device Placement Optimization with Reinforcement Learning," ICML 2017.</li>
     <li>Hoefler et al., "Sparsity in Deep Learning," <em>JMLR</em>, 2021.</li>
+    <li>Jacob et al., "Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference," CVPR 2018; Dettmers et al., "LLM.int8()," NeurIPS 2022; Frantar et al., "GPTQ," ICLR 2023.</li>
+    <li>Hu et al., "LoRA: Low-Rank Adaptation of Large Language Models," ICLR 2022; Denton et al., "Exploiting Linear Structure Within Convolutional Networks for Efficient Evaluation," NeurIPS 2014.</li>
     <li>Microsoft Research, "DeepSpeed: Extreme-scale model training for everyone."</li>
     <li>Meta, "The Llama 3 Herd of Models," 2024 (4D parallelism); DeepSeek-AI, "DeepSeek-V3 Technical Report," 2024 (expert parallelism).</li>
     <li>Liu, Zaharia &amp; Abbeel, "Ring Attention with Blockwise Transformers for Near-Infinite Context," 2023; Lepikhin et al., "GShard," ICLR 2021.</li>
