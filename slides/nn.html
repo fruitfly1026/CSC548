@@ -22,7 +22,7 @@
 <section class="title-slide" data-background-color="#ffffff">
   <div class="eyebrow">CSC 548 · Parallel Systems</div>
   <h1>Parallel Deep Learning</h1>
-  <div class="sub">Data, model &amp; pipeline parallelism for deep learning</div>
+  <div class="sub">Parallel training, LLM serving systems, and model compression</div>
   <div class="meta">Instructor: Jiajia Li<br>Fall 2026<br>11/09/2026</div>
   <aside class="notes">
     Deep learning is the workload driving today's largest parallel systems. We start with just enough
@@ -41,7 +41,8 @@
     <div class="callout"><span class="lbl">3. Model &amp; Tensor Parallelism</span><span class="small">Split layers or tensors; placement.</span></div>
     <div class="callout"><span class="lbl">4. Pipeline Parallelism</span><span class="small">GPipe, 1F1B, the bubble.</span></div>
     <div class="callout"><span class="lbl">5. 3D Parallelism and Beyond</span><span class="small">Combine the axes: DeepSpeed, then context and expert parallelism.</span></div>
-    <div class="callout"><span class="lbl">6. Model Compression</span><span class="small">Pruning, quantization, low-rank.</span></div>
+    <div class="callout"><span class="lbl">6. LLM Systems</span><span class="small">Prefill vs. decode, FlashAttention, PagedAttention (vLLM), batching and scheduling, speculative decoding.</span></div>
+    <div class="callout"><span class="lbl">7. Model Compression</span><span class="small">Pruning, quantization, low-rank.</span></div>
     <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Partition <em>data</em>, <em>tensors</em> and <em>layers</em>, then shrink the model.</span></div>
   </div>
 </section>
@@ -308,6 +309,33 @@ model = optimizer.step(model, g)  # identical update
   </div>
 </section>
 
+<section data-background-color="#ffffff">
+  <h2>ZeRO &amp; FSDP: Shard the Replica</h2>
+  <div class="symkey">
+    <span><b>ZeRO</b> = Zero Redundancy Optimizer (DeepSpeed)</span>
+    <span><b>FSDP</b> = Fully Sharded Data Parallel (PyTorch)</span>
+    <span><b>Ψ</b> = number of parameters</span>
+  </div>
+  <div class="cols" style="grid-template-columns:11fr 9fr">
+    <div>
+      <div class="callout"><span class="lbl">Where the memory goes</span><span class="small">Mixed-precision Adam keeps per parameter an FP16 weight and gradient (4 B) plus FP32 master weight, momentum and variance (12 B): <strong>16Ψ bytes</strong> on <em>every</em> replica.</span></div>
+      <div class="callout ok"><span class="lbl">ZeRO: partition instead of replicate</span><span class="small">Each of the \(N\) ranks owns <strong>1/N</strong> of the optimizer state (stage 1), of the gradients too (stage 2), of the parameters too (stage 3). Parameters are all-gathered just before a layer runs and freed after; gradients are reduce-scattered to their owner.</span></div>
+      <div class="callout"><span class="lbl">Cost</span><span class="small">Stages 1–2 move the same bytes as a plain all-reduce, stage 3 about 1.5×. Still <strong>data parallelism</strong>: each rank sees a different batch, no model code changes.</span></div>
+    </div>
+    <div>
+      <table style="font-size:.8em">
+        <tr><th>Scheme</th><th>Memory / GPU</th></tr>
+        <tr><td>Plain data parallel</td><td>\(16\Psi\)</td></tr>
+        <tr><td>ZeRO-1 (optimizer)</td><td>\(4\Psi + 12\Psi/N\)</td></tr>
+        <tr><td>ZeRO-2 (+ gradients)</td><td>\(2\Psi + 14\Psi/N\)</td></tr>
+        <tr><td class="hi">ZeRO-3 / FSDP (+ params)</td><td class="hi">\(16\Psi/N\)</td></tr>
+      </table>
+      <p class="tiny muted">FSDP is PyTorch's implementation of stage 3; Llama 3 used it as its data-parallel axis.</p>
+    </div>
+  </div>
+  <div class="src">Rajbhandari et al., "ZeRO," SC 2020; Zhao et al., "PyTorch FSDP," VLDB 2023.</div>
+</section>
+
 <!-- ==================================================================
      MODULE 3 — MODEL & TENSOR PARALLELISM
      ================================================================== -->
@@ -561,6 +589,135 @@ model = optimizer.step(model, g)  # identical update
 
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 6</div>
+  <div class="mod-title">LLM Systems: Attention Kernels &amp; Serving</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Transformer Anatomy &amp; the Two Phases of Inference</h2>
+  <div class="symkey">
+    <span><b>n</b> = sequence length</span>
+    <span><b>d</b> = model width</span>
+    <span><b>KV cache</b> = stored keys and values of past tokens</span>
+  </div>
+  <div class="cols">
+    <div>
+      <div class="callout"><span class="lbl">One layer</span><span class="small">Multi-head attention then an MLP. Attention costs \(O(n^2 d)\) time and \(O(n^2)\) memory per head; the MLP holds about two thirds of the parameters.</span></div>
+      <div class="callout"><span class="lbl">Prefill</span><span class="small">The prompt's \(n\) tokens run <strong>in parallel</strong>: big GEMMs, <strong>compute-bound</strong>. Produces the first token and the KV cache.</span></div>
+      <div class="callout warn"><span class="lbl">Decode</span><span class="small">Then <strong>one token per step</strong>: each step reads all weights and the whole KV cache for ~2 flops per weight. A GEMV in disguise, <strong>memory-bound</strong>; intensity ≈ number of sequences batched. The serving problem: keep the GPU busy in decode without running out of KV memory.</span></div>
+    </div>
+    <div>
+      <svg viewBox="0 0 260 120" class="chart" style="width:100%;max-width:380px">
+        <rect x="10" y="20" width="110" height="34" rx="5" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="65" y="34" text-anchor="middle" class="lbl">prefill</text>
+        <text x="65" y="47" text-anchor="middle" class="tiny">n tokens at once, GEMM</text>
+        <g fill="#fee2e2" stroke="#CC0000" stroke-width="1.3">
+          <rect x="130" y="20" width="26" height="34" rx="4"/><rect x="160" y="20" width="26" height="34" rx="4"/><rect x="190" y="20" width="26" height="34" rx="4"/><rect x="220" y="20" width="26" height="34" rx="4"/>
+        </g>
+        <text x="188" y="41" text-anchor="middle" class="tiny" style="fill:#CC0000">decode: 1 token / step</text>
+        <text x="65" y="78" text-anchor="middle" class="tiny" style="fill:#1d4ed8">compute-bound</text>
+        <text x="188" y="78" text-anchor="middle" class="tiny" style="fill:#CC0000">memory-bound</text>
+        <text x="130" y="112" text-anchor="middle" class="tiny" style="fill:#64748b">batching sequences raises intensity, until KV caches fill memory</text>
+      </svg>
+    </div>
+  </div>
+  <div class="src">Vaswani et al., NeurIPS 2017; Pope et al., "Efficiently Scaling Transformer Inference," MLSys 2023.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>FlashAttention: Tiling the Attention Kernel</h2>
+  <div class="cols" style="grid-template-columns:11fr 9fr">
+    <div>
+      <div class="callout warn"><span class="lbl">Standard attention</span><span class="small">Write \(S = QK^{\top}\) (\(n \times n\)) to HBM, read it for softmax, write \(P\), read it for \(PV\). \(O(n^2)\) traffic: <strong>memory-bound</strong>, and the \(n \times n\) matrix limits sequence length.</span></div>
+      <div class="callout ok"><span class="lbl">FlashAttention</span><span class="small">Load <strong>tiles</strong> of Q, K, V into SRAM; keep a <strong>running softmax</strong> (row max and sum, rescaled as blocks arrive) and accumulate the output tile. The \(n \times n\) matrix is never written; backward <strong>recomputes</strong> it from saved statistics.</span></div>
+      <div class="callout"><span class="lbl">Result</span><span class="small">Exact attention, memory linear in \(n\), 2–4× faster than the standard kernel (paper's figures); FlashAttention-2 adds about 2× by re-partitioning work across warps.</span></div>
+    </div>
+    <div>
+      <svg viewBox="0 0 250 170" class="chart" style="width:100%;max-width:300px">
+        <g fill="#fff" stroke="#94a3b8" stroke-width="0.8">
+          <rect x="60" y="20" width="120" height="120"/>
+        </g>
+        <g stroke="#cbd5e1" stroke-width="0.8">
+          <line x1="90" y1="20" x2="90" y2="140"/><line x1="120" y1="20" x2="120" y2="140"/><line x1="150" y1="20" x2="150" y2="140"/>
+          <line x1="60" y1="50" x2="180" y2="50"/><line x1="60" y1="80" x2="180" y2="80"/><line x1="60" y1="110" x2="180" y2="110"/>
+        </g>
+        <rect x="90" y="50" width="30" height="30" fill="#fca5a5" stroke="#CC0000" stroke-width="1.5"/>
+        <rect x="30" y="50" width="22" height="30" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="41" y="69" text-anchor="middle" class="tiny">Q<tspan font-size="6" dy="2">i</tspan></text>
+        <rect x="90" y="148" width="30" height="16" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="105" y="160" text-anchor="middle" class="tiny">K<tspan font-size="6" dy="2">j</tspan>, V<tspan font-size="6" dy="2">j</tspan></text>
+        <text x="120" y="14" text-anchor="middle" class="tiny" style="fill:#64748b">S = QKᵀ, never materialized</text>
+        <text x="200" y="69" class="tiny" style="fill:#CC0000">one tile</text>
+        <text x="200" y="81" class="tiny" style="fill:#CC0000">in SRAM</text>
+      </svg>
+    </div>
+  </div>
+  <div class="src">Dao et al., "FlashAttention," NeurIPS 2022; Dao, "FlashAttention-2," ICLR 2024.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>KV Cache &amp; PagedAttention (vLLM)</h2>
+  <div class="cols" style="grid-template-columns:11fr 9fr">
+    <div>
+      <div class="callout"><span class="lbl">The KV cache is big</span><span class="small">Every token adds its K and V for every layer: about <strong>800 KB per token</strong> for a 13B FP16 model, 1.6 GB for a 2K-token sequence. The cache, not the weights, decides how many requests fit.</span></div>
+      <div class="callout warn"><span class="lbl">The waste</span><span class="small">Earlier systems reserved one <strong>contiguous</strong> buffer per request at its maximum length; fragmentation and over-reservation wasted <strong>60–80%</strong> of KV memory.</span></div>
+      <div class="callout ok"><span class="lbl">PagedAttention</span><span class="small">Store the cache in fixed-size <strong>blocks</strong> (e.g. 16 tokens); a per-request <strong>block table</strong> maps logical to physical blocks, like virtual-memory paging. Blocks are allocated on demand and shared across requests with copy-on-write.</span></div>
+    </div>
+    <div>
+      <svg viewBox="0 0 250 160" class="chart" style="width:100%;max-width:300px">
+        <text x="40" y="14" text-anchor="middle" class="tiny" style="fill:#1d4ed8">logical blocks</text>
+        <g fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.3">
+          <rect x="15" y="22" width="50" height="22" rx="3"/><rect x="15" y="48" width="50" height="22" rx="3"/><rect x="15" y="74" width="50" height="22" rx="3"/>
+        </g>
+        <g class="tiny" text-anchor="middle"><text x="40" y="37">0</text><text x="40" y="63">1</text><text x="40" y="89">2</text></g>
+        <text x="110" y="14" text-anchor="middle" class="tiny" style="fill:#64748b">block table</text>
+        <g fill="#f1f5f9" stroke="#64748b" stroke-width="1.2">
+          <rect x="85" y="22" width="50" height="22" rx="3"/><rect x="85" y="48" width="50" height="22" rx="3"/><rect x="85" y="74" width="50" height="22" rx="3"/>
+        </g>
+        <g class="tiny" text-anchor="middle"><text x="110" y="37">7</text><text x="110" y="63">1</text><text x="110" y="89">3</text></g>
+        <text x="200" y="14" text-anchor="middle" class="tiny" style="fill:#CC0000">physical KV memory</text>
+        <g fill="#fff" stroke="#94a3b8" stroke-width="1">
+          <rect x="165" y="22" width="70" height="14"/><rect x="165" y="38" width="70" height="14"/><rect x="165" y="54" width="70" height="14"/><rect x="165" y="70" width="70" height="14"/>
+          <rect x="165" y="86" width="70" height="14"/><rect x="165" y="102" width="70" height="14"/><rect x="165" y="118" width="70" height="14"/><rect x="165" y="134" width="70" height="14"/>
+        </g>
+        <g fill="#fee2e2" stroke="#CC0000" stroke-width="1.2">
+          <rect x="165" y="38" width="70" height="14"/><rect x="165" y="70" width="70" height="14"/><rect x="165" y="134" width="70" height="14"/>
+        </g>
+        <g class="tiny" text-anchor="end"><text x="160" y="48">1</text><text x="160" y="80">3</text><text x="160" y="144">7</text></g>
+      </svg>
+      <p class="tiny muted">Result: near-zero waste, 2–4× serving throughput at the same latency vs. FasterTransformer and Orca (paper's figures).</p>
+    </div>
+  </div>
+  <div class="src">Kwon et al., "Efficient Memory Management for Large Language Model Serving with PagedAttention," SOSP 2023.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Scheduling Requests: Batching, Chunking, Disaggregation</h2>
+  <div class="symkey">
+    <span><b>TTFT</b> = time to first token (prefill latency)</span>
+    <span><b>TPOT</b> = time per output token (decode latency)</span>
+  </div>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Continuous batching (Orca)</span><span class="small">Static batching waits for the whole batch to finish; short requests leave GPUs idle. Orca schedules at the <strong>iteration</strong> level: after every decode step, finished sequences leave and new ones join. Batch the GEMMs, run attention per request.</span></div>
+    <div class="callout"><span class="lbl">Chunked prefill (Sarathi-Serve)</span><span class="small">A long prompt's prefill stalls every decode in the batch. Split the prefill into <strong>chunks</strong> and run each chunk together with the pending decode steps: decodes never stall, and the chunk fills the GPU the decodes left idle.</span></div>
+    <div class="callout"><span class="lbl">Disaggregation (DistServe)</span><span class="small">Prefill is compute-bound, decode is memory-bound; on shared GPUs they interfere. Run them on <strong>separate GPU pools</strong>, each with its own parallelism, and ship the KV cache across. TTFT and TPOT are tuned independently.</span></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">The common thread</span>Serving is a scheduling problem: the goal is a full GPU at every decode step under latency targets, which is the utilization story of this course with requests instead of threads.</div>
+  <div class="src">Yu et al., "Orca," OSDI 2022; Agrawal et al., "Sarathi-Serve," OSDI 2024; Zhong et al., "DistServe," OSDI 2024.</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Faster Decoding: Speculation, Prefix Sharing, MoE</h2>
+  <div class="cols c3">
+    <div class="callout"><span class="lbl">Speculative decoding</span><span class="small">A small <strong>draft</strong> model proposes \(k\) tokens; the large model <strong>verifies</strong> all \(k\) in one parallel forward pass and keeps the longest accepted prefix. With rejection sampling the output distribution is unchanged. 2–3× faster decoding (paper's figure): spends spare compute to cut memory-bound steps.</span></div>
+    <div class="callout"><span class="lbl">Prefix sharing (SGLang)</span><span class="small">System prompts, few-shot examples and chat history repeat across requests. <strong>RadixAttention</strong> keeps KV blocks of shared prefixes in a radix tree and reuses them, skipping their prefill. Up to 6.4× higher throughput on such workloads (paper's figure).</span></div>
+    <div class="callout"><span class="lbl">MoE inference</span><span class="small">Each token touches only a few experts, so FLOPs per token stay small while parameters grow. Experts are spread over GPUs with <strong>expert parallelism</strong>; the cost is a token <strong>all-to-all</strong> per MoE layer and load imbalance when a few experts are popular.</span></div>
+  </div>
+  <div class="callout takeaway"><span class="lbl">Pattern</span>Every trick trades a resource the decode step has spare (compute, memory for reused prefixes, more GPUs) for the one it lacks (bytes per step).</div>
+  <div class="src">Leviathan et al., "Fast Inference from Transformers via Speculative Decoding," ICML 2023; Zheng et al., "SGLang," NeurIPS 2024; Lepikhin et al., "GShard," ICLR 2021.</div>
+</section>
+
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 7</div>
   <div class="mod-title">Model Compression</div>
 </section>
 
@@ -712,8 +869,9 @@ model = optimizer.step(model, g)  # identical update
     <div class="callout"><span class="lbl">Tensor</span>Split weights within a layer. Scales layer size; keep it intra-node.</div>
     <div class="callout"><span class="lbl">Pipeline</span>Split layers into stages; mind the bubble. 1F1B bounds memory.</div>
   </div>
-  <div class="cols">
+  <div class="cols c3">
     <div class="callout"><span class="lbl">3D parallelism and beyond</span>Combine all three: \(N = d \times t \times p\), each mapped to the right interconnect level (DeepSpeed). Context and expert axes extend it to 4D/5D.</div>
+    <div class="callout"><span class="lbl">LLM serving</span>Decode is memory-bound: tile attention, page the KV cache, batch continuously, speculate.</div>
     <div class="callout"><span class="lbl">Compression</span>Pruning + quantization + low-rank shrink the model — size, latency, energy together.</div>
   </div>
   <div class="callout takeaway"><span class="lbl">One sentence</span>
@@ -725,7 +883,8 @@ model = optimizer.step(model, g)  # identical update
   <h2>References</h2>
   <div class="callout"><span class="lbl">Course material</span>
     Adapted from the CSC 548 <em>T8 — Parallel NNs &amp; Tensor Computations</em> notes (J. Li, Spring 2025).</div>
-  <ul class="small">
+  <div class="cols">
+    <ul class="tiny" style="margin:0">
     <li>Ben-Nun &amp; Hoefler, "Demystifying Parallel and Distributed Deep Learning: An In-Depth Concurrency Analysis," <em>ACM Computing Surveys</em>, 2019.</li>
     <li>Huang et al., "GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism," NeurIPS 2019.</li>
     <li>Narayanan et al., "PipeDream: Generalized Pipeline Parallelism for DNN Training" (1F1B), SOSP 2019.</li>
@@ -735,9 +894,18 @@ model = optimizer.step(model, g)  # identical update
     <li>Jacob et al., "Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference," CVPR 2018; Dettmers et al., "LLM.int8()," NeurIPS 2022; Frantar et al., "GPTQ," ICLR 2023.</li>
     <li>Hu et al., "LoRA: Low-Rank Adaptation of Large Language Models," ICLR 2022; Denton et al., "Exploiting Linear Structure Within Convolutional Networks for Efficient Evaluation," NeurIPS 2014.</li>
     <li>Microsoft Research, "DeepSpeed: Extreme-scale model training for everyone."</li>
+    </ul>
+    <ul class="tiny" style="margin:0">
+    <li>Rajbhandari et al., "ZeRO: Memory Optimizations Toward Training Trillion Parameter Models," SC 2020; Zhao et al., "PyTorch FSDP," VLDB 2023.</li>
+    <li>Pope et al., "Efficiently Scaling Transformer Inference," MLSys 2023.</li>
+    <li>Dao et al., "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness," NeurIPS 2022; Dao, "FlashAttention-2," ICLR 2024.</li>
+    <li>Kwon et al., "Efficient Memory Management for Large Language Model Serving with PagedAttention" (vLLM), SOSP 2023.</li>
+    <li>Yu et al., "Orca: A Distributed Serving System for Transformer-Based Generative Models," OSDI 2022; Agrawal et al., "Taming Throughput-Latency Tradeoff in LLM Inference with Sarathi-Serve," OSDI 2024; Zhong et al., "DistServe," OSDI 2024.</li>
+    <li>Leviathan, Kalman &amp; Matias, "Fast Inference from Transformers via Speculative Decoding," ICML 2023; Zheng et al., "SGLang: Efficient Execution of Structured Language Model Programs," NeurIPS 2024.</li>
     <li>Meta, "The Llama 3 Herd of Models," 2024 (4D parallelism); DeepSeek-AI, "DeepSeek-V3 Technical Report," 2024 (expert parallelism).</li>
     <li>Liu, Zaharia &amp; Abbeel, "Ring Attention with Blockwise Transformers for Near-Infinite Context," 2023; Lepikhin et al., "GShard," ICLR 2021.</li>
-  </ul>
+    </ul>
+  </div>
 </section>
 
 </div>
