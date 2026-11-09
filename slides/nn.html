@@ -606,7 +606,7 @@ model = optimizer.step(model, g)  # identical update
       <div class="callout warn"><span class="lbl">Decode</span><span class="small">Then <strong>one token per step</strong>: each step reads all weights and the whole KV cache for ~2 flops per weight. A GEMV in disguise, <strong>memory-bound</strong>; intensity ≈ sequences batched. The serving problem: keep the GPU busy in decode without exhausting KV memory.</span></div>
     </div>
     <div>
-      <svg viewBox="0 0 300 150" class="chart" style="width:100%;max-width:440px">
+      <svg viewBox="0 0 320 150" class="chart" style="width:100%;max-width:440px">
         <rect x="10" y="22" width="120" height="40" rx="5" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
         <text x="70" y="39" text-anchor="middle" class="lbl">prefill</text>
         <text x="70" y="53" text-anchor="middle" class="tiny">n tokens, one GEMM pass</text>
@@ -615,10 +615,10 @@ model = optimizer.step(model, g)  # identical update
         </g>
         <g class="tiny" text-anchor="middle"><text x="159" y="46">t₁</text><text x="197" y="46">t₂</text><text x="235" y="46">t₃</text><text x="273" y="46">t₄</text></g>
         <text x="70" y="78" text-anchor="middle" class="tiny" style="fill:#1d4ed8">compute-bound</text>
-        <text x="216" y="78" text-anchor="middle" class="tiny" style="fill:#CC0000">decode: one token per step, memory-bound</text>
+        <text x="216" y="78" text-anchor="middle" class="tiny" style="fill:#CC0000">decode: 1 token / step, memory-bound</text>
         <line x1="150" y1="92" x2="282" y2="92" stroke="#64748b" stroke-width="1" marker-end="url(#ar)"/>
         <defs><marker id="ar" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#64748b"/></marker></defs>
-        <text x="216" y="108" text-anchor="middle" class="tiny" style="fill:#64748b">each step reads all weights + the whole KV cache</text>
+        <text x="216" y="108" text-anchor="middle" class="tiny" style="fill:#64748b">each step reads all weights + KV cache</text>
         <text x="150" y="138" text-anchor="middle" class="tiny" style="fill:#64748b">batching sequences raises intensity, until KV caches fill memory</text>
       </svg>
     </div>
