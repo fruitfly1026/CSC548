@@ -75,7 +75,7 @@
       <p class="small">The weights \(W^{(\ell)}\) are the <strong>parameters</strong> we learn. Modern models have <strong>billions</strong> of them — which is exactly why they no longer fit on one device.</p>
     </div>
     <div class="center">
-      <svg viewBox="0 0 300 220" class="chart" style="max-width:320px">
+      <svg viewBox="0 0 300 220" class="chart" style="width:100%;max-width:440px">
         <!-- layers of neurons -->
         <g>
           <circle cx="40" cy="50" r="11" fill="#3b82f6"/><circle cx="40" cy="100" r="11" fill="#3b82f6"/><circle cx="40" cy="150" r="11" fill="#3b82f6"/>
@@ -105,7 +105,7 @@
       <div class="callout"><span class="lbl">Two passes</span><strong>Forward</strong> computes the loss; <strong>backward</strong> computes \(\nabla_\theta L\). Both are dense tensor algebra — perfect for accelerators.</div>
     </div>
     <div class="center">
-      <svg viewBox="0 0 260 200" class="chart" style="max-width:280px">
+      <svg viewBox="0 0 260 200" class="chart" style="width:100%;max-width:440px">
         <path d="M20,180 Q130,-40 240,180" fill="none" stroke="#cbd5e1" stroke-width="2"/>
         <circle cx="55" cy="120" r="6" fill="#CC0000"/>
         <circle cx="85" cy="78" r="6" fill="#3b82f6"/>
@@ -148,7 +148,7 @@
       <p class="tiny muted">Convolution is the compute hot-spot — usually lowered to dense matrix multiply (im2col + GEMM) on the GPU.</p>
     </div>
     <div class="center">
-      <svg viewBox="0 0 280 180" class="chart" style="max-width:300px">
+      <svg viewBox="0 0 280 180" class="chart" style="width:100%;max-width:440px">
         <!-- input grid -->
         <g stroke="#cbd5e1" fill="#eff6ff">
           <rect x="20" y="20" width="120" height="120"/>
@@ -176,7 +176,7 @@
       <div class="callout"><span class="lbl">Multi-head</span>Run <em>h</em> attention computations in parallel on different projections, then concatenate. Heads are an obvious axis to <strong>partition across devices</strong>.</div>
     </div>
     <div class="center">
-      <svg viewBox="0 0 260 200" class="chart" style="max-width:280px">
+      <svg viewBox="0 0 260 200" class="chart" style="width:100%;max-width:440px">
         <rect x="20" y="20" width="50" height="26" rx="4" fill="#3b82f6"/><text x="45" y="38" text-anchor="middle" fill="#fff" class="lbl">Q</text>
         <rect x="105" y="20" width="50" height="26" rx="4" fill="#3b82f6"/><text x="130" y="38" text-anchor="middle" fill="#fff" class="lbl">K</text>
         <rect x="190" y="20" width="50" height="26" rx="4" fill="#3b82f6"/><text x="215" y="38" text-anchor="middle" fill="#fff" class="lbl">V</text>
@@ -202,7 +202,7 @@
       <div class="callout warn"><span class="lbl">Hard on GPUs</span>The aggregation is <strong>irregular &amp; sparse</strong> — poor locality and load imbalance, unlike the dense GEMMs in CNNs/Transformers.</div>
     </div>
     <div class="center">
-      <svg viewBox="0 0 240 200" class="chart" style="max-width:260px">
+      <svg viewBox="0 0 240 200" class="chart" style="width:100%;max-width:440px">
         <g stroke="#94a3b8" stroke-width="1.4">
           <line x1="120" y1="100" x2="60" y2="50"/><line x1="120" y1="100" x2="190" y2="60"/>
           <line x1="120" y1="100" x2="70" y2="160"/><line x1="120" y1="100" x2="180" y2="150"/>
@@ -226,7 +226,7 @@
       <div class="callout takeaway"><span class="lbl">Consequence</span>Large-scale training is now <strong>fundamentally parallel</strong> — the rest of this lecture is how.</div>
     </div>
     <div class="center">
-      <svg viewBox="0 0 260 200" class="chart" style="max-width:280px">
+      <svg viewBox="0 0 260 200" class="chart" style="width:100%;max-width:440px">
         <line x1="40" y1="170" x2="240" y2="170" stroke="#16181d" stroke-width="1.5"/>
         <line x1="40" y1="170" x2="40" y2="20" stroke="#16181d" stroke-width="1.5"/>
         <path d="M40,165 C120,160 170,120 230,30" fill="none" stroke="#CC0000" stroke-width="2.5"/>
@@ -275,7 +275,7 @@ model = optimizer.step(model, g)  # identical update
       <p class="tiny muted">After the all-reduce every replica applies the <strong>same</strong> averaged gradient, so all replicas stay in sync.</p>
     </div>
     <div class="center">
-      <svg viewBox="0 0 260 220" class="chart" style="max-width:280px">
+      <svg viewBox="0 0 260 220" class="chart" style="width:100%;max-width:440px">
         <g>
           <rect x="20" y="20" width="60" height="40" rx="5" fill="#3b82f6"/><text x="50" y="44" text-anchor="middle" fill="#fff" class="lbl">GPU 0</text>
           <rect x="100" y="20" width="60" height="40" rx="5" fill="#3b82f6"/><text x="130" y="44" text-anchor="middle" fill="#fff" class="lbl">GPU 1</text>
@@ -353,7 +353,7 @@ model = optimizer.step(model, g)  # identical update
       <div class="callout warn"><span class="lbl">Cost</span>Devices must <strong>exchange activations</strong> at every cut in the graph — communication is on the critical path.</div>
     </div>
     <div class="center">
-      <svg viewBox="0 0 260 200" class="chart" style="max-width:280px">
+      <svg viewBox="0 0 260 200" class="chart" style="width:100%;max-width:440px">
         <rect x="20" y="20" width="100" height="160" rx="6" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4 3"/>
         <text x="70" y="16" text-anchor="middle" class="note" fill="#3b82f6">GPU 0</text>
         <rect x="140" y="20" width="100" height="160" rx="6" fill="none" stroke="#CC0000" stroke-width="1.5" stroke-dasharray="4 3"/>
@@ -399,7 +399,7 @@ model = optimizer.step(model, g)  # identical update
       <div class="callout warn"><span class="lbl">Trade-off</span>Fine-grained → frequent collective communication; best kept <strong>within a fast interconnect</strong> (a single node / NVLink).</div>
     </div>
     <div class="center">
-      <svg viewBox="0 0 260 180" class="chart" style="max-width:280px">
+      <svg viewBox="0 0 260 180" class="chart" style="width:100%;max-width:440px">
         <rect x="20" y="60" width="40" height="60" fill="#cbd5e1"/><text x="40" y="138" text-anchor="middle" class="lbl">X</text>
         <text x="72" y="95" text-anchor="middle" class="lbl">×</text>
         <rect x="90" y="40" width="35" height="100" fill="#3b82f6"/><text x="107" y="160" text-anchor="middle" class="lbl">W₀</text>
@@ -445,7 +445,7 @@ model = optimizer.step(model, g)  # identical update
       <p class="tiny muted">"GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism."</p>
     </div>
     <div class="center">
-      <svg viewBox="0 0 260 180" class="chart" style="max-width:280px">
+      <svg viewBox="0 0 260 180" class="chart" style="width:100%;max-width:440px">
         <g>
           <rect x="30" y="30" width="60" height="30" rx="4" fill="#3b82f6"/><text x="60" y="50" text-anchor="middle" fill="#fff" class="lbl">Stage 0</text>
           <rect x="30" y="75" width="60" height="30" rx="4" fill="#3b82f6"/><text x="60" y="95" text-anchor="middle" fill="#fff" class="lbl">Stage 1</text>
@@ -472,7 +472,7 @@ model = optimizer.step(model, g)  # identical update
       <p class="small">With <em>m</em> micro-batches and <em>p</em> stages, the bubble fraction is roughly \(\tfrac{p-1}{m+p-1}\). <strong>More micro-batches → smaller relative bubble</strong>, but more in-flight activations.</p>
     </div>
     <div class="center">
-      <svg viewBox="0 0 280 160" class="chart" style="max-width:300px">
+      <svg viewBox="0 0 280 160" class="chart" style="width:100%;max-width:440px">
         <!-- 3 stage rows, time across -->
         <g font-size="8">
           <text x="8" y="35" class="note">S0</text><text x="8" y="65" class="note">S1</text><text x="8" y="95" class="note">S2</text>
@@ -538,7 +538,7 @@ model = optimizer.step(model, g)  # identical update
       <p class="tiny muted">Source: Microsoft Research — "DeepSpeed: Extreme-scale model training for everyone."</p>
     </div>
     <div class="center">
-      <svg viewBox="0 0 260 200" class="chart" style="max-width:280px">
+      <svg viewBox="0 0 260 200" class="chart" style="width:100%;max-width:440px">
         <!-- grid: rows = pipeline stages, cols = tensor shards; two replicas -->
         <g>
           <rect x="20" y="30" width="100" height="120" fill="none" stroke="#3b82f6" stroke-width="1.5"/>
@@ -601,22 +601,25 @@ model = optimizer.step(model, g)  # identical update
   </div>
   <div class="cols">
     <div>
-      <div class="callout"><span class="lbl">One layer</span><span class="small">Multi-head attention then an MLP. Attention costs \(O(n^2 d)\) time and \(O(n^2)\) memory per head; the MLP holds about two thirds of the parameters.</span></div>
+      <div class="callout"><span class="lbl">One layer</span><span class="small">Multi-head attention, then an MLP. Attention: \(O(n^2 d)\) time, \(O(n^2)\) memory per head. The MLP holds about two thirds of the parameters (for \(d_{ff}=4d\)).</span></div>
       <div class="callout"><span class="lbl">Prefill</span><span class="small">The prompt's \(n\) tokens run <strong>in parallel</strong>: big GEMMs, <strong>compute-bound</strong>. Produces the first token and the KV cache.</span></div>
-      <div class="callout warn"><span class="lbl">Decode</span><span class="small">Then <strong>one token per step</strong>: each step reads all weights and the whole KV cache for ~2 flops per weight. A GEMV in disguise, <strong>memory-bound</strong>; intensity ≈ number of sequences batched. The serving problem: keep the GPU busy in decode without running out of KV memory.</span></div>
+      <div class="callout warn"><span class="lbl">Decode</span><span class="small">Then <strong>one token per step</strong>: each step reads all weights and the whole KV cache for ~2 flops per weight. A GEMV in disguise, <strong>memory-bound</strong>; intensity ≈ sequences batched. The serving problem: keep the GPU busy in decode without exhausting KV memory.</span></div>
     </div>
     <div>
-      <svg viewBox="0 0 260 120" class="chart" style="width:100%;max-width:380px">
-        <rect x="10" y="20" width="110" height="34" rx="5" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
-        <text x="65" y="34" text-anchor="middle" class="lbl">prefill</text>
-        <text x="65" y="47" text-anchor="middle" class="tiny">n tokens at once, GEMM</text>
+      <svg viewBox="0 0 300 150" class="chart" style="width:100%;max-width:440px">
+        <rect x="10" y="22" width="120" height="40" rx="5" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="70" y="39" text-anchor="middle" class="lbl">prefill</text>
+        <text x="70" y="53" text-anchor="middle" class="tiny">n tokens, one GEMM pass</text>
         <g fill="#fee2e2" stroke="#CC0000" stroke-width="1.3">
-          <rect x="130" y="20" width="26" height="34" rx="4"/><rect x="160" y="20" width="26" height="34" rx="4"/><rect x="190" y="20" width="26" height="34" rx="4"/><rect x="220" y="20" width="26" height="34" rx="4"/>
+          <rect x="142" y="22" width="34" height="40" rx="4"/><rect x="180" y="22" width="34" height="40" rx="4"/><rect x="218" y="22" width="34" height="40" rx="4"/><rect x="256" y="22" width="34" height="40" rx="4"/>
         </g>
-        <text x="188" y="41" text-anchor="middle" class="tiny" style="fill:#CC0000">decode: 1 token / step</text>
-        <text x="65" y="78" text-anchor="middle" class="tiny" style="fill:#1d4ed8">compute-bound</text>
-        <text x="188" y="78" text-anchor="middle" class="tiny" style="fill:#CC0000">memory-bound</text>
-        <text x="130" y="112" text-anchor="middle" class="tiny" style="fill:#64748b">batching sequences raises intensity, until KV caches fill memory</text>
+        <g class="tiny" text-anchor="middle"><text x="159" y="46">t₁</text><text x="197" y="46">t₂</text><text x="235" y="46">t₃</text><text x="273" y="46">t₄</text></g>
+        <text x="70" y="78" text-anchor="middle" class="tiny" style="fill:#1d4ed8">compute-bound</text>
+        <text x="216" y="78" text-anchor="middle" class="tiny" style="fill:#CC0000">decode: one token per step, memory-bound</text>
+        <line x1="150" y1="92" x2="282" y2="92" stroke="#64748b" stroke-width="1" marker-end="url(#ar)"/>
+        <defs><marker id="ar" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#64748b"/></marker></defs>
+        <text x="216" y="108" text-anchor="middle" class="tiny" style="fill:#64748b">each step reads all weights + the whole KV cache</text>
+        <text x="150" y="138" text-anchor="middle" class="tiny" style="fill:#64748b">batching sequences raises intensity, until KV caches fill memory</text>
       </svg>
     </div>
   </div>
@@ -629,10 +632,10 @@ model = optimizer.step(model, g)  # identical update
     <div>
       <div class="callout warn"><span class="lbl">Standard attention</span><span class="small">Write \(S = QK^{\top}\) (\(n \times n\)) to HBM, read it for softmax, write \(P\), read it for \(PV\). \(O(n^2)\) traffic: <strong>memory-bound</strong>, and the \(n \times n\) matrix limits sequence length.</span></div>
       <div class="callout ok"><span class="lbl">FlashAttention</span><span class="small">Load <strong>tiles</strong> of Q, K, V into SRAM; keep a <strong>running softmax</strong> (row max and sum, rescaled as blocks arrive) and accumulate the output tile. The \(n \times n\) matrix is never written; backward <strong>recomputes</strong> it from saved statistics.</span></div>
-      <div class="callout"><span class="lbl">Result</span><span class="small">Exact attention, memory linear in \(n\), 2–4× faster than the standard kernel (paper's figures); FlashAttention-2 adds about 2× by re-partitioning work across warps.</span></div>
+      <div class="callout"><span class="lbl">Result</span><span class="small">Exact attention, memory linear in \(n\), up to 3× faster than the standard kernel (original paper); FlashAttention-2 adds about 2× by re-partitioning work across warps.</span></div>
     </div>
     <div>
-      <svg viewBox="0 0 250 170" class="chart" style="width:100%;max-width:300px">
+      <svg viewBox="0 0 270 178" class="chart" style="width:100%;max-width:420px">
         <g fill="#fff" stroke="#94a3b8" stroke-width="0.8">
           <rect x="60" y="20" width="120" height="120"/>
         </g>
@@ -643,11 +646,15 @@ model = optimizer.step(model, g)  # identical update
         <rect x="90" y="50" width="30" height="30" fill="#fca5a5" stroke="#CC0000" stroke-width="1.5"/>
         <rect x="30" y="50" width="22" height="30" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
         <text x="41" y="69" text-anchor="middle" class="tiny">Q<tspan font-size="6" dy="2">i</tspan></text>
-        <rect x="90" y="148" width="30" height="16" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
-        <text x="105" y="160" text-anchor="middle" class="tiny">K<tspan font-size="6" dy="2">j</tspan>, V<tspan font-size="6" dy="2">j</tspan></text>
+        <rect x="90" y="144" width="30" height="14" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="105" y="155" text-anchor="middle" class="tiny">K<tspan font-size="6" dy="2">j</tspan>, V<tspan font-size="6" dy="2">j</tspan></text>
         <text x="120" y="14" text-anchor="middle" class="tiny" style="fill:#64748b">S = QKᵀ, never materialized</text>
-        <text x="200" y="69" class="tiny" style="fill:#CC0000">one tile</text>
-        <text x="200" y="81" class="tiny" style="fill:#CC0000">in SRAM</text>
+        <text x="120" y="170" text-anchor="middle" class="tiny" style="fill:#64748b">keys →</text>
+        <text x="12" y="80" text-anchor="middle" class="tiny" style="fill:#64748b" transform="rotate(-90 12 80)">queries ↓</text>
+        <rect x="190" y="50" width="22" height="30" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+        <text x="201" y="69" text-anchor="middle" class="tiny">O<tspan font-size="6" dy="2">i</tspan></text>
+        <text x="232" y="62" class="tiny" style="fill:#CC0000">one tile</text>
+        <text x="232" y="74" class="tiny" style="fill:#CC0000">in SRAM</text>
       </svg>
     </div>
   </div>
@@ -663,10 +670,10 @@ model = optimizer.step(model, g)  # identical update
       <div class="callout ok"><span class="lbl">PagedAttention</span><span class="small">Store the cache in fixed-size <strong>blocks</strong> (e.g. 16 tokens); a per-request <strong>block table</strong> maps logical to physical blocks, like virtual-memory paging. Blocks are allocated on demand and shared across requests with copy-on-write.</span></div>
     </div>
     <div>
-      <svg viewBox="0 0 250 160" class="chart" style="width:100%;max-width:300px">
+      <svg viewBox="0 0 250 160" class="chart" style="width:100%;max-width:420px">
         <text x="40" y="14" text-anchor="middle" class="tiny" style="fill:#1d4ed8">logical blocks</text>
-        <g fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.3">
-          <rect x="15" y="22" width="50" height="22" rx="3"/><rect x="15" y="48" width="50" height="22" rx="3"/><rect x="15" y="74" width="50" height="22" rx="3"/>
+        <g stroke-width="1.3">
+          <rect x="15" y="22" width="50" height="22" rx="3" fill="#dbeafe" stroke="#1d4ed8"/><rect x="15" y="48" width="50" height="22" rx="3" fill="#fde68a" stroke="#b45309"/><rect x="15" y="74" width="50" height="22" rx="3" fill="#dcfce7" stroke="#16a34a"/>
         </g>
         <g class="tiny" text-anchor="middle"><text x="40" y="37">0</text><text x="40" y="63">1</text><text x="40" y="89">2</text></g>
         <text x="110" y="14" text-anchor="middle" class="tiny" style="fill:#64748b">block table</text>
@@ -674,13 +681,13 @@ model = optimizer.step(model, g)  # identical update
           <rect x="85" y="22" width="50" height="22" rx="3"/><rect x="85" y="48" width="50" height="22" rx="3"/><rect x="85" y="74" width="50" height="22" rx="3"/>
         </g>
         <g class="tiny" text-anchor="middle"><text x="110" y="37">7</text><text x="110" y="63">1</text><text x="110" y="89">3</text></g>
-        <text x="200" y="14" text-anchor="middle" class="tiny" style="fill:#CC0000">physical KV memory</text>
+        <text x="200" y="14" text-anchor="middle" class="tiny" style="fill:#64748b">physical KV memory</text>
         <g fill="#fff" stroke="#94a3b8" stroke-width="1">
           <rect x="165" y="22" width="70" height="14"/><rect x="165" y="38" width="70" height="14"/><rect x="165" y="54" width="70" height="14"/><rect x="165" y="70" width="70" height="14"/>
           <rect x="165" y="86" width="70" height="14"/><rect x="165" y="102" width="70" height="14"/><rect x="165" y="118" width="70" height="14"/><rect x="165" y="134" width="70" height="14"/>
         </g>
-        <g fill="#fee2e2" stroke="#CC0000" stroke-width="1.2">
-          <rect x="165" y="38" width="70" height="14"/><rect x="165" y="70" width="70" height="14"/><rect x="165" y="134" width="70" height="14"/>
+        <g stroke-width="1.2">
+          <rect x="165" y="38" width="70" height="14" fill="#fde68a" stroke="#b45309"/><rect x="165" y="70" width="70" height="14" fill="#dcfce7" stroke="#16a34a"/><rect x="165" y="134" width="70" height="14" fill="#dbeafe" stroke="#1d4ed8"/>
         </g>
         <g class="tiny" text-anchor="end"><text x="160" y="48">1</text><text x="160" y="80">3</text><text x="160" y="144">7</text></g>
       </svg>
@@ -745,7 +752,7 @@ model = optimizer.step(model, g)  # identical update
       <div class="callout warn"><span class="lbl">Accuracy curve</span>Light pruning can even <em>improve accuracy</em> (it acts as a regularizer); a wide middle range stays stable; past a point accuracy <strong>drops</strong> — and where that point is depends on the network.</div>
     </div>
     <div class="center">
-      <svg viewBox="0 0 240 180" class="chart" style="max-width:260px">
+      <svg viewBox="0 0 240 180" class="chart" style="width:100%;max-width:440px">
         <g stroke="#cbd5e1" stroke-width="1.2" opacity="0.5">
           <line x1="30" y1="40" x2="120" y2="30"/><line x1="30" y1="40" x2="120" y2="90"/><line x1="30" y1="90" x2="120" y2="30"/><line x1="30" y1="90" x2="120" y2="150"/><line x1="30" y1="140" x2="120" y2="90"/><line x1="30" y1="140" x2="120" y2="150"/>
         </g>
@@ -784,7 +791,7 @@ model = optimizer.step(model, g)  # identical update
       <p class="tiny muted">Simpler schemes (bitmap, delta) trade index size against random-access cost.</p>
     </div>
     <div class="center">
-      <svg viewBox="0 0 250 200" class="chart" style="max-width:270px">
+      <svg viewBox="0 0 250 200" class="chart" style="width:100%;max-width:440px">
         <!-- 4x4 matrix -->
         <g font-size="9" text-anchor="middle">
           <rect x="20" y="20" width="100" height="100" fill="none" stroke="#cbd5e1"/>
@@ -839,7 +846,7 @@ model = optimizer.step(model, g)  # identical update
       <div class="callout ok"><span class="lbl">LoRA: low-rank for fine-tuning</span><span class="small">Freeze \(W\); train a low-rank update \(\Delta W = BA\) with \(r\) of 8 to 64. Far fewer trainable parameters, and \(BA\) merges into \(W\) after training: no inference cost.</span></div>
     </div>
     <div>
-      <svg viewBox="0 0 260 130" class="chart" style="width:100%;max-width:380px">
+      <svg viewBox="0 0 260 130" class="chart" style="width:100%;max-width:440px">
         <rect x="10" y="20" width="80" height="80" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
         <text x="50" y="65" text-anchor="middle" class="lbl">W</text>
         <text x="50" y="112" text-anchor="middle" class="tiny">n × n</text>
@@ -880,32 +887,34 @@ model = optimizer.step(model, g)  # identical update
 
 <!-- ===== REFERENCES ===== -->
 <section data-background-color="#f6f8fb">
-  <h2>References</h2>
+  <h2>References: Training &amp; Parallelism</h2>
   <div class="callout"><span class="lbl">Course material</span>
     Adapted from the CSC 548 <em>T8 — Parallel NNs &amp; Tensor Computations</em> notes (J. Li, Spring 2025).</div>
-  <div class="cols">
-    <ul class="tiny" style="margin:0">
-    <li>Ben-Nun &amp; Hoefler, "Demystifying Parallel and Distributed Deep Learning: An In-Depth Concurrency Analysis," <em>ACM Computing Surveys</em>, 2019.</li>
+  <ul class="small">
     <li>Huang et al., "GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism," NeurIPS 2019.</li>
     <li>Narayanan et al., "PipeDream: Generalized Pipeline Parallelism for DNN Training" (1F1B), SOSP 2019.</li>
     <li>Narayanan et al., "Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM" (interleaved 1F1B), SC 2021.</li>
     <li>Mirhoseini et al., "Device Placement Optimization with Reinforcement Learning," ICML 2017.</li>
-    <li>Hoefler et al., "Sparsity in Deep Learning," <em>JMLR</em>, 2021.</li>
-    <li>Jacob et al., "Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference," CVPR 2018; Dettmers et al., "LLM.int8()," NeurIPS 2022; Frantar et al., "GPTQ," ICLR 2023.</li>
-    <li>Hu et al., "LoRA: Low-Rank Adaptation of Large Language Models," ICLR 2022; Denton et al., "Exploiting Linear Structure Within Convolutional Networks for Efficient Evaluation," NeurIPS 2014.</li>
     <li>Microsoft Research, "DeepSpeed: Extreme-scale model training for everyone."</li>
-    </ul>
-    <ul class="tiny" style="margin:0">
     <li>Rajbhandari et al., "ZeRO: Memory Optimizations Toward Training Trillion Parameter Models," SC 2020; Zhao et al., "PyTorch FSDP," VLDB 2023.</li>
+    <li>Meta, "The Llama 3 Herd of Models," 2024 (4D parallelism); DeepSeek-AI, "DeepSeek-V3 Technical Report," 2024 (expert parallelism).</li>
+    <li>Liu, Zaharia &amp; Abbeel, "Ring Attention with Blockwise Transformers for Near-Infinite Context," 2023; Lepikhin et al., "GShard," ICLR 2021.</li>
+  </ul>
+</section>
+
+<section data-background-color="#f6f8fb">
+  <h2>References: LLM Serving &amp; Compression</h2>
+  <ul class="small">
     <li>Pope et al., "Efficiently Scaling Transformer Inference," MLSys 2023.</li>
     <li>Dao et al., "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness," NeurIPS 2022; Dao, "FlashAttention-2," ICLR 2024.</li>
     <li>Kwon et al., "Efficient Memory Management for Large Language Model Serving with PagedAttention" (vLLM), SOSP 2023.</li>
     <li>Yu et al., "Orca: A Distributed Serving System for Transformer-Based Generative Models," OSDI 2022; Agrawal et al., "Taming Throughput-Latency Tradeoff in LLM Inference with Sarathi-Serve," OSDI 2024; Zhong et al., "DistServe," OSDI 2024.</li>
     <li>Leviathan, Kalman &amp; Matias, "Fast Inference from Transformers via Speculative Decoding," ICML 2023; Zheng et al., "SGLang: Efficient Execution of Structured Language Model Programs," NeurIPS 2024.</li>
-    <li>Meta, "The Llama 3 Herd of Models," 2024 (4D parallelism); DeepSeek-AI, "DeepSeek-V3 Technical Report," 2024 (expert parallelism).</li>
-    <li>Liu, Zaharia &amp; Abbeel, "Ring Attention with Blockwise Transformers for Near-Infinite Context," 2023; Lepikhin et al., "GShard," ICLR 2021.</li>
-    </ul>
-  </div>
+    <li>Ben-Nun &amp; Hoefler, "Demystifying Parallel and Distributed Deep Learning: An In-Depth Concurrency Analysis," <em>ACM Computing Surveys</em>, 2019.</li>
+    <li>Hoefler et al., "Sparsity in Deep Learning," <em>JMLR</em>, 2021.</li>
+    <li>Jacob et al., "Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference," CVPR 2018; Dettmers et al., "LLM.int8()," NeurIPS 2022; Frantar et al., "GPTQ," ICLR 2023.</li>
+    <li>Hu et al., "LoRA: Low-Rank Adaptation of Large Language Models," ICLR 2022; Denton et al., "Exploiting Linear Structure Within Convolutional Networks for Efficient Evaluation," NeurIPS 2014.</li>
+  </ul>
 </section>
 
 </div>
