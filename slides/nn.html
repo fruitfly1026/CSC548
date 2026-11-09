@@ -40,7 +40,7 @@
     <div class="callout"><span class="lbl">2. Data Parallelism</span><span class="small">Replicas, all-reduce, the memory wall.</span></div>
     <div class="callout"><span class="lbl">3. Model &amp; Tensor Parallelism</span><span class="small">Split layers or tensors; placement.</span></div>
     <div class="callout"><span class="lbl">4. Pipeline Parallelism</span><span class="small">GPipe, 1F1B, the bubble.</span></div>
-    <div class="callout"><span class="lbl">5. 3D Parallelism</span><span class="small">Combine all three — DeepSpeed.</span></div>
+    <div class="callout"><span class="lbl">5. 3D Parallelism and Beyond</span><span class="small">Combine the axes: DeepSpeed, then context and expert parallelism.</span></div>
     <div class="callout"><span class="lbl">6. Model Compression</span><span class="small">Pruning, quantization, low-rank.</span></div>
     <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Partition <em>data</em>, <em>tensors</em> and <em>layers</em>, then shrink the model.</span></div>
   </div>
@@ -485,7 +485,7 @@ model = optimizer.step(model, g)  # identical update
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 5</div>
-  <div class="mod-title">3D Parallelism</div>
+  <div class="mod-title">3D Parallelism and Beyond</div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -541,6 +541,24 @@ model = optimizer.step(model, g)  # identical update
 <!-- ==================================================================
      MODULE 6 — MODEL COMPRESSION
      ================================================================== -->
+<section data-background-color="#ffffff">
+  <h2>Beyond 3D: Context &amp; Expert Parallelism (4D / 5D)</h2>
+  <div class="cols">
+    <div class="callout"><span class="lbl">Context (sequence) parallelism</span><span class="small">Split one sample's <strong>sequence</strong> across devices. Feed-forward is per-token, but attention needs every key/value, so devices pass K/V blocks around a ring (Ring Attention). Scales <strong>context length</strong>.</span></div>
+    <div class="callout"><span class="lbl">Expert parallelism</span><span class="small">A mixture-of-experts (MoE) layer routes each token to a few of many <strong>experts</strong>; put experts on different devices and move tokens with an <strong>all-to-all</strong>. Scales <strong>parameters</strong> without more FLOPs per token.</span></div>
+  </div>
+  <table style="font-size:.74em">
+    <tr><th>Axis</th><th>Splits</th><th>Comm pattern</th><th>Scales</th></tr>
+    <tr><td>Data</td><td>the batch</td><td>gradient all-reduce</td><td>throughput</td></tr>
+    <tr><td>Tensor</td><td>weights within a layer</td><td>all-gather / all-reduce per layer</td><td>layer size</td></tr>
+    <tr><td>Pipeline</td><td>layers into stages</td><td>point-to-point between stages</td><td>depth</td></tr>
+    <tr><td class="hi">Context</td><td class="hi">the sequence</td><td class="hi">K/V ring or all-to-all in attention</td><td class="hi">context length</td></tr>
+    <tr><td class="hi">Expert</td><td class="hi">MoE experts</td><td class="hi">token all-to-all</td><td class="hi">parameters (MoE)</td></tr>
+  </table>
+  <p class="tiny muted">In use: Llama 3 trained with 4D (tensor, pipeline, context, data); DeepSeek-V3 with pipeline, 64-way expert and ZeRO data parallelism; Megatron-Core supports all five.</p>
+  <div class="src">Llama 3 report (Meta, 2024); DeepSeek-V3 technical report (2024); Liu et al., Ring Attention (2023); Lepikhin et al., GShard (ICLR 2021); NVIDIA Megatron-Core documentation.</div>
+</section>
+
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 6</div>
   <div class="mod-title">Model Compression</div>
@@ -655,7 +673,7 @@ model = optimizer.step(model, g)  # identical update
     <div class="callout"><span class="lbl">Pipeline</span>Split layers into stages; mind the bubble. 1F1B bounds memory.</div>
   </div>
   <div class="cols">
-    <div class="callout"><span class="lbl">3D parallelism</span>Combine all three: \(N = d \times t \times p\), each mapped to the right interconnect level (DeepSpeed).</div>
+    <div class="callout"><span class="lbl">3D parallelism and beyond</span>Combine all three: \(N = d \times t \times p\), each mapped to the right interconnect level (DeepSpeed). Context and expert axes extend it to 4D/5D.</div>
     <div class="callout"><span class="lbl">Compression</span>Pruning + quantization + low-rank shrink the model — size, latency, energy together.</div>
   </div>
   <div class="callout takeaway"><span class="lbl">One sentence</span>
@@ -675,6 +693,8 @@ model = optimizer.step(model, g)  # identical update
     <li>Mirhoseini et al., "Device Placement Optimization with Reinforcement Learning," ICML 2017.</li>
     <li>Hoefler et al., "Sparsity in Deep Learning," <em>JMLR</em>, 2021.</li>
     <li>Microsoft Research, "DeepSpeed: Extreme-scale model training for everyone."</li>
+    <li>Meta, "The Llama 3 Herd of Models," 2024 (4D parallelism); DeepSeek-AI, "DeepSeek-V3 Technical Report," 2024 (expert parallelism).</li>
+    <li>Liu, Zaharia &amp; Abbeel, "Ring Attention with Blockwise Transformers for Near-Infinite Context," 2023; Lepikhin et al., "GShard," ICLR 2021.</li>
   </ul>
 </section>
 
