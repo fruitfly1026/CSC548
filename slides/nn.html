@@ -248,7 +248,7 @@
   <h2>Data Parallelism</h2>
   <div class="cols w-64">
     <div>
-      <div class="callout"><span class="lbl">Idea</span>Replicate the <strong>full model</strong> on every device. Each device gets a different shard of the mini-batch, runs forward + backward locally, then they <strong>average gradients</strong>.</div>
+      <div class="callout"><span class="lbl">Idea</span>Replicate the <strong>full model</strong> on every device. Each device gets a different shard of the mini-batch, runs forward + backward locally, then <strong>average gradients</strong>.</div>
       <div class="code-label">Per-step, per device <em>p</em></div>
       <pre><code class="language-python" data-trim>
 shard = batch[p]                # disjoint slice
