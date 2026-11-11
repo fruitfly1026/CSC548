@@ -311,9 +311,7 @@ model = optimizer.step(model, g)  # identical update
       <table style="font-size:.8em">
         <tr><th>Scheme</th><th>Memory / GPU</th></tr>
         <tr><td>Plain data parallel</td><td>\(16\Psi\)</td></tr>
-        <tr><td>ZeRO-1 (optimizer)</td><td>\(4\Psi + 12\Psi/N\)</td></tr>
-        <tr><td>ZeRO-2 (+ gradients)</td><td>\(2\Psi + 14\Psi/N\)</td></tr>
-        <tr><td class="hi">ZeRO-3 / FSDP (+ params)</td><td class="hi">\(16\Psi/N\)</td></tr>
+        <tr><td class="hi">ZeRO-3 / FSDP</td><td class="hi">\(16\Psi/N\)</td></tr>
       </table>
       <p class="tiny muted">FSDP is PyTorch's implementation of stage 3; Llama 3 used it as its data-parallel axis.</p>
     </div>
