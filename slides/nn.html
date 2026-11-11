@@ -219,24 +219,9 @@
 
 <section data-background-color="#ffffff">
   <h2>The Rising Compute Demand</h2>
-  <div class="cols w-64">
-    <div>
-      <p class="small">Model size and training FLOPs have grown far faster than the memory and throughput of a single accelerator.</p>
-      <div class="callout warn"><span class="lbl">Two walls</span><strong>Memory:</strong> parameters + activations + optimizer state exceed one GPU.<br><strong>Time:</strong> one device would take months.</div>
-      <div class="callout takeaway"><span class="lbl">Consequence</span>Large-scale training is now <strong>fundamentally parallel</strong> — the rest of this lecture is how.</div>
-    </div>
-    <div class="center">
-      <svg viewBox="0 0 260 200" class="chart" style="width:100%;max-width:440px">
-        <line x1="40" y1="170" x2="240" y2="170" stroke="#16181d" stroke-width="1.5"/>
-        <line x1="40" y1="170" x2="40" y2="20" stroke="#16181d" stroke-width="1.5"/>
-        <path d="M40,165 C120,160 170,120 230,30" fill="none" stroke="#CC0000" stroke-width="2.5"/>
-        <line x1="40" y1="120" x2="240" y2="120" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5 4"/>
-        <text x="235" y="114" text-anchor="end" class="note" fill="#3b82f6">single-GPU memory</text>
-        <text x="150" y="190" text-anchor="middle" class="note">year</text>
-        <text x="30" y="30" text-anchor="end" class="note" transform="rotate(-90 30 95)">model size (log)</text>
-      </svg>
-    </div>
-  </div>
+  <p class="small">Model size and training FLOPs have grown far faster than the memory and throughput of a single accelerator.</p>
+  <div class="callout warn"><span class="lbl">Two walls</span><strong>Memory:</strong> parameters + activations + optimizer state exceed one GPU.<br><strong>Time:</strong> one device would take months.</div>
+  <div class="callout takeaway"><span class="lbl">Consequence</span>Large-scale training is now <strong>fundamentally parallel</strong> — the rest of this lecture is how.</div>
 </section>
 
 
