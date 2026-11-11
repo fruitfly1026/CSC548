@@ -38,12 +38,12 @@
   <div class="cols c3">
     <div class="callout"><span class="lbl">1. Neural Networks</span><span class="small">DNNs, SGD, CNNs, Transformers, GNNs.</span></div>
     <div class="callout"><span class="lbl">2. Data Parallelism</span><span class="small">Replicas, all-reduce, the memory wall.</span></div>
-    <div class="callout"><span class="lbl">3. Model &amp; Tensor Parallelism</span><span class="small">Split layers or tensors; placement.</span></div>
-    <div class="callout"><span class="lbl">4. Pipeline Parallelism</span><span class="small">GPipe, 1F1B, the bubble.</span></div>
+    <div class="callout"><span class="lbl">3. Model &amp; Pipeline Parallelism</span><span class="small">Split by layer into stages; placement, GPipe, 1F1B, the bubble.</span></div>
+    <div class="callout"><span class="lbl">4. Tensor Parallelism</span><span class="small">Split the weight matrices inside a layer.</span></div>
     <div class="callout"><span class="lbl">5. 3D Parallelism and Beyond</span><span class="small">Combine the axes: DeepSpeed, then context and expert parallelism.</span></div>
     <div class="callout"><span class="lbl">6. Model Compression</span><span class="small">Pruning, quantization, low-rank.</span></div>
-    <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Partition <em>data</em>, <em>tensors</em> and <em>layers</em>, then shrink the model.</span></div>
   </div>
+  <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Partition <em>data</em>, <em>layers</em> and <em>tensors</em>, then shrink the model.</span></div>
 </section>
 
 <!-- ==================================================================
@@ -314,11 +314,11 @@ model = optimizer.step(model, g)  # identical update
 </section>
 
 <!-- ==================================================================
-     MODULE 3 — MODEL & TENSOR PARALLELISM
+     MODULE 3 — MODEL & PIPELINE PARALLELISM
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
   <div class="mod-num">Module 3</div>
-  <div class="mod-title">Model &amp; Tensor Parallelism</div>
+  <div class="mod-title">Model &amp; Pipeline Parallelism</div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -377,52 +377,6 @@ model = optimizer.step(model, g)  # identical update
       <p class="tiny muted">Hand-tuned placement dominates production systems; learned placement is promising but expensive to search.</p>
     </div>
   </div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>Tensor Model Parallelism</h2>
-  <div class="cols w-64">
-    <div>
-      <div class="callout"><span class="lbl">Idea</span>Partition the <strong>parameters / gradients within a single layer</strong> across devices — split the weight matrix itself, not whole layers.</div>
-      <p class="small">A matmul \(Y = XW\) splits \(W\) by columns: each device computes a slice \(Y_i = X W_i\), then the slices are concatenated (an all-gather). Splitting \(W\) by rows instead gives partial sums that need an all-reduce. The whole team cooperates on <strong>one</strong> layer.</p>
-      <div class="callout warn"><span class="lbl">Trade-off</span>Fine-grained → frequent collective communication; best kept <strong>within a fast interconnect</strong> (a single node / NVLink).</div>
-    </div>
-    <div class="center">
-      <svg viewBox="0 0 260 180" class="chart" style="width:100%;max-width:440px">
-        <rect x="20" y="60" width="40" height="60" fill="#cbd5e1"/><text x="40" y="138" text-anchor="middle" class="lbl">X</text>
-        <text x="72" y="95" text-anchor="middle" class="lbl">×</text>
-        <rect x="90" y="40" width="35" height="100" fill="#3b82f6"/><text x="107" y="160" text-anchor="middle" class="lbl">W₀</text>
-        <rect x="128" y="40" width="35" height="100" fill="#CC0000"/><text x="145" y="160" text-anchor="middle" class="lbl">W₁</text>
-        <text x="178" y="95" text-anchor="middle" class="lbl">=</text>
-        <rect x="195" y="40" width="22" height="100" fill="#3b82f6"/><rect x="219" y="40" width="22" height="100" fill="#CC0000"/>
-        <text x="218" y="160" text-anchor="middle" class="lbl">Y</text>
-        <text x="130" y="22" text-anchor="middle" class="note">split W by columns across GPUs</text>
-      </svg>
-    </div>
-  </div>
-</section>
-
-<section data-background-color="#ffffff">
-  <h2>Data vs. Tensor Model Parallelism</h2>
-  <table style="font-size:.82em">
-    <tr><th></th><th>Data parallelism</th><th>Tensor model parallelism</th></tr>
-    <tr><td class="hi">What is split</td><td>the mini-batch</td><td>the weight tensors within a layer</td></tr>
-    <tr><td class="hi">Per device holds</td><td>a <strong>full</strong> model replica</td><td>a <strong>shard</strong> of each layer</td></tr>
-    <tr><td>Scales</td><td>throughput (samples/sec)</td><td>model capacity (params)</td></tr>
-    <tr><td>Communication</td><td>gradient all-reduce, once per step</td><td>activation collectives, every layer</td></tr>
-    <tr><td>Best across</td><td>nodes (less frequent comm)</td><td>within a node (fast interconnect)</td></tr>
-  </table>
-  <div class="callout takeaway"><span class="lbl">Rule of thumb</span>Data parallelism when the model <em>fits</em> and you want speed; tensor parallelism when a single layer is too big for one device.</div>
-</section>
-
-
-
-<!-- ==================================================================
-     MODULE 4 — PIPELINE PARALLELISM
-     ================================================================== -->
-<section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Module 4</div>
-  <div class="mod-title">Pipeline Parallelism</div>
 </section>
 
 <section data-background-color="#ffffff">
@@ -496,6 +450,52 @@ model = optimizer.step(model, g)  # identical update
     </div>
   </div>
 </section>
+
+<!-- ==================================================================
+     MODULE 4 — TENSOR PARALLELISM
+     ================================================================== -->
+<section class="divider" data-background-color="#ffffff">
+  <div class="mod-num">Module 4</div>
+  <div class="mod-title">Tensor Parallelism</div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Tensor Model Parallelism</h2>
+  <div class="cols w-64">
+    <div>
+      <div class="callout"><span class="lbl">Idea</span>Partition the <strong>parameters / gradients within a single layer</strong> across devices — split the weight matrix itself, not whole layers.</div>
+      <p class="small">A matmul \(Y = XW\) splits \(W\) by columns: each device computes a slice \(Y_i = X W_i\), then the slices are concatenated (an all-gather). Splitting \(W\) by rows instead gives partial sums that need an all-reduce. The whole team cooperates on <strong>one</strong> layer.</p>
+      <div class="callout warn"><span class="lbl">Trade-off</span>Fine-grained → frequent collective communication; best kept <strong>within a fast interconnect</strong> (a single node / NVLink).</div>
+    </div>
+    <div class="center">
+      <svg viewBox="0 0 260 180" class="chart" style="width:100%;max-width:440px">
+        <rect x="20" y="60" width="40" height="60" fill="#cbd5e1"/><text x="40" y="138" text-anchor="middle" class="lbl">X</text>
+        <text x="72" y="95" text-anchor="middle" class="lbl">×</text>
+        <rect x="90" y="40" width="35" height="100" fill="#3b82f6"/><text x="107" y="160" text-anchor="middle" class="lbl">W₀</text>
+        <rect x="128" y="40" width="35" height="100" fill="#CC0000"/><text x="145" y="160" text-anchor="middle" class="lbl">W₁</text>
+        <text x="178" y="95" text-anchor="middle" class="lbl">=</text>
+        <rect x="195" y="40" width="22" height="100" fill="#3b82f6"/><rect x="219" y="40" width="22" height="100" fill="#CC0000"/>
+        <text x="218" y="160" text-anchor="middle" class="lbl">Y</text>
+        <text x="130" y="22" text-anchor="middle" class="note">split W by columns across GPUs</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section data-background-color="#ffffff">
+  <h2>Data vs. Tensor Model Parallelism</h2>
+  <table style="font-size:.82em">
+    <tr><th></th><th>Data parallelism</th><th>Tensor model parallelism</th></tr>
+    <tr><td class="hi">What is split</td><td>the mini-batch</td><td>the weight tensors within a layer</td></tr>
+    <tr><td class="hi">Per device holds</td><td>a <strong>full</strong> model replica</td><td>a <strong>shard</strong> of each layer</td></tr>
+    <tr><td>Scales</td><td>throughput (samples/sec)</td><td>model capacity (params)</td></tr>
+    <tr><td>Communication</td><td>gradient all-reduce, once per step</td><td>activation collectives, every layer</td></tr>
+    <tr><td>Best across</td><td>nodes (less frequent comm)</td><td>within a node (fast interconnect)</td></tr>
+  </table>
+  <div class="callout takeaway"><span class="lbl">Rule of thumb</span>Data parallelism when the model <em>fits</em> and you want speed; tensor parallelism when a single layer is too big for one device.</div>
+</section>
+
+
 
 <!-- ==================================================================
      MODULE 5 — 3D PARALLELISM
@@ -726,8 +726,8 @@ model = optimizer.step(model, g)  # identical update
   <h2>Parallel Deep Learning — Big Picture</h2>
   <div class="cols c3">
     <div class="callout"><span class="lbl">Data</span>Split the batch; all-reduce gradients. Scales throughput, replicates the model.</div>
-    <div class="callout"><span class="lbl">Tensor</span>Split weights within a layer. Scales layer size; keep it intra-node.</div>
     <div class="callout"><span class="lbl">Pipeline</span>Split layers into stages; mind the bubble. 1F1B bounds memory.</div>
+    <div class="callout"><span class="lbl">Tensor</span>Split weights within a layer. Scales layer size; keep it intra-node.</div>
   </div>
   <div class="cols">
     <div class="callout"><span class="lbl">3D parallelism and beyond</span>Combine all three: \(N = d \times t \times p\), each mapped to the right interconnect level (DeepSpeed). Context and expert axes extend it to 4D/5D.</div>
