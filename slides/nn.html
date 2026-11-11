@@ -299,23 +299,18 @@ model = optimizer.step(model, g)  # identical update
   <div class="symkey">
     <span><b>ZeRO</b> = Zero Redundancy Optimizer (DeepSpeed)</span>
     <span><b>FSDP</b> = Fully Sharded Data Parallel (PyTorch)</span>
-    <span><b>Ψ</b> = number of parameters</span>
+    <span><b>Ψ</b> = #parameters</span>
+    <span><b>N</b> = #GPUs</span>
   </div>
-  <div class="cols" style="grid-template-columns:11fr 9fr">
-    <div>
-      <div class="callout"><span class="lbl">Where the memory goes</span><span class="small">Mixed-precision Adam keeps per parameter an FP16 weight and gradient (4 B) plus FP32 master weight, momentum and variance (12 B): <strong>16Ψ bytes</strong> on <em>every</em> replica.</span></div>
-      <div class="callout ok"><span class="lbl">ZeRO: partition instead of replicate</span><span class="small">Each of the \(N\) ranks owns <strong>1/N</strong> of the optimizer state (stage 1), of the gradients too (stage 2), of the parameters too (stage 3). Parameters are all-gathered just before a layer runs and freed after; gradients are reduce-scattered to their owner.</span></div>
-      <div class="callout"><span class="lbl">Cost</span><span class="small">Stages 1–2 move the same bytes as a plain all-reduce, stage 3 about 1.5×. Still <strong>data parallelism</strong>: each rank sees a different batch, no model code changes.</span></div>
-    </div>
-    <div>
-      <table style="font-size:.8em">
-        <tr><th>Scheme</th><th>Memory / GPU</th></tr>
-        <tr><td>Plain data parallel</td><td>\(16\Psi\)</td></tr>
-        <tr><td class="hi">ZeRO-3 / FSDP</td><td class="hi">\(16\Psi/N\)</td></tr>
-      </table>
-      <p class="tiny muted">FSDP is PyTorch's implementation of stage 3; Llama 3 used it as its data-parallel axis.</p>
-    </div>
-  </div>
+  <p class="small">Mixed-precision Adam keeps 16 bytes per parameter, so <strong>16Ψ bytes</strong> on <em>every</em> replica:<br>FP16 weight + gradient (4 B), FP32 master weight + momentum + variance (12 B).</p>
+  <table style="font-size:.76em">
+    <tr><th>Scheme</th><th>What is sharded</th><th>Memory / GPU</th><th>Example: Ψ = 7.5B, N = 64</th></tr>
+    <tr><td>Plain data parallel</td><td>nothing</td><td>\(16\Psi\)</td><td>120 GB</td></tr>
+    <tr><td>ZeRO-1</td><td>optimizer state</td><td>\(4\Psi + 12\Psi/N\)</td><td>31.4 GB</td></tr>
+    <tr><td>ZeRO-2</td><td>+ gradients</td><td>\(2\Psi + 14\Psi/N\)</td><td>16.6 GB</td></tr>
+    <tr><td class="hi">ZeRO-3 / FSDP</td><td class="hi">+ parameters</td><td class="hi">\(16\Psi/N\)</td><td class="hi">1.9 GB</td></tr>
+  </table>
+  <div class="callout ok"><span class="lbl">Stage 3 is still data parallelism</span><span class="small">Parameters are all-gathered just before a layer runs and freed after; gradients are reduce-scattered to their owner. Each rank still runs every layer on its own batch. FSDP is PyTorch's stage 3; Llama 3 used it for data parallelism.</span></div>
   <div class="src">Rajbhandari et al., "ZeRO," SC 2020; Zhao et al., "PyTorch FSDP," VLDB 2023.</div>
 </section>
 
