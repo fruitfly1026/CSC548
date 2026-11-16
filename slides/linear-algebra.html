@@ -23,7 +23,7 @@
   <div class="eyebrow">CSC 548 · Parallel Systems · Advanced</div>
   <h1>High-Performance (Multi-)Linear Algebra</h1>
   <div class="sub">From <strong>GEMM</strong> to <strong>tensor contractions</strong> — dense &amp; sparse</div>
-  <div class="meta">Instructor: Jiajia Li<br>Fall 2026<br>11/11/2026</div>
+  <div class="meta">Instructor: Jiajia Li<br>Fall 2026<br>11/16/2026</div>
   <aside class="notes">
     This is an advanced topic that ties together threads from the whole course: the GEMM you tuned in the
     midterm, the SpMV in the homeworks, GPU shared-memory tiling, and distributed SUMMA. The unifying idea
@@ -38,11 +38,11 @@
   <h2>Agenda</h2>
   <div class="cols c3">
     <div class="callout"><span class="lbl">From last lecture: LLM Systems</span><span class="small">Prefill vs. decode, FlashAttention, PagedAttention (vLLM), batching and scheduling, speculative decoding.</span></div>
-    <div class="callout"><span class="lbl">1 · Motivation</span><span class="small">Why BLAS lifts vectors to matrices; tensors lift again. GEMM &rarr; batched &rarr; contraction; TTGT vs. GETT.</span></div>
-    <div class="callout"><span class="lbl">2 · Dense frameworks</span><span class="small">TBLIS, Cyclops (CTF), cuTENSOR, and Bientinesi's GETT / Linnea line of work.</span></div>
-    <div class="callout"><span class="lbl">3 · Sparse tensors</span><span class="small">Formats (COO, CSF, HiCOO), kernels (MTTKRP, SpTTM), and the systems built on them.</span></div>
-    <div class="callout"><span class="lbl">4 · Decompositions</span><span class="small">CP &amp; Tucker — why the kernels above are the hot inner loops.</span></div>
-    <div class="callout"><span class="lbl">5 · Systems tour</span><span class="small">ParTI!/HiParTI, InTensLi, AdaTM, reordering, PASTA, Sparta.</span></div>
+    <div class="callout"><span class="lbl">1. Motivation</span><span class="small">Why BLAS lifts vectors to matrices; tensors lift again. GEMM &rarr; batched &rarr; contraction; TTGT vs. GETT.</span></div>
+    <div class="callout"><span class="lbl">2. Dense frameworks</span><span class="small">TBLIS, Cyclops (CTF), cuTENSOR, and Bientinesi's GETT / Linnea line of work.</span></div>
+    <div class="callout"><span class="lbl">3. Sparse tensors</span><span class="small">Formats (COO, CSF, HiCOO), kernels (MTTKRP, SpTTM), and the systems built on them.</span></div>
+    <div class="callout"><span class="lbl">4. Decompositions and systems</span><span class="small">CP &amp; Tucker and their hot inner loops; InTensLi, AdaTM, HiParTI, PASTA, Sparta.</span></div>
+    <div class="callout"><span class="lbl">5. Takeaways</span><span class="small">What to remember from the dense and the sparse half.</span></div>
   </div>
   <div class="callout takeaway"><span class="lbl">Theme</span><span class="small">Performance is <strong>reuse</strong>. Dense code finds it by raising the primitive; sparse code must find it in the input, so format and kernel are designed together.</span></div>
 </section>
@@ -91,11 +91,15 @@
 
 <section data-background-color="#ffffff">
   <h2>FlashAttention: Tiling the Attention Kernel</h2>
+  <div class="symkey">
+    <span><b>HBM</b> = GPU main memory (high-bandwidth memory)</span>
+    <span><b>SRAM</b> = on-chip cache, small and fast</span>
+  </div>
   <div class="cols" style="grid-template-columns:11fr 9fr">
     <div>
       <div class="callout warn"><span class="lbl">Standard attention</span><span class="small">Write \(S = QK^{\top}\) (\(n \times n\)) to HBM, read it for softmax, write \(P\), read it for \(PV\). \(O(n^2)\) traffic: <strong>memory-bound</strong>, and the \(n \times n\) matrix limits sequence length.</span></div>
       <div class="callout ok"><span class="lbl">FlashAttention</span><span class="small">Load <strong>tiles</strong> of Q, K, V into SRAM; keep a <strong>running softmax</strong> (row max and sum, rescaled as blocks arrive) and accumulate the output tile. The \(n \times n\) matrix is never written; backward <strong>recomputes</strong> it from saved statistics.</span></div>
-      <div class="callout"><span class="lbl">Result</span><span class="small">Exact attention, memory linear in \(n\), up to 3× faster than the standard kernel (original paper); FlashAttention-2 adds about 2× by re-partitioning work across warps.</span></div>
+      <div class="callout"><span class="lbl">Result</span><span class="small">Exact attention, memory linear in \(n\), up to 3× faster than the standard kernel (original paper); FlashAttention-2 adds about 2× by cutting non-matmul work and parallelizing across thread blocks and warps.</span></div>
     </div>
     <div>
       <svg viewBox="0 0 270 178" class="chart" style="width:100%;max-width:420px">
@@ -130,7 +134,7 @@
     <div>
       <div class="callout"><span class="lbl">The KV cache is big</span><span class="small">Every token adds its K and V for every layer: about <strong>800 KB per token</strong> for a 13B FP16 model, 1.6 GB for a 2K-token sequence. The cache, not the weights, decides how many requests fit.</span></div>
       <div class="callout warn"><span class="lbl">The waste</span><span class="small">Earlier systems reserved one <strong>contiguous</strong> buffer per request at its maximum length; fragmentation and over-reservation wasted <strong>60–80%</strong> of KV memory.</span></div>
-      <div class="callout ok"><span class="lbl">PagedAttention</span><span class="small">Store the cache in fixed-size <strong>blocks</strong> (e.g. 16 tokens); a per-request <strong>block table</strong> maps logical to physical blocks, like virtual-memory paging. Blocks are allocated on demand and shared across requests with copy-on-write.</span></div>
+      <div class="callout ok"><span class="lbl">PagedAttention</span><span class="small">Store the cache in fixed-size <strong>blocks</strong> (e.g. 16 tokens); a per-request <strong>block table</strong> maps logical to physical blocks, like virtual-memory paging. Blocks are allocated on demand and shared across sequences (parallel samples, beams, common prefixes) with copy-on-write.</span></div>
     </div>
     <div>
       <svg viewBox="0 0 250 160" class="chart" style="width:100%;max-width:420px">
@@ -182,7 +186,7 @@
     <div class="callout"><span class="lbl">Prefix sharing (SGLang)</span><span class="small">System prompts, few-shot examples and chat history repeat across requests. <strong>RadixAttention</strong> keeps KV blocks of shared prefixes in a radix tree and reuses them, skipping their prefill. Up to 6.4× higher throughput on such workloads (paper's figure).</span></div>
     <div class="callout"><span class="lbl">MoE inference</span><span class="small">Each token touches only a few experts, so FLOPs per token stay small while parameters grow. Experts are spread over GPUs with <strong>expert parallelism</strong>; the cost is a token <strong>all-to-all</strong> per MoE layer and load imbalance when a few experts are popular.</span></div>
   </div>
-  <div class="callout takeaway"><span class="lbl">Pattern</span>Every trick trades a resource the decode step has spare (compute, memory for reused prefixes, more GPUs) for the one it lacks (bytes per step).</div>
+  <div class="callout takeaway"><span class="lbl">Pattern</span>Each trick cuts the memory-bound work per generated token: verify several tokens per weight pass, skip prefill for shared prefixes, touch only a few experts.</div>
   <div class="src">Leviathan et al., "Fast Inference from Transformers via Speculative Decoding," ICML 2023; Zheng et al., "SGLang," NeurIPS 2024; Lepikhin et al., "GShard," ICLR 2021.</div>
 </section>
 
@@ -198,7 +202,7 @@
   <h2>Why BLAS? Lift the Operation, Gain the Reuse</h2>
   <div class="symkey">
     <span><b>BLAS</b> = Basic Linear Algebra Subprograms</span>
-    <span><b>AI</b> = arithmetic intensity, flops per byte moved</span>
+    <span><b>AI</b> = arithmetic intensity, flops per number moved</span>
   </div>
   <div class="cols" style="grid-template-columns:11fr 9fr">
     <div>
@@ -288,10 +292,10 @@
     </div>
     <div>
       <div class="callout takeaway"><span class="lbl">GETT — GEMM-like Tensor-Tensor mult.</span><span class="small">Fold the reshaping <em>into</em> the packing/blocking of a GEMM-style macro-kernel. <strong>No explicit transpose, no scratch</strong> — the permutation happens for free while data is copied into tiles anyway.</span></div>
-      <div class="callout"><span class="lbl">Also: LoG</span><span class="small">"Loops-over-GEMM" — wrap batched GEMM calls in loops over the remaining indices. A useful middle ground.</span></div>
+      <div class="callout"><span class="lbl">Also: LoG</span><span class="small">"Loops-over-GEMM" — wrap GEMM calls in loops over the remaining indices. A useful middle ground.</span></div>
     </div>
   </div>
-  <div class="callout"><span class="lbl">The recurring theme</span>The cache/tiling lessons from Topic 7 come back exactly: whoever packs data into cache-sized tiles with the fewest wasted moves wins. <span class="muted">TTGT is the naïve copy; GETT is the fused, tiled version.</span></div>
+  <div class="callout"><span class="lbl">The recurring theme</span>The cache/tiling lessons from Topic 6 come back exactly: whoever packs data into cache-sized tiles with the fewest wasted moves wins. <span class="muted">TTGT is the naïve copy; GETT is the fused, tiled version.</span></div>
   <div class="src">Springer &amp; Bientinesi, "Design of a High-Performance GEMM-like Tensor-Tensor Multiplication," ACM TOMS 44(3), 2018.</div>
   <aside class="notes">
     Draw the analogy to tiled matmul from the cache lecture: TTGT is like materializing a transposed copy of B before
@@ -328,7 +332,6 @@
 // BLIS packs tiles directly from the
 // tensor — transpose happens for free.
 </code></pre>
-      <p class="tiny muted">One caveat: near-square contractions benefit most; very "thin" cases still need care.</p>
     </div>
   </div>
   <div class="src">D. A. Matthews, "High-Performance Tensor Contraction without Transposition," SIAM J. Sci. Comput. 40(1):C1–C24, 2018.</div>
@@ -343,7 +346,7 @@
   <h2>Cyclops Tensor Framework (CTF) — Distributed</h2>
   <div class="cols w-64">
     <div>
-      <p class="small">Scales tensor contractions to <strong>distributed memory</strong> (thousands of nodes) — the MPI/SUMMA world of Topic 11, generalized to order-N.</p>
+      <p class="small">Scales tensor contractions to <strong>distributed memory</strong> (thousands of nodes) — the MPI world of Topic 3, generalized to order-N.</p>
       <div class="callout"><span class="lbl">Cyclic distribution</span><span class="small">Spreads tensor elements <em>cyclically</em> across the process grid → even load and packed storage even for <strong>symmetric</strong> tensors.</span></div>
       <div class="callout"><span class="lbl">Why symmetry matters</span><span class="small">Quantum-chemistry tensors have permutational symmetry; cyclic layout keeps the compressed form balanced across ranks.</span></div>
     </div>
@@ -364,21 +367,22 @@
   <h2>cuTENSOR — Tensor Primitives on the GPU</h2>
   <div class="cols w-64">
     <div>
-      <p class="small">NVIDIA's GPU library exposing an <strong>Einstein-summation API</strong>. The "cuBLAS of tensors," using Tensor Cores &amp; mixed precision.</p>
-      <div class="callout"><span class="lbl">Three operation classes</span>
-        <span class="small">&bull; <strong>Contraction</strong> (generalized GEMM)<br>
+      <p class="small">NVIDIA's GPU library exposing an <strong>Einstein-summation API</strong>. The "cuBLAS of tensors," with mixed-precision compute (FP16, BF16, TF32).</p>
+      <div class="callout"><span class="lbl">Four operation classes</span>
+        <span class="small">&bull; <strong>Contraction</strong> (generalized GEMM, transpose-free)<br>
+        &bull; <strong>Block-sparse contraction</strong><br>
         &bull; <strong>Reduction</strong> (sum/max over modes)<br>
         &bull; <strong>Element-wise</strong> with operator <em>fusion</em> (permute + scale + add in one pass)</span></div>
     </div>
     <div>
-      <div class="callout takeaway"><span class="lbl">Where it's used</span><span class="small">Backend for <strong>cuTensorNet</strong> in the <strong>cuQuantum</strong> SDK (quantum-circuit simulation) and for <code class="inline">einsum</code> in deep-learning frameworks.</span></div>
-      <div class="callout"><span class="lbl">Same tiling story on-GPU</span><span class="small">Picks contraction algorithms &amp; tile shapes to fill Tensor Cores — the GPU shared-memory tiling of Topic 8, automated.</span></div>
+      <div class="callout takeaway"><span class="lbl">Where it's used</span><span class="small">Backend for <strong>cuTensorNet</strong> in the <strong>cuQuantum</strong> SDK (quantum-circuit simulation).</span></div>
+      <div class="callout"><span class="lbl">Same tiling story on-GPU</span><span class="small">Selects a contraction plan per operation — the GPU shared-memory tiling of Topic 8, automated.</span></div>
     </div>
   </div>
   <div class="src">NVIDIA cuTENSOR docs (developer.nvidia.com/cutensor); Bayraktar et al., "cuQuantum SDK," arXiv:2308.01999, 2023 (cuTensorNet uses cuTENSOR as its contraction backend).</div>
   <aside class="notes">
     cuTENSOR is the vendor answer: you give it the index strings and strides, it selects a plan (which may internally
-    permute) and runs on Tensor Cores. The important connection for a quantum audience is cuTensorNet/cuQuantum, where
+    permute) and runs it on the GPU. The important connection for a quantum audience is cuTensorNet/cuQuantum, where
     contracting a tensor network IS the simulation. Note it also does transposition/permutation as first-class ops.
   </aside>
 </section>
@@ -395,7 +399,7 @@
       <div class="src">Barthels, Psarras, Bientinesi, "Linnea…," ACM TOMS 47(3), 2021.</div>
     </div>
   </div>
-  <div class="callout"><span class="lbl">Why include this group</span>They span the two altitudes that matter: the <strong>micro-kernel</strong> (GETT, like your GEMM tuning) and the <strong>whole-expression optimizer</strong> (Linnea, like a query planner for matrix math). Their survey "The Landscape of Software for Tensor Computations" (Psarras, Karlsson, Li, Bientinesi, 2021) is a good map of the whole field.</div>
+  <div class="callout"><span class="lbl">Why include this group</span>They span the two altitudes that matter: the <strong>kernel</strong> (GETT, like your GEMM tuning) and the <strong>whole-expression optimizer</strong> (Linnea, like a query planner for matrix math). Their survey "The Landscape of Software for Tensor Computations" (Psarras, Karlsson, Li, Bientinesi, 2021) is a good map of the whole field.</div>
   <aside class="notes">
     Bientinesi's HPAC group is worth showing because it connects the two ends of the stack. GETT is the low-level answer
     to "how do I contract fast"; Linnea is the high-level answer to "given a big matrix expression, what order and which
@@ -411,13 +415,13 @@
         <tr><th>Framework</th><th>Scope</th><th>Trick</th></tr>
         <tr><td class="hi">TBLIS</td><td>1 node, CPU</td><td>BLIS packing, no transpose</td></tr>
         <tr><td class="hi">CTF</td><td>distributed</td><td>cyclic layout, symmetry</td></tr>
-        <tr><td class="hi">cuTENSOR</td><td>GPU</td><td>Tensor Cores, fused einsum</td></tr>
+        <tr><td class="hi">cuTENSOR</td><td>GPU</td><td>mixed precision, fused einsum</td></tr>
         <tr><td class="hi">GETT / TCCG</td><td>1 node, CPU</td><td>GEMM-like macro-kernel</td></tr>
         <tr><td>Linnea</td><td>expression</td><td>algebraic + BLAS planner</td></tr>
       </table>
     </div>
     <div>
-      <div class="callout takeaway"><span class="lbl">The common thread</span><span class="small">Every one of them is <strong>"reach GEMM performance at order N"</strong> — by avoiding transposes, balancing across nodes, or filling Tensor Cores. The dense world is, at heart, <em>solved by reduction to GEMM</em>.</span></div>
+      <div class="callout takeaway"><span class="lbl">The common thread</span><span class="small">Every one of them is <strong>"reach GEMM performance at order N"</strong> — by avoiding transposes, balancing across nodes, or running mixed-precision GPU kernels. The dense world is, at heart, <em>solved by reduction to GEMM</em>.</span></div>
       <div class="callout warn"><span class="lbl">…and that's exactly what breaks next</span><span class="small">Reduction-to-GEMM assumes <strong>dense, regular</strong> data. Real tensors — reviews, health records, graphs — are <strong>hyper-sparse</strong>. There is no dense matrix to call GEMM on.</span></div>
     </div>
   </div>
@@ -500,7 +504,7 @@ val: [a b c d e]
   <div class="cols w-64">
     <div>
       <p class="small">Generalizes <strong>CSR</strong> to tensors: nonzeros form a <strong>tree</strong>, one level per mode, sharing common index prefixes.</p>
-      <div class="callout"><span class="lbl">Idea</span><span class="small">A "fiber" is a mode-1 slice (fix all but one index). CSF compresses repeated outer indices — like CSR row pointers, nested N deep.</span></div>
+      <div class="callout"><span class="lbl">Idea</span><span class="small">A "fiber" is a 1-D section: fix all but one index. CSF compresses repeated outer indices — like CSR row pointers, nested N deep.</span></div>
       <div class="callout takeaway"><span class="lbl">Foundational work</span><span class="small">The CSF format &amp; the parallel <strong>SPLATT</strong> library are the reference point the whole field builds on.</span></div>
     </div>
     <div class="center">
@@ -530,7 +534,7 @@ val: [a b c d e]
 <section data-background-color="#ffffff">
   <h2>Format 3 — HiCOO (Hierarchical COO)</h2>
   <div class="symkey">
-    <span>block = small dense-ish sub-tensor</span>
+    <span>block = small sub-tensor holding nearby nonzeros</span>
     <span>byte-index = offset within a block</span>
     <span>goal: keep COO's mode-agnostic simplicity, shrink the bytes</span>
   </div>
@@ -640,7 +644,7 @@ val: [a b c d e]
   </div>
   <div class="src">Li et al., "Efficient and Effective Sparse Tensor Reordering," ICS 2019. Ma, Li et al., "Optimizing Sparse Tensor Times Matrix on GPUs," JPDC 129, 2019.</div>
   <aside class="notes">
-    Reordering is the tensor version of the cache-locality transformations from Topic 7 — you cannot change the
+    Reordering is the tensor version of the cache-locality transformations from Topic 6 — you cannot change the
     hardware, but relabeling indices changes the access pattern and recovers most of the lost locality, and it composes
     with HiCOO's blocking. The GPU SpTTM work is the coalescing/shared-memory/in-place story from the GPU lectures,
     applied to a sparse kernel.
@@ -731,7 +735,7 @@ val: [a b c d e]
   <h2>Big Picture — What to Remember</h2>
   <div class="cols c3">
     <div class="callout"><span class="lbl">Lift the primitive</span><span class="small">BLAS-1 → BLAS-3 created reuse; contractions repeat the lift one order up.</span></div>
-    <div class="callout"><span class="lbl">Dense = reduce to GEMM</span><span class="small">TBLIS/GETT avoid transposes; CTF distributes; cuTENSOR fills Tensor Cores.</span></div>
+    <div class="callout"><span class="lbl">Dense = reduce to GEMM</span><span class="small">TBLIS/GETT avoid transposes; CTF distributes; cuTENSOR runs it on GPUs.</span></div>
     <div class="callout"><span class="lbl">Sparse breaks that</span><span class="small">No dense matrix to call, and not merely memory-bound: irregular, input-driven access.</span></div>
     <div class="callout"><span class="lbl">Format and kernel, together</span><span class="small">COO → CSF → HiCOO: access is input- and runtime-dependent, so the format fixes the kernel's performance.</span></div>
     <div class="callout"><span class="lbl">Kernels drive apps</span><span class="small">MTTKRP → CP, TTM → Tucker. Speed the kernel, speed the science.</span></div>
