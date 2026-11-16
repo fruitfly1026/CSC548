@@ -64,7 +64,7 @@
   </div>
   <div class="cols">
     <div>
-      <div class="callout"><span class="lbl">One layer</span><span class="small">Multi-head attention, then an MLP. Attention: \(O(n^2 d)\) time, \(O(n^2)\) memory per head. The MLP holds about two thirds of the parameters (for \(d_{ff}=4d\)).</span></div>
+      <div class="callout"><span class="lbl">One Transformer layer</span><span class="small">Multi-head attention, then an MLP. Attention: \(O(n^2 d)\) time, \(O(n^2)\) memory per head. The MLP holds about two thirds of the parameters (for \(d_{ff}=4d\)).</span></div>
       <div class="callout"><span class="lbl">Prefill</span><span class="small">The prompt's \(n\) tokens run <strong>in parallel</strong>: big GEMMs, <strong>compute-bound</strong>. Produces the first token and the KV cache.</span></div>
       <div class="callout warn"><span class="lbl">Decode</span><span class="small">Then <strong>one token per step</strong>: each step reads all weights and the whole KV cache for ~2 flops per weight. A GEMV in disguise, <strong>memory-bound</strong>; intensity ≈ sequences batched.<br>The serving problem: keep the GPU busy in decode without exhausting KV memory.</span></div>
     </div>
