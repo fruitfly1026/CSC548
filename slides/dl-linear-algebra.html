@@ -23,7 +23,7 @@
   <div class="eyebrow">CSC 548 · Parallel Systems · Advanced</div>
   <h1>Parallel Deep Learning &amp; High-Performance (Multi-)Linear Algebra</h1>
   <div class="sub">Parallel training, LLM systems and model compression; then from <strong>GEMM</strong> to <strong>tensor contractions</strong>, dense &amp; sparse</div>
-  <div class="meta">Instructor: Jiajia Li<br>Fall 2026<br>11/16 &amp; 11/18/2026</div>
+  <div class="meta">Instructor: Jiajia Li<br>Fall 2026<br>11/11 &amp; 11/16/2026</div>
   <aside class="notes">
     Two lectures in one deck. Part I: deep learning is the workload driving today's largest parallel systems. We start with just enough
     neural-network background (DNNs, SGD, CNNs, Transformers, GNNs), then spend most of our time on how
@@ -42,7 +42,7 @@
   <h2>Agenda</h2>
   <table style="font-size:.7em">
     <tr><th style="width:24%">Part</th><th style="width:24%">Module</th><th>What we cover</th></tr>
-    <tr><td rowspan="7" class="hi"><strong>I. Parallel Deep Learning</strong><br>Mon, Nov 16<br><span class="tiny muted">Partition <em>data</em>, <em>layers</em> and <em>tensors</em>, then shrink the model.</span></td>
+    <tr><td rowspan="7" class="hi"><strong>I. Parallel Deep Learning</strong><br>Wed, Nov 11<br><span class="tiny muted">Partition <em>data</em>, <em>layers</em> and <em>tensors</em>, then shrink the model.</span></td>
         <td>1. Neural Networks</td><td>DNNs, SGD, CNNs, Transformers, GNNs.</td></tr>
     <tr><td>2. Data Parallelism</td><td>Replicas, all-reduce, the memory wall.</td></tr>
     <tr><td>3. Model &amp; Pipeline Parallelism</td><td>Split by layer into stages; placement, GPipe, 1F1B, the bubble.</td></tr>
@@ -50,7 +50,7 @@
     <tr><td>5. 3D Parallelism and Beyond</td><td>Combine the axes: DeepSpeed, then context and expert parallelism.</td></tr>
     <tr><td>6. Model Compression</td><td>Pruning, quantization, low-rank.</td></tr>
     <tr><td>7. LLM Systems</td><td>Prefill vs. decode, FlashAttention, PagedAttention (vLLM), batching and scheduling, speculative decoding.</td></tr>
-    <tr><td rowspan="5" class="hi"><strong>II. High-Performance (Multi-)Linear Algebra</strong><br>Wed, Nov 18<br><span class="tiny muted">Performance is <strong>reuse</strong>: dense code raises the primitive; sparse code must find it in the input.</span></td>
+    <tr><td rowspan="5" class="hi"><strong>II. High-Performance (Multi-)Linear Algebra</strong><br>Mon, Nov 16<br><span class="tiny muted">Performance is <strong>reuse</strong>: dense code raises the primitive; sparse code must find it in the input.</span></td>
         <td>8. Motivation</td><td>Why BLAS lifts vectors to matrices; tensors lift again. GEMM &rarr; batched &rarr; contraction; TTGT vs. GETT.</td></tr>
     <tr><td>9. Dense frameworks</td><td>TBLIS, Cyclops (CTF), cuTENSOR, and Bientinesi's GETT / Linnea line of work.</td></tr>
     <tr><td>10. Sparse tensors</td><td>Formats (COO, CSF, HiCOO), kernels (MTTKRP, SpTTM), and the systems built on them.</td></tr>
@@ -63,7 +63,7 @@
      PART I — PARALLEL DEEP LEARNING
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part I · Mon, Nov 16</div>
+  <div class="mod-num">Part I · Wed, Nov 11</div>
   <div class="mod-title">Parallel Deep Learning</div>
 </section>
 
@@ -1010,7 +1010,7 @@ model = optimizer.step(model, g)  # identical update
      PART II — HIGH-PERFORMANCE (MULTI-)LINEAR ALGEBRA
      ================================================================== -->
 <section class="divider" data-background-color="#ffffff">
-  <div class="mod-num">Part II · Wed, Nov 18</div>
+  <div class="mod-num">Part II · Mon, Nov 16</div>
   <div class="mod-title">High-Performance (Multi-)Linear Algebra</div>
 </section>
 
